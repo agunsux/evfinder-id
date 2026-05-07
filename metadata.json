@@ -1,0 +1,6 @@
+{
+  "name": "LanggamAI",
+  "description": "Professional Indonesian Text-to-Speech with AI Script Assistant and natural voices for marketing and podcasts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["text-to-speech", "ai-assistant"]
+}
