@@ -10,6 +10,8 @@ export interface Voice {
   suitability?: string;
   isPremium?: boolean;
   demoUrl?: string;
+    qualityLabel?: "Studio: HD" | "Pro: Natural" | "Standard";
+    dialect?: string;
 }
 
 export interface TTSRequest {
@@ -17,6 +19,8 @@ export interface TTSRequest {
   voice: string;
   pitch: number;
   speed: number;
+  mood?: string;
+  format?: 'MP3' | 'WAV' | 'OGG';
 }
 
 export interface TTSResponse {
@@ -26,79 +30,71 @@ export interface TTSResponse {
 export const VOICES: Voice[] = [
   {
     id: "id-ID-Wavenet-B",
-    name: "Pritt (Legenda)",
+    name: "Pramudya",
     gender: "Male",
     type: "Wavenet",
-    description: "Berwibawa, Karismatik, & Dalam — Suara legenda seperti Pramudya Ananta Toer bertemu narator Falls of Civilization. Ideal untuk sejarah epik dan misteri nusantara.",
-    suitability: "YouTube 45-180 menit (Sejarah Epik, Dokumenter)",
-    tags: ["Epik", "Storytelling"],
+    qualityLabel: "Studio: HD",
+    dialect: "Indonesia (Resonan/Kontemplatif)",
+    description: "Laki-laki, suara dalam, resonan, dan kontemplatif. Sempurna untuk narasi sejarah, sastra, dan refleksi mendalam.",
+    suitability: "Sejarah, Sastra, Kontemplatif",
+    tags: ["Resonan", "Deep", "Sastra"],
     isPremium: true,
-    defaultPitch: -2,
-    defaultSpeed: -5,
+    defaultPitch: -3,
+    defaultSpeed: -8,
   },
   {
     id: "id-ID-Wavenet-C",
-    name: "Ferry (Pioneer)",
+    name: "Ferry",
     gender: "Male",
     type: "Wavenet",
-    description: "Narator Radio Klasik yang Lembut & Berwibawa — Cocok untuk dokumenter, podcast edukasi, dan long-form YouTube.",
-    suitability: "YouTube 30-120 menit (Edukasi, Dokumenter)",
-    tags: ["Long-form Educational", "Casual"],
+    qualityLabel: "Studio: HD",
+    dialect: "Indonesia (Santai/Karismatik)",
+    description: "Laki-laki, santai namun karismatik. Gaya bicara gaya podcaster yang asyik didengar untuk durasi panjang.",
+    suitability: "Podcast, Review, Santai",
+    tags: ["Casual", "Karismatik", "Podcaster"],
     isPremium: true,
     defaultPitch: -2,
     defaultSpeed: -5,
-  },
-  {
-    id: "id-ID-Standard-C",
-    name: "Bimoky (Moderen)",
-    gender: "Male",
-    type: "Standard",
-    description: "Deep Voice Over yang Autentik & Kuat — Untuk konten modern, analisis pop culture, dan breakdown mendalam.",
-    suitability: "Social Media 15-60 menit (Pop Culture, Analysis)",
-    tags: ["Casual", "Epik"],
-    defaultPitch: -4,
-    defaultSpeed: 0,
   },
   {
     id: "id-ID-Wavenet-A",
     name: "Ratna",
     gender: "Female",
     type: "Wavenet",
-    description: "Lembut & Menenangkan — Suara ibu dongeng nusantara yang hangat, sempurna untuk narasi sejarah humanis, audiobook, dan cerita panjang 1-3 jam.",
-    suitability: "Audiobook 60-180 menit (History, Storytelling)",
-    tags: ["Storytelling", "Casual"],
+    qualityLabel: "Studio: HD",
+    dialect: "Indonesia (Lembut/Nurturing)",
+    description: "Perempuan, lembut, hangat, dan nurturing. Sangat cocok untuk dongeng, konten edukasi Ibu & Anak, dan narasi kemanusiaan.",
+    suitability: "Dongeng, Nurturing, Humanis",
+    tags: ["Lembut", "Hangat", "Nurturing"],
     isPremium: true,
-    defaultPitch: -2,
+    defaultPitch: -1,
     defaultSpeed: -5,
   },
   {
     id: "id-ID-Wavenet-D",
-    name: "Indah",
+    name: "Sari",
     gender: "Female",
     type: "Wavenet",
-    description: "Profesional & Ceria — Suara energik untuk iklan, tutorial singkat, dan konten marketing yang persuasif.",
-    suitability: "ADS / Shorts 1-10 menit",
-    tags: ["Casual"],
+    qualityLabel: "Studio: HD",
+    dialect: "Indonesia (Cerah/Energik)",
+    description: "Perempuan, cerah, energik, dan penuh semangat. Pas untuk konten iklan, promo, dan edukasi yang ceria.",
+    suitability: "Iklan, Promo, Energik",
+    tags: ["Energik", "Cerah", "Modern"],
     isPremium: true,
-    defaultPitch: 0,
+    defaultPitch: 1,
     defaultSpeed: 0,
   },
   {
-    id: "id-ID-Standard-D",
-    name: "Santi",
-    gender: "Female",
-    type: "Standard",
-    description: "Jernih & Sopan — Ideal untuk layanan pelanggan, pengumuman publik, dan panduan sistem.",
-    suitability: "System Voice / IVR",
-    tags: ["Casual"],
-  },
-  {
     id: "id-ID-Standard-B",
-    name: "Eko",
+    name: "Eka",
     gender: "Male",
     type: "Standard",
-    description: "Naturil & Ramah — Suara sehari-hari yang cocok untuk tutorial sederhana dan vlog santai.",
-    suitability: "Tutorial / Vlog 10-30 menit",
-    tags: ["Casual"],
-  },
+    qualityLabel: "Pro: Natural",
+    dialect: "Indonesia (Dinamis/Versatile)",
+    description: "Unisex/Male, versatile dan dinamis. Sangat fleksibel untuk berbagai kebutuhan video pendek dan dubbing karakter.",
+    suitability: "Dubbing, Versatile, Dinamis",
+    tags: ["Universal", "Versatile", "Dinamis"],
+    defaultPitch: -2,
+    defaultSpeed: 0,
+  }
 ];

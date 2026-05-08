@@ -5,7 +5,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import dotenv from "dotenv";
-import { Xendit } from "xendit-node";
+import midtransClient from "midtrans-client";
+import fs from "fs";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -14,6 +16,29 @@ const __dirname = path.dirname(__filename);
 
 // Initialize Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+// Persistence-ready Cache Configuration
+const CACHE_DIR = path.join(process.cwd(), "cache-tts");
+if (!fs.existsSync(CACHE_DIR)) {
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+}
+
+// Simple in-memory cache for fast access (first layer)
+const ttsMemoryCache = new Map<string, any>();
+
+/**
+ * Generates a stable hash for cache keys based on TTS parameters
+ */
+function getCacheKey(params: { text: string; voice: string; pitch?: number; speed?: number; format?: string }) {
+  const normalizedParams = {
+    text: params.text.trim(),
+    voice: params.voice,
+    pitch: params.pitch || 0,
+    speed: params.speed || 1.0,
+    format: params.format || 'MP3'
+  };
+  return crypto.createHash('sha256').update(JSON.stringify(normalizedParams)).digest('hex');
+}
 
 async function startServer() {
   const app = express();
@@ -50,7 +75,7 @@ async function startServer() {
   // API Route for TTS Synthesis
   app.post("/api/tts", async (req, res) => {
     try {
-      const { text, voice, pitch, speed } = req.body;
+      const { text, voice, pitch, speed, mood, format } = req.body;
       const apiKey = process.env.GOOGLE_API_KEY; // Prefer specific TTS key
 
       if (!apiKey || apiKey === "MY_GOOGLE_API_KEY") {
@@ -60,6 +85,29 @@ async function startServer() {
             status: "MISSING_CONFIG"
           }
         });
+      }
+
+      // Generate a persistent cache key
+      const cacheKey = getCacheKey({ text, voice, pitch, speed, format });
+      const cacheFilePath = path.join(CACHE_DIR, `${cacheKey}.json`);
+
+      // 1. Check Memory Cache
+      if (ttsMemoryCache.has(cacheKey)) {
+        console.log("TTS Memory Cache Hit for:", voice);
+        return res.json(ttsMemoryCache.get(cacheKey));
+      }
+
+      // 2. Check File Cache
+      if (fs.existsSync(cacheFilePath)) {
+        try {
+          const cachedData = JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
+          console.log("TTS Disk Cache Hit for:", voice);
+          // Update memory cache
+          ttsMemoryCache.set(cacheKey, cachedData);
+          return res.json(cachedData);
+        } catch (readError) {
+          console.error("Error reading cache file:", readError);
+        }
       }
 
       const synthesizeVoice = async (voiceName: string) => {
@@ -84,7 +132,7 @@ async function startServer() {
                 name: voiceName,
               },
               audioConfig: {
-                audioEncoding: "MP3",
+                audioEncoding: format === 'WAV' ? 'LINEAR16' : (format === 'OGG' ? 'OGG_OPUS' : 'MP3'),
                 pitch: pitch || 0,
                 speakingRate: speed || 1.0,
               },
@@ -139,6 +187,14 @@ async function startServer() {
         return res.status(response.status).json(responseData);
       }
 
+      // Save to cache before returning
+      try {
+        ttsMemoryCache.set(cacheKey, responseData);
+        fs.writeFileSync(cacheFilePath, JSON.stringify(responseData));
+      } catch (saveError) {
+        console.error("Failed to save to cache:", saveError);
+      }
+
       res.json(responseData);
     } catch (error) {
       console.error("Fatal Server Error:", error);
@@ -150,43 +206,102 @@ async function startServer() {
     }
   });
 
-  // API Route for Xendit Checkout
+  // API Route for Midtrans Client Key
+  app.get("/api/config/midtrans", (req, res) => {
+    res.json({ clientKey: process.env.MIDTRANS_CLIENT_KEY });
+  });
+
+  // API Route for Midtrans Checkout
   app.post("/api/checkout", async (req, res) => {
     try {
-      const { planName, amount } = req.body;
-      const xenditKey = process.env.XENDIT_SECRET_KEY;
+      const { planName, amount, userEmail, userName, userId } = req.body;
+      const serverKey = process.env.MIDTRANS_SERVER_KEY;
 
-      if (!xenditKey) {
+      if (!serverKey) {
         return res.status(401).json({ 
           error: {
-            message: "XENDIT_SECRET_KEY belum dikonfigurasi di environment variables.",
+            message: "MIDTRANS_SERVER_KEY belum dikonfigurasi di environment variables.",
             status: "MISSING_CONFIG"
           }
         });
       }
 
-      const x = new Xendit({ secretKey: xenditKey });
-      
-      const response = await x.Invoice.createInvoice({
-        data: {
-          externalId: `langgam-${Date.now()}`,
-          amount: amount,
-          description: `Pembelian Paket Langgam: ${planName}`,
-          currency: "IDR",
-          reminderTime: 1,
-          successRedirectUrl: `${req.headers.origin}/?status=success`,
-          failureRedirectUrl: `${req.headers.origin}/?status=failure`,
-        }
+      const snap = new midtransClient.Snap({
+        isProduction: process.env.MIDTRANS_IS_PRODUCTION === "true",
+        serverKey: serverKey,
+        clientKey: process.env.MIDTRANS_CLIENT_KEY
       });
+      
+      const parameter = {
+        transaction_details: {
+          order_id: `rungu-${Date.now()}`,
+          gross_amount: amount
+        },
+        item_details: [{
+          id: planName.toLowerCase().replace(/\s+/g, '-'),
+          price: amount,
+          quantity: 1,
+          name: `Top Up Rungu: ${planName}`
+        }],
+        customer_details: {
+          email: userEmail || "customer@example.com",
+          first_name: userName || "Customer"
+        },
+        custom_field1: userId,
+        credit_card: {
+          secure: true
+        }
+      };
 
-      res.json({ invoiceUrl: response.invoiceUrl });
+      const transaction = await snap.createTransaction(parameter);
+      res.json({ token: transaction.token, redirect_url: transaction.redirect_url });
     } catch (error) {
-      console.error("Xendit Invoice Error:", error);
+      console.error("Midtrans Transaction Error:", error);
       res.status(500).json({ 
         error: { 
-          message: error instanceof Error ? error.message : "Gagal membuat invoice pembayaran." 
+          message: error instanceof Error ? error.message : "Gagal membuat transaksi pembayaran." 
         } 
       });
+    }
+  });
+
+  // API Route for Midtrans Notification Callback
+  app.post("/api/payment-callback", async (req, res) => {
+    try {
+      const notification = req.body;
+      const serverKey = process.env.MIDTRANS_SERVER_KEY;
+      
+      const snap = new midtransClient.Snap({
+        isProduction: process.env.MIDTRANS_IS_PRODUCTION === "true",
+        serverKey: serverKey,
+        clientKey: process.env.MIDTRANS_CLIENT_KEY
+      });
+
+      const statusResponse = await snap.transaction.notification(notification);
+      const orderId = statusResponse.order_id;
+      const transactionStatus = statusResponse.transaction_status;
+      const fraudStatus = statusResponse.fraud_status;
+
+      console.log(`Transaction notification received. Order ID: ${orderId}. Status: ${transactionStatus}. Fraud Status: ${fraudStatus}`);
+
+      if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
+        if (fraudStatus === 'challenge') {
+          // TODO: handle fraud challenge
+        } else if (fraudStatus === 'accept') {
+          // TODO: update user balance in Firestore
+          // Since we don't have the user ID directly in the callback (unless we put it in metadata or orderId)
+          // We should ideally use custom_field1 for userId
+        }
+      } else if (transactionStatus === 'cancel' || transactionStatus === 'deny' || transactionStatus === 'expire') {
+        // TODO: handle failure
+      } else if (transactionStatus === 'pending') {
+        // TODO: handle pending
+      }
+
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error("Midtrans Callback Error:", error);
+      res.status(500).send('Error');
     }
   });
 

@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'plan', 'currentQuota', 'maxQuota']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.plan in ['Free', 'Creator', 'Pro', 'Studio'] &&
+             data.currentQuota is int &&
+             data.maxQuota is int;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.plan == 'Free';
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    // Only allow updating currentQuota or rolloverQuota during normal use
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentQuota', 'rolloverQuota', 'updatedAt']);
+    }
+  }
+}

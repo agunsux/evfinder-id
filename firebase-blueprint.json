@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and quota information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "plan": { "type": "string", "enum": ["Free", "Creator", "Pro", "Studio"] },
+        "currentQuota": { "type": "integer" },
+        "maxQuota": { "type": "integer" },
+        "rolloverQuota": { "type": "integer" },
+        "nextBillingDate": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "plan", "currentQuota", "maxQuota"]
+    },
+    "Script": {
+      "title": "Script",
+      "description": "User saved scripts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user profiles and their quotas."
+    },
+    "/scripts/{scriptId}": {
+      "schema": "Script",
+      "description": "Stores user saved scripts."
+    }
+  }
+}

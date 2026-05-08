@@ -1,6 +1,6 @@
 {
-  "name": "LanggamAI",
-  "description": "Professional Indonesian Text-to-Speech with AI Script Assistant and natural voices for marketing and podcasts.",
+  "name": "Rungu",
+  "description": "Best Indonesian AI Voice Generator. Professional Text-to-Speech (TTS) with natural human-like voices for YouTube, TikTok, and Marketing. Direct local payments.",
   "requestFramePermissions": [],
   "majorCapabilities": ["text-to-speech", "ai-assistant"]
 }

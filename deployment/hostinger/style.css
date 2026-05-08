@@ -1,0 +1,107 @@
+/* Apple Style Cubic Bezier Transitions */
+* {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.transition-apple {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Sound Bars */
+.sound-bar {
+    @apply w-1.5 bg-brand-primary rounded-full;
+    animation: soundwave 0.8s ease-in-out infinite;
+    transform-origin: bottom;
+}
+.sound-bar:nth-child(even) { animation-delay: 0.2s; height: 1.5rem; }
+.sound-bar:nth-child(odd) { animation-delay: 0.4s; height: 2rem; }
+
+@keyframes soundwave {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1.4); }
+}
+
+/* Hide Scrollbar */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Custom Scrollbar for Textareas */
+textarea::-webkit-scrollbar {
+    width: 6px;
+}
+textarea::-webkit-scrollbar-track {
+    background: #050505;
+}
+textarea::-webkit-scrollbar-thumb {
+    background: #1a1a1a;
+    border-radius: 10px;
+}
+textarea::-webkit-scrollbar-thumb:hover {
+    background: #333;
+}
+
+/* Voice Card Premium Badges */
+.badge {
+    @apply px-2 py-0.5 rounded-full text-[7px] font-black tracking-widest uppercase;
+}
+.badge.premium {
+    @apply bg-emerald-500/20 text-emerald-500 border border-emerald-500/10;
+}
+.badge.standard {
+    @apply bg-zinc-800 text-zinc-500 border border-zinc-700/50;
+}
+
+/* Pricing Card Glow */
+.pricing-card {
+    @apply bg-zinc-900 border border-zinc-800 p-10 rounded-[40px] flex flex-col transition-all duration-500 hover:scale-[1.03] hover:shadow-2xl hover:border-zinc-700;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#editor-section, #pricing-section {
+    animation: fadeIn 0.8s ease-out forwards;
+}
+
+/* SSML Editor Custom Styling */
+#ssml-editor {
+    spellcheck: false;
+}
+
+/* Contextual Toolbar Pop Animation */
+#contextual-toolbar {
+    animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+    from { transform: scale(0.8) translateY(10px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Progress Bar Shine */
+#quota-bar {
+    position: relative;
+    overflow: hidden;
+}
+#quota-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    to { left: 100%; }
+}
