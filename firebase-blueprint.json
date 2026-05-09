@@ -7,10 +7,11 @@
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string" },
-        "plan": { "type": "string", "enum": ["Free", "Creator", "Pro", "Studio"] },
+        "plan": { "type": "string", "enum": ["Free", "Kreator", "Produktif", "Bisnis", "Creator"] },
         "currentQuota": { "type": "integer" },
         "maxQuota": { "type": "integer" },
         "rolloverQuota": { "type": "integer" },
+        "isNewsletterSubscribed": { "type": "boolean" },
         "nextBillingDate": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }

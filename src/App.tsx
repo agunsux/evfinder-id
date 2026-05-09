@@ -58,12 +58,26 @@ import {
   AlertTriangle,
   Search,
   MessageSquare,
-  ChevronLeft
+  MessageCircle,
+  ChevronLeft,
+  ArrowRight,
+  Instagram,
+  Music,
+  Mail
 } from "lucide-react";
 import { VOICES, Voice, TTSRequest, TTSResponse } from "./types";
 import { auth, db, googleProvider, facebookProvider, appleProvider, handleFirestoreError, OperationType, testConnection } from "./lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, serverTimestamp, collection, query, where, orderBy, getDocs, deleteDoc } from "firebase/firestore";
+
+interface Transaction {
+  id: string;
+  planName: string;
+  amount: number;
+  status: string;
+  paymentType: string;
+  createdAt: any;
+}
 
 const translations = {
   id: {
@@ -82,19 +96,19 @@ const translations = {
     feature3Desc: "Langgam bicara yang manusiawi, minim kesan robotik.",
     compareTitle: "Rungu vs Dunia",
     compareSub: "Kami menghormati kompetitor global, tapi untuk Indonesia? Rungu juaranya.",
-    packageFree: "Trial",
+    packageFree: "Free",
     packageTopup1: "Starter",
     packageTopup2: "Kreator",
     packageTopup3: "Produktif",
-    packageTopup4: "Lifetime",
-    priceTopup1: "Rp 25.000",
-    priceTopup2: "Rp 85.000",
-    priceTopup3: "Rp 225.000",
-    priceTopup4: "Rp 599.000",
+    packageTopup4: "Bisnis",
+    priceTopup1: "Rp 19.000",
+    priceTopup2: "Rp 49.000",
+    priceTopup3: "Rp 99.000",
+    priceTopup4: "Rp 249.000",
     charsTopup1: "25.000 Karakter",
-    charsTopup2: "100.000 Karakter",
-    charsTopup3: "300.000 Karakter",
-    charsTopup4: "800.000 Karakter",
+    charsTopup2: "180.000 Karakter",
+    charsTopup3: "420.000 Karakter",
+    charsTopup4: "1.150.000 Karakter",
     lifetimeLabel: "Bayar Sekali, Gunakan Selamanya. Tanpa Biaya Bulanan.",
     bonusTopup2: "Paket Dasar",
     bonusTopup3: "Bonus 20% (Terpopuler)",
@@ -106,19 +120,19 @@ const translations = {
     pricingTitle: "Pilih Investasi Kreativitasmu",
     paymentTitle: "Metode Pembayaran Lengkap",
     paymentSub: "Kami mendukung berbagai metode pembayaran lokal dan internasional untuk kenyamanan Anda.",
-    testimonialsTitle: "Cerita Sukses Kreator Rungu",
+    testimonialsTitle: "Cerita Sukses Creator Rungu",
     faqTitle: "Pertanyaan yang Sering Muncul",
     finalCtaTitle: "Siap Mewarnai Kontenmu?",
     finalCtaSub: "Bergabung bersama ribuan kreator Indonesia lainnya yang sudah mulai meninggalkan suara robotik lama.",
     finalCtaBtn: "Mulai Kreativitasmu Sekarang (Gratis)",
     promoBanner: "🔥 Early Bird: Top up pertama Rp 59.000, dapat kan BONUS 2x LIPAT KREDIT! (Sisa 142 slot)",
     affiliateTitle: "Dapatkan Kredit Gratis",
-    affiliateSub: "Share postingan ini di Instagram/TikTok dengan tag @rungu_id → 25K Karakter. Ajak teman daftar → Kamu + teman masing-masing dapat 20K karakter bonus!",
+    affiliateSub: "Share di Instagram/TikTok tag @rungu_id → 15K-25K Karakter. Buat video review → 50K Karakter / 1 bln Creator. Ajak teman daftar → Masing-masing dapat 20K bonus!",
     affiliateBtn: "Ajak Teman (Dapat 20K Bonus)",
     seoKeywords: "AI Voice Generator Bahasa Indonesia Terbaik · Text to Speech Indonesia Natural · Suara AI untuk YouTube & TikTok",
     feedbackTitle: "Ada Saran atau Masalah?",
     feedbackSub: "Obrolin langsung dengan tim dev kami via WhatsApp. Kami dengerin setiap keluhanmu.",
-    feedbackBtn: "Hubungi Tim Dev",
+    feedbackBtn: "Hubungi Kami",
     deleteConfirmTitle: "Hapus Suara Kloning?",
     deleteConfirmDesc: "Tindakan ini tidak dapat dibatalkan. Suara kustom '{name}' akan dihapus permanen.",
     deleteBtn: "Hapus Sekarang",
@@ -160,16 +174,16 @@ const translations = {
     packageFree: "Free",
     packageTopup1: "Starter",
     packageTopup2: "Creator",
-    packageTopup3: "Productive",
+    packageTopup3: "Pro",
     packageTopup4: "Lifetime",
-    priceTopup1: "$2",
-    priceTopup2: "$6",
-    priceTopup3: "$15",
-    priceTopup4: "$40",
-    charsTopup1: "25.000 Karakter",
-    charsTopup2: "100.000 Karakter",
-    charsTopup3: "300.000 Karakter",
-    charsTopup4: "800.000 Karakter",
+    priceTopup1: "$1.5",
+    priceTopup2: "$4.5",
+    priceTopup3: "$12",
+    priceTopup4: "$35",
+    charsTopup1: "25.000 Characters",
+    charsTopup2: "100.000 Characters",
+    charsTopup3: "300.000 Characters",
+    charsTopup4: "800.000 Characters",
     lifetimeLabel: "One-time Payment, Lifetime Use. No Monthly Fees.",
     bonusTopup2: "+10% Bonus",
     bonusTopup3: "+20% Bonus",
@@ -202,7 +216,7 @@ const translations = {
     seoKeywords: "Best Indonesian AI Voice Generator · Natural Indonesia Text to Speech · AI Voice for YouTube & TikTok",
     feedbackTitle: "Have Suggestions or Issues?",
     feedbackSub: "Chat directly with our dev team via WhatsApp. We listen to every piece of feedback.",
-    feedbackBtn: "Chat with Devs",
+    feedbackBtn: "Contact Us",
     saveX: "Save",
     pricingTitle: "Choose Your Creativity Investment",
     paymentTitle: "Complete Payment Methods",
@@ -221,15 +235,20 @@ const translations = {
   }
 };
 
-const RunguLogo = ({ size = 32 }) => (
-  <div className="flex items-center gap-3">
+const RunguLogo = ({ size = 32, className = "" }) => (
+  <div className={`flex items-center gap-3 ${className}`}>
     <div 
-      className="bg-[#10B981] rounded-lg shadow-lg shadow-[#10B981]/20 flex items-center justify-center shrink-0" 
+      className="flex items-center justify-center shrink-0 fill-brand-primary" 
       style={{ width: size, height: size }}
     >
-      <div className="w-4 h-4 border-2 border-black/20 rounded-sm" />
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        <path d="M50,10 C27.9,10 10,27.9 10,50 C10,72.1 27.9,90 50,90 C72.1,90 90,72.1 90,50 C90,27.9 72.1,10 50,10 Z M50,82 C32.3,82 18,67.7 18,50 C18,32.3 32.3,18 50,18 C67.7,18 82,32.3 82,50 C82,67.7 67.7,82 50,82 Z" opacity="0.3" />
+        <path d="M50,25 C36.2,25 25,36.2 25,50 C25,63.8 36.2,75 50,75 C63.8,75 75,63.8 75,50 C75,36.2 63.8,25 50,25 Z M50,67 C40.6,67 33,59.4 33,50 C33,40.6 40.6,33 50,33 C59.4,33 67,40.6 67,50 C67,59.4 59.4,67 50,67 Z" opacity="0.6" />
+        <path d="M50,40 C44.5,40 40,44.5 40,50 C40,55.5 44.5,60 50,60 C55.5,60 60,55.5 60,50 C60,44.5 55.5,40 50,40 Z" />
+        <path d="M50,55 C47.2,55 45,52.8 45,50 C45,47.2 47.2,45 50,45 C52.8,45 55,47.2 55,50 C55,52.8 52.8,55 50,55 Z" />
+      </svg>
     </div>
-    <h1 className="font-sans text-xl font-black text-black dark:text-white tracking-[0.2em] hidden sm:block">RUNGU</h1>
+    <h1 className="font-sans text-xl font-black text-[#222222] dark:text-white tracking-[0.2em] hidden sm:block">RUNGU</h1>
   </div>
 );
 
@@ -255,22 +274,41 @@ const Waveform = () => (
   </div>
 );
 
-const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterval, setPricingInterval, onCheckout, currentUser, setIsAuthModalOpen }: any) => {
+const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterval, setPricingInterval, onCheckout, currentUser, setIsAuthModalOpen, addToast }: any) => {
   const t = translations[lang as keyof typeof translations] as any;
   const [demoText, setDemoText] = useState(lang === "id" ? "Halo, saya Sari. Mari kita buat konten audio yang luar biasa bersama Rungu AI." : "Hello, I am Sari. Let's create amazing audio content together with Rungu AI.");
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [playingDemo, setPlayingDemo] = useState(false);
   const [selectedDemoVoice, setSelectedDemoVoice] = useState("Sari");
   const [localIsCheckingOut, setLocalIsCheckingOut] = useState<string | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   
   const faqData = lang === "id" ? [
-    { q: "Apakah suaranya benar-benar natural?", a: "Ya, mesin kami menggunakan arsitektur WaveNet yang dioptimalkan khusus untuk linguistik Indonesia, Sunda, dan Jawa." },
-    { q: "Apa bedanya dengan ElevenLabs?", a: "ElevenLabs bagus untuk suara global, tapi Rungu fokus pada kealamian logat Indonesia dan harga yang jauh lebih terjangkau bagi kreator lokal." },
-    { q: "Bisakah saya kloning suara sendiri?", a: "Tentu! Di paket Pro dan Studio, Anda bisa mengunggah sampel suara 30 detik untuk membuat kloning suara Anda sendiri." }
+    { q: "Apakah kuota karakter hangus setiap akhir bulan?", a: "Tidak semuanya hangus. Paket Starter → Kuota tidak rollover (hangus tiap bulan). Paket Kreator, Produktif, Bisnis → Kuota rollover hingga 30 hari (sisa kuota akan dibawa ke bulan berikutnya, maksimal 2x kuota bulanan). Enterprise → Custom rollover sesuai kesepakatan." },
+    { q: "Bagaimana sistem rollover kuota?", a: "Kuota bulanan akan di-reset setiap tanggal langganan. Sisa kuota dari bulan sebelumnya akan ditambahkan (rollover) maksimal sebanyak 2 kali kuota bulanan. Contoh: Paket Produktif Rp99.000 (420.000 char) bisa menumpuk hingga 840.000 char." },
+    { q: "Apakah ada Pay As You Go / Top-up?", a: "Ya. Kamu bisa top-up kapan saja dengan harga Rp2.000 per 10.000 karakter. Sangat cocok kalau kuotamu hampir habis tapi belum mau upgrade paket bulanan." },
+    { q: "Apakah boleh digunakan untuk komersial (YouTube, TikTok, iklan, dll)?", a: "Ya, semua paket berbayar (Kreator ke atas) diperbolehkan untuk penggunaan komersial termasuk monetisasi YouTube, TikTok, iklan, dan penjualan produk." },
+    { q: "Berapa lama audio yang bisa dihasilkan dalam sekali generate?", a: "Maksimal 15 menit per generate. Untuk konten lebih panjang, sistem akan otomatis membagi menjadi beberapa bagian atau kamu bisa generate bertahap." },
+    { q: "Apakah suara bisa dikloning (Voice Cloning)?", a: "Saat ini belum tersedia di paket standar. Fitur Voice Cloning sedang dalam pengembangan dan akan tersedia terlebih dahulu untuk paket Bisnis & Enterprise." },
+    { q: "Apakah ada watermark di audio?", a: "Free & Starter → Ada watermark kecil di awal audio. Kreator ke atas → Tidak ada watermark." },
+    { q: "Bagaimana cara pembayaran?", a: "Mendukung QRIS, Transfer Bank, Dompet Digital (GoPay, OVO, DANA, ShopeePay), dan Kartu Kredit." },
+    { q: "Apakah bisa refund?", a: "Kami menerapkan kebijakan no refund untuk paket bulanan yang sudah aktif, namun kamu bisa pause langganan kapan saja." },
+    { q: "Bagaimana kalau butuh bantuan atau custom voice?", a: "Kamu bisa langsung chat tim kami via WhatsApp di dalam aplikasi atau hubungi support@rungu.id. Untuk kebutuhan custom (dedicated voice, volume besar, integrasi API) silakan pilih paket Enterprise → Contact Sales." },
+    { q: "Apakah ada batas penggunaan harian?", a: "Tidak ada batas harian, hanya batas kuota bulanan paket kamu." },
+    { q: "Suara Rungu lebih bagus daripada ElevenLabs?", a: "Rungu dioptimalkan khusus untuk Bahasa Indonesia (intonasi, emosi, dan irama lokal). Banyak creator mengatakan lebih \"terasa Indonesia\" dibanding ElevenLabs, meski ElevenLabs unggul di bahasa asing." }
   ] : [
-    { q: "Are the voices really natural?", a: "Yes, our engine uses WaveNet architecture specifically optimized for Indonesian, Sundanese, and Javanese linguistics." },
-    { q: "How is it different from ElevenLabs?", a: "ElevenLabs is great for global voices, but Rungu focuses on natural Indonesian accents and significantly more affordable pricing for local creators." },
-    { q: "Can I clone my own voice?", a: "Absolutely! In the Pro and Studio plans, you can upload a 30-second voice sample to create your personal voice clone." }
+    { q: "Does character quota expire every month?", a: "Not entirely. Starter Plan → Quota does not rollover (expires monthly). Kreator, Produktif, Bisnis Plans → Quota rollovers for up to 30 days (unused quota is carried over to the next month, up to 2x the monthly quota). Enterprise → Custom rollover based on agreement." },
+    { q: "How does the quota rollover system work?", a: "Monthly quota resets on your subscription date. Unused quota from the previous month is added (rollover) up to a maximum of 2 times your monthly quota. Example: Produktif Plan Rp99,000 (420,000 char) can accumulate up to 840,000 char." },
+    { q: "Is there Pay As You Go / Top-up?", a: "Yes. You can top-up anytime at Rp2,000 per 10,000 characters. Perfect if your quota is low but you don't want to upgrade your monthly plan yet." },
+    { q: "Can it be used for commercial purposes (YouTube, TikTok, ads, etc)?", a: "Yes, all paid plans (Kreator and above) are allowed for commercial use including YouTube monetization, TikTok, ads, and product sales." },
+    { q: "How long can generated audio be in one go?", a: "A maximum of 15 minutes per generation. For longer content, the system will automatically split it into sections or you can generate in stages." },
+    { q: "Is Voice Cloning available?", a: "Currently not available in standard plans. Voice Cloning is under development and will be available first for Bisnis & Enterprise plans." },
+    { q: "Are there watermarks on the audio?", a: "Free & Starter → Small watermark at the beginning of the audio. Kreator and above → No watermark." },
+    { q: "What are the payment methods?", a: "Supports QRIS, Bank Transfer, Digital Wallets (GoPay, OVO, DANA, ShopeePay), and Credit Cards." },
+    { q: "Is there a refund policy?", a: "We have a no-refund policy for active monthly plans, but you can pause your subscription at any time." },
+    { q: "What if I need help or a custom voice?", a: "You can chat with our team directly via WhatsApp in the app or contact support@rungu.id. For custom needs (dedicated voice, high volume, API integration) please choose Enterprise → Contact Sales." },
+    { q: "Is there a daily usage limit?", a: "There are no daily limits, only your monthly package quota limit." },
+    { q: "Is Rungu's voice better than ElevenLabs?", a: "Rungu is specifically optimized for Indonesian (local intonation, emotion, and rhythm). Many creators say it feels more \"Indonesian\" compared to ElevenLabs, though ElevenLabs excels in foreign languages." }
   ];
 
   const handleDemoPlay = () => {
@@ -284,15 +322,15 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
 
   return (
     <div className={isDark ? "dark" : ""}>
-      <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-500 font-sans">
+      <div className="min-h-screen bg-white dark:bg-[#222222] text-[#222222] dark:text-zinc-100 transition-colors duration-500 font-sans">
         {/* Early Bird Promo Banner */}
-        <div className="bg-brand-primary text-black text-[10px] font-black uppercase tracking-[0.2em] py-2 px-6 text-center fixed top-0 w-full z-[60] flex items-center justify-center gap-2">
+        <div className="bg-brand-primary text-[#222222] text-[10px] font-black uppercase tracking-[0.2em] py-2 px-6 text-center fixed top-0 w-full z-[60] flex items-center justify-center gap-2">
           {t.promoBanner}
-          <div className="w-2 h-2 bg-black rounded-full animate-pulse ml-2" />
+          <div className="w-2 h-2 bg-[#222222] rounded-full animate-pulse ml-2" />
         </div>
 
         {/* Navigation */}
-        <nav className="fixed top-8 w-full z-50 premium-glass">
+        <nav className="fixed top-8 w-full z-50 premium-glass border-b border-zinc-200/50 dark:border-brand-border/20 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <div className="flex items-center gap-6">
               <button 
@@ -333,10 +371,13 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
               )}
             </div>
             <div className="flex items-center gap-4 sm:gap-8">
-              <button onClick={() => setLang(lang === "id" ? "en" : "id")} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest hover:text-brand-primary transition-colors">
+              <button onClick={() => setLang(lang === "id" ? "en" : "id")} className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-900 dark:text-white hover:text-brand-primary transition-colors">
                 <Globe size={16} /> {lang === "id" ? "EN" : "ID"}
               </button>
-              <button onClick={() => setIsDark(!isDark)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-all">
+              <button 
+                onClick={() => setIsDark(!isDark)} 
+                className="p-3 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-2xl transition-all border border-zinc-200 dark:border-zinc-800"
+              >
                 {isDark ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-brand-primary" />}
               </button>
               <button 
@@ -350,7 +391,7 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
         </nav>
 
         {/* Hero Section */}
-        <section className="pt-48 pb-24 px-6 relative overflow-hidden bg-zinc-50/30">
+        <section className="pt-48 pb-24 px-6 relative overflow-hidden bg-zinc-50 dark:bg-brand-bg-premium">
           <div className="max-w-5xl mx-auto text-center relative z-10">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
@@ -363,7 +404,7 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-6xl md:text-8xl font-serif font-black text-zinc-950 dark:text-white leading-[1] tracking-tighter mb-8"
+              className="text-6xl md:text-8xl font-serif font-black text-[#222222] dark:text-white leading-[1] tracking-tighter mb-8"
             >
               {t.heroTitle}
             </motion.h1>
@@ -392,7 +433,7 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
                 </button>
                 <a 
                   href="#pricing"
-                  className="w-full sm:w-auto px-12 py-5 bg-white dark:bg-brand-card-bg text-zinc-950 dark:text-white border border-zinc-200 dark:border-brand-border rounded-full font-black text-xs uppercase tracking-widest hover:border-brand-primary transition-all shadow-sm flex items-center justify-center"
+                  className="w-full sm:w-auto px-12 py-5 bg-white dark:bg-brand-card-bg text-[#222222] dark:text-white border border-zinc-200 dark:border-brand-border rounded-full font-black text-xs uppercase tracking-widest hover:border-brand-primary transition-all shadow-sm flex items-center justify-center"
                 >
                   {t.ctaPricing}
                 </a>
@@ -406,19 +447,19 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
         </section>
 
         {/* Live Demo Section */}
-        <section className="py-24 px-6 bg-white transition-colors relative z-20 -mt-12">
-          <div className="max-w-3xl mx-auto bg-white rounded-[3rem] shadow-2xl shadow-zinc-200 border border-zinc-100 overflow-hidden transform hover:-translate-y-2 transition-all p-2">
-            <div className="bg-zinc-50 p-10 rounded-[2.5rem]">
+        <section className="py-24 px-6 bg-white dark:bg-brand-bg-premium transition-colors relative z-20 -mt-12">
+          <div className="max-w-3xl mx-auto bg-white dark:bg-brand-card-bg rounded-[3rem] shadow-2xl shadow-zinc-200 dark:shadow-none border border-zinc-100 dark:border-brand-border overflow-hidden transform hover:-translate-y-2 transition-all p-2">
+            <div className="bg-zinc-50 dark:bg-brand-card-bg p-10 rounded-[2.5rem]">
               <div className="flex items-center gap-4 mb-8">
                 <div className="flex -space-x-4">
                   {[
-                    { name: "Sari", color: "bg-emerald-100" },
+                    { name: "Sari", color: "bg-brand-primary/10 dark:bg-brand-primary/20" },
                     { name: "Budi", color: "bg-brand-primary/20" },
-                    { name: "Tio", color: "bg-amber-100" }
+                    { name: "Tio", color: "bg-brand-primary/30" }
                   ].map((v, i) => (
                     <button
                       key={v.name}
-                      className={`w-14 h-14 rounded-full border-4 ${selectedDemoVoice === v.name ? "border-brand-primary scale-110 z-10" : "border-white hover:scale-105"} transition-all ${v.color} flex items-center justify-center shadow-lg`}
+                      className={`w-14 h-14 rounded-full border-4 ${selectedDemoVoice === v.name ? "border-brand-primary scale-110 z-10" : "border-white dark:border-brand-border hover:scale-105"} transition-all ${v.color} flex items-center justify-center shadow-lg`}
                       onClick={() => setSelectedDemoVoice(v.name)}
                     >
                       <UserIcon size={24} className={selectedDemoVoice === v.name ? "text-brand-primary" : "text-zinc-400"} />
@@ -427,7 +468,8 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
                 </div>
                 <div className="text-left ml-2">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">Pilih Suara</p>
-                  <p className="text-sm font-bold text-zinc-900">{selectedDemoVoice} - {selectedDemoVoice === 'Sari' ? 'Natural/Ceria' : 'Formal/Berwibawa'}</p>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{selectedDemoVoice} - {selectedDemoVoice === 'Sari' ? 'Natural/Ceria' : 'Formal/Berwibawa'}</p>
+                  <p className="text-[9px] font-bold text-[#E2725B] mt-1 italic animate-pulse">🔥 Bahasa Jawa & Sunda Segera Rilis!</p>
                 </div>
               </div>
 
@@ -435,20 +477,20 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
                 <textarea
                   value={demoText}
                   onChange={(e) => setDemoText(e.target.value)}
-                  className="w-full h-32 bg-white border border-zinc-200 rounded-3xl p-6 text-zinc-900 font-medium focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary resize-none transition-all placeholder:text-zinc-300"
+                  className="w-full h-32 bg-white dark:bg-brand-bg-premium border border-zinc-200 dark:border-brand-border rounded-3xl p-6 text-zinc-900 dark:text-zinc-100 font-medium focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary resize-none transition-all placeholder:text-zinc-300 dark:placeholder:text-zinc-700"
                   placeholder="Ketik teks di sini untuk mencoba..."
                 />
                 <button
                   onClick={handleDemoPlay}
                   disabled={isDemoLoading || !demoText}
-                  className="absolute bottom-4 right-4 bg-brand-primary text-black w-14 h-14 rounded-2xl flex items-center justify-center hover:bg-brand-primary/90 active:scale-90 transition-all shadow-xl shadow-brand-primary/20 disabled:opacity-50"
+                  className="absolute bottom-4 right-4 bg-brand-primary text-[#222222] w-14 h-14 rounded-2xl flex items-center justify-center hover:bg-brand-primary/90 active:scale-90 transition-all shadow-xl shadow-brand-primary/20 disabled:opacity-50"
                 >
                   {isDemoLoading ? <RefreshCw className="animate-spin" /> : playingDemo ? <Volume2 className="animate-pulse" /> : <Play />}
                 </button>
               </div>
               
-              <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">
-                <ShieldCheck size={14} className="text-emerald-500" />
+              <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
+                <ShieldCheck size={14} className="text-brand-primary" />
                 Tanpa Registrasi untuk Percobaan Pertama
               </div>
             </div>
@@ -456,20 +498,20 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
         </section>
 
         {/* Pillars Section */}
-        <section className="py-24 px-6 border-b border-zinc-50">
+        <section className="py-24 px-6 border-b border-zinc-50 dark:border-[#222222] bg-white dark:bg-[#222222]">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               {[
-                { title: t.feature1Title, desc: t.feature1Desc, icon: <Volume2 className="text-zinc-950 px-px" size={32} /> },
-                { title: t.feature2Title, desc: t.feature2Desc, icon: <FastForward className="text-zinc-950 px-px" size={32} /> },
-                { title: t.feature3Title, desc: t.feature3Desc, icon: <Sparkles className="text-zinc-950 px-px" size={32} /> }
+                { title: t.feature1Title, desc: t.feature1Desc, icon: <Volume2 className="text-[#222222] dark:text-white px-px" size={32} /> },
+                { title: t.feature2Title, desc: t.feature2Desc, icon: <FastForward className="text-[#222222] dark:text-white px-px" size={32} /> },
+                { title: t.feature3Title, desc: t.feature3Desc, icon: <Sparkles className="text-[#222222] dark:text-white px-px" size={32} /> }
               ].map((f, i) => (
                 <div key={i} className="text-center group">
-                  <div className="mx-auto mb-8 w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-brand-primary/10 transition-all shadow-sm">
+                  <div className="mx-auto mb-8 w-20 h-20 bg-zinc-50 dark:bg-zinc-900 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-brand-primary/10 transition-all shadow-sm border border-zinc-100 dark:border-zinc-800">
                     {typeof f.icon === 'function' ? f.icon(f) : f.icon}
                   </div>
-                  <h3 className="text-2xl font-black mb-4 tracking-tighter uppercase">{f.title}</h3>
-                  <p className="text-zinc-500 font-bold leading-relaxed">{f.desc}</p>
+                  <h3 className="text-2xl font-black mb-4 tracking-tighter uppercase text-[#222222] dark:text-white">{f.title}</h3>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed">{f.desc}</p>
                 </div>
               ))}
             </div>
@@ -477,188 +519,276 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
         </section>
 
         {/* Use Cases Section */}
-        <section className="py-24 px-6 bg-zinc-50/30">
+        <section className="py-32 px-6 bg-zinc-50 dark:bg-brand-bg-premium/40">
           <div className="max-w-7xl mx-auto">
-             <div className="text-center mb-16">
-                <h2 className="text-4xl font-serif font-black tracking-tight mb-4">Solusi Untuk Siapa?</h2>
-                <div className="w-12 h-1 bg-indigo-600 mx-auto rounded-full" />
-             </div>
+             <motion.div 
+               initial={{ opacity: 0, y: 20 }}
+               whileInView={{ opacity: 1, y: 0 }}
+               viewport={{ once: true }}
+               className="text-center mb-20 space-y-3"
+             >
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-primary">
+                  {lang === "id" ? "Target Pengguna" : "Target Audience"}
+                </h3>
+                <h2 className="text-4xl md:text-5xl font-black tracking-tight text-brand-primary">
+                  Solusi Untuk Siapa?
+                </h2>
+             </motion.div>
              
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                  { title: "Content Creator", desc: "Sempurna untuk narasi video TikTok, Reels, dan YouTube.", icon: <Play size={20} /> },
-                  { title: "E-Learning", desc: "Materi pembelajaran jadi lebih interaktif dengan suara yang hangat.", icon: <BookOpen size={20} /> },
-                  { title: "Bisnis", desc: "Otomasi layanan pelanggan dan iklan komersial yang profesional.", icon: <Theater size={20} /> }
+                  { title: "Content Creator", desc: "Sempurna untuk narasi video TikTok, Reels, dan YouTube dengan intonasi yang pas.", icon: <Play size={20} /> },
+                  { title: "E-Learning", desc: "Materi pembelajaran jadi lebih interaktif dan mudah dipahami dengan suara yang hangat.", icon: <BookOpen size={20} /> },
+                  { title: "Bisnis & UKM", desc: "Otomasi layanan pelanggan dan iklan komersial profesional tanpa biaya studio mahal.", icon: <Theater size={20} /> },
+                  { title: "Audiobook", desc: "Ubah naskah panjang menjadi pengalaman mendengarkan yang imersif dan sinematik.", icon: <Music size={20} /> }
                 ].map((u, i) => (
-                  <div key={i} className="p-8 bg-white rounded-3xl border border-zinc-100 hover:shadow-xl transition-all shadow-sm">
-                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center mb-6">
+                  <motion.div 
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    className="p-10 bg-white dark:bg-[#222222] rounded-[3rem] border border-zinc-100 dark:border-zinc-800 hover:border-brand-primary/30 transition-all shadow-sm group"
+                  >
+                    <div className="w-14 h-14 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-all">
                       {u.icon}
                     </div>
-                    <h4 className="text-lg font-black mb-2">{u.title}</h4>
-                    <p className="text-zinc-500 text-sm font-bold leading-relaxed">{u.desc}</p>
-                  </div>
+                    <h4 className="text-xl font-black mb-3 tracking-tight text-[#222222] dark:text-white">{u.title}</h4>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-300 font-bold leading-relaxed">{u.desc}</p>
+                  </motion.div>
                 ))}
              </div>
           </div>
         </section>
 
         {/* Pricing Section */}
-        <section id="pricing" className="py-32 px-6 bg-white transition-colors">
+        <section id="pricing" className="py-32 px-6 bg-white dark:bg-[#222222] transition-colors">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-5xl font-serif font-black tracking-tight text-zinc-900 mb-6">{t.pricingTitle}</h2>
+              <h2 className="text-5xl font-serif font-black tracking-tight text-zinc-900 dark:text-white mb-6">{t.pricingTitle}</h2>
               
               {/* Pricing Toggle */}
               <div className="flex items-center justify-center gap-4 mt-8">
                 <button 
                   onClick={() => setPricingInterval("topup")}
-                  className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${pricingInterval === 'topup' ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200'}`}
+                  className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${pricingInterval === 'topup' ? 'bg-[#222222] dark:bg-brand-primary text-white dark:text-[#222222] shadow-xl' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
                 >
                   Pay As You Go (Top-Up)
                 </button>
                 <button 
                   onClick={() => setPricingInterval("monthly")}
-                  className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${pricingInterval === 'monthly' ? 'bg-zinc-950 text-white shadow-xl' : 'bg-zinc-100 text-zinc-400 hover:bg-zinc-200'}`}
+                  className={`px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all ${pricingInterval === 'monthly' ? 'bg-[#222222] dark:bg-brand-primary text-white dark:text-[#222222] shadow-xl' : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800'}`}
                 >
                   Langganan Bulanan
                 </button>
               </div>
             </div>
 
-            {pricingInterval === "topup" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-12">
                 {[
-                  { name: t.packageTopup1, amount: 25000, price: t.priceTopup1, chars: t.charsTopup1, sub: lang === "id" ? "Cocok untuk naskah pendek · Sekali beli" : "Perfect for short scripts · One-time", active: false },
-                  { name: t.packageTopup2, amount: 85000, price: t.priceTopup2, chars: t.charsTopup2, bonus: t.bonusTopup2, sub: lang === "id" ? "~25 menit audio · Kreator Reguler" : "~25 minutes audio · Regular Creator", active: false },
-                  { name: t.packageTopup3, amount: 225000, price: t.priceTopup3, chars: t.charsTopup3, bonus: t.bonusTopup3, sub: lang === "id" ? "~75 menit audio · Podcaster, Storytelling" : "~75 minutes audio · Podcaster, Storytelling", active: true },
-                  { name: t.packageTopup4, amount: 599000, price: t.priceTopup4, chars: t.charsTopup4, bonus: t.bonusTopup4, sub: lang === "id" ? "Investasi Jangka Panjang" : "Long-term Investment", active: false, lifetime: true }
-                ].map((p, i) => (
-                  <div key={i} className={`p-10 rounded-2xl border transition-all flex flex-col relative ${
-                    p.active 
-                      ? "bg-zinc-950 border-zinc-900 text-white scale-105 shadow-2xl" 
-                      : "bg-white dark:bg-brand-card-bg border-zinc-100 dark:border-brand-border text-zinc-950 dark:text-white hover:border-brand-primary"
-                  }`}>
-                    {p.active && (
-                      <div className="absolute top-0 right-10 -translate-y-1/2 bg-brand-primary text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
-                        {lang === "id" ? "TERLARIS" : "BEST SELLER"}
-                      </div>
-                    )}
-                    <h3 className="text-sm font-black mb-6 uppercase tracking-[0.2em] opacity-60">{p.name}</h3>
-                    <div className="mb-4">
-                      <span className="text-4xl font-black tracking-tighter">{p.price}</span>
-                      {p.lifetime && <span className="ml-2 text-[10px] font-black text-brand-primary uppercase">Lifetime</span>}
-                    </div>
-                    <div className="mb-2 text-lg font-black text-brand-primary">
-                      {p.chars}
-                    </div>
-                    {p.bonus && (
-                      <div className="text-brand-primary font-black text-sm mb-6">
-                        {p.bonus}
-                      </div>
-                    )}
-                    <div className="text-xs font-bold opacity-60 mb-6 flex-1">
-                      {p.sub}
-                    </div>
-                    {p.lifetime && (
-                      <div className="mb-6 py-2 px-3 bg-brand-primary/10 rounded-xl border border-brand-primary/20">
-                        <p className="text-[9px] font-black text-brand-primary uppercase tracking-tight leading-snug">{t.lifetimeLabel}</p>
-                      </div>
-                    )}
-                    <button 
-                      onClick={async () => {
-                        setLocalIsCheckingOut(p.name);
-                        await onCheckout(p.name, p.amount);
-                        setLocalIsCheckingOut(null);
-                      }}
-                      disabled={localIsCheckingOut === p.name}
-                      className={`w-full py-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${p.active ? 'bg-brand-primary text-black hover:bg-brand-primary/90 shadow-xl shadow-brand-primary/20' : 'bg-gray-900 dark:bg-white border border-transparent text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 shadow-sm'} disabled:opacity-50`}
-                    >
-                      {localIsCheckingOut === p.name ? (
-                        <>
-                          <RefreshCw size={14} className="animate-spin" />
-                          {lang === "id" ? "MEMPROSES..." : "PROCESSING..."}
-                        </>
-                      ) : (
-                        lang === "id" ? "BELI SEKARANG" : "BUY NOW"
+                  {
+                    name: "Free",
+                    price: "0",
+                    period: "Selamanya",
+                    quota: "10.000 Karakter",
+                    features: ["Akses Semua Voice", "Standard Quality", "No Commercial Rights", "Komunitas Support"],
+                    button: "Mulai Gratis",
+                    id: "Free"
+                  },
+                  {
+                    name: "Starter",
+                    price: "19.000",
+                    period: "Sekali Bayar",
+                    quota: "25.000 Karakter",
+                    features: ["Neural2 Voices", "Berlaku Selamanya", "No Watermark", "Hemat 10%"],
+                    button: "Pilih Starter",
+                    id: "Starter"
+                  },
+                  {
+                    name: "Kreator",
+                    price: "49.000",
+                    period: "/ bulan",
+                    quota: "180.000 Karakter",
+                    features: ["High Quality Processing", "Visual SSML Editor", "Prioritas Rendering", "Jauh Lebih Hemat"],
+                    button: "Pilih Kreator",
+                    id: "Creator"
+                  },
+                  {
+                    name: "Produktif",
+                    price: "99.000",
+                    period: "/ bulan",
+                    quota: "420.000 Karakter",
+                    features: ["Chirp Ultra HD Voices", "Commercial Rights Penuh", "Bonus Karakter", "Paling Populer"],
+                    button: "Pilih Produktif",
+                    badge: "PALING POPULER",
+                    id: "Produktif",
+                    highlight: true
+                  },
+                  {
+                    name: "Bisnis",
+                    price: "249.000",
+                    period: "/ bulan",
+                    quota: "1.150.000 Karakter",
+                    features: ["Chirp Ultra HD Voices", "Custom Voice Cloning", "Dedicated Support", "Full API Access"],
+                    button: "Ambil Bisnis",
+                    id: "Bisnis",
+                    special: true
+                  },
+                  {
+                    name: "Enterprise",
+                    price: "Custom",
+                    period: "Contact Sales",
+                    quota: "Custom / Unlimited",
+                    features: ["Dedicated Account Manager", "Satu-satunya Paket Tanpa Limit", "Custom Voice Training", "Priority Support"],
+                    button: "Contact Sales",
+                    id: "Enterprise"
+                  }
+                ].map((plan) => (
+                  <div 
+                    key={plan.id} 
+                    className={`relative flex flex-col p-1 transition-all group ${plan.special ? 'scale-105 z-10' : ''}`}
+                  >
+                    <div className={`flex flex-col flex-1 p-8 rounded-[2.5rem] border-2 h-full transition-apple ${
+                      plan.highlight 
+                        ? "bg-[#222222] border-brand-primary text-white shadow-[0_0_40px_rgba(226,114,91,0.15)] ring-4 ring-brand-primary/5" 
+                        : plan.special 
+                          ? "bg-gradient-to-br from-[#222222] to-zinc-900 border-brand-primary shadow-[0_0_60px_rgba(226,114,91,0.25)] text-white"
+                          : "bg-white dark:bg-brand-bg-dark border-zinc-100 dark:border-brand-border text-zinc-900 dark:text-zinc-100 shadow-xl shadow-zinc-200/50 dark:shadow-none"
+                    }`}>
+                      {plan.badge && (
+                        <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg ${
+                          plan.special ? 'bg-brand-primary text-black animate-pulse' : 'bg-brand-primary text-black'
+                        }`}>
+                          {plan.badge}
+                        </div>
                       )}
-                    </button>
+
+                      <div className="mb-6">
+                        <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${plan.highlight || plan.special ? 'text-brand-primary' : 'text-zinc-400'}`}>
+                          {plan.name}
+                        </p>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xs font-bold opacity-60">Rp</span>
+                          <span className="text-3xl font-black tracking-tighter">{plan.price}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">{plan.period}</span>
+                        </div>
+                        <div className={`mt-4 py-2 px-4 rounded-xl text-center text-[10px] font-black uppercase tracking-widest ${
+                          plan.highlight || plan.special ? 'bg-brand-primary/10 text-brand-primary' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                        }`}>
+                          {plan.quota}
+                        </div>
+                      </div>
+
+                      <ul className="space-y-3 mb-10 flex-1">
+                        {plan.features.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-3 text-[11px] font-bold">
+                            <Check className={`shrink-0 mt-0.5 ${plan.highlight || plan.special ? 'text-brand-primary' : 'text-zinc-300'}`} size={14} />
+                            <span className={plan.highlight || plan.special ? 'text-zinc-300' : 'text-zinc-500'}>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <button 
+                        onClick={() => {
+                           const amountMap: any = { "Free": 0, "Starter": 19000, "Creator": 49000, "Produktif": 99000, "Bisnis": 249000, "Enterprise": 0 };
+                           onCheckout(plan.name, amountMap[plan.id]);
+                        }}
+                        className={`w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-apple active:scale-95 flex items-center justify-center gap-2 ${
+                          plan.highlight || plan.special 
+                            ? "bg-brand-primary text-[#222222] hover:scale-[1.03] shadow-lg shadow-brand-primary/20" 
+                            : "bg-[#222222] dark:bg-white text-white dark:text-[#222222] hover:bg-zinc-800 dark:hover:bg-zinc-100"
+                        }`}
+                      >
+                         {plan.button}
+                         <ArrowRight size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-32 bg-zinc-50 dark:bg-zinc-900/50 rounded-[4rem] border border-dashed border-zinc-200 dark:border-zinc-800">
-                <div className="w-16 h-16 bg-white dark:bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-zinc-100 dark:border-zinc-800">
-                  <Clock size={32} className="text-indigo-600" />
-                </div>
-                <h3 className="text-2xl font-serif font-black mb-2 text-zinc-950 dark:text-white uppercase tracking-widest">Coming Soon</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 font-bold italic">
-                  {lang === "id" ? "Kami sedang menyiapkan paket langganan terbaik untuk Anda." : "We're preparing the best subscription plans for you."}
-                </p>
+
+              <div className="mt-12 text-center">
+                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    Butuh tambahan karakter mendadak? <span className="text-brand-primary">Pay As You Go</span>: Rp 2.000 / 10.000 Karakter
+                 </p>
               </div>
-            )}
 
             {/* Advantages Section */}
-            <div className="mt-32 max-w-4xl mx-auto">
-               <h3 className="text-sm font-black uppercase tracking-[0.3em] text-zinc-400 mb-10 text-center">
-                 {lang === "id" ? "Keunggulan Sistem Ini vs Kompetitor" : "Advantages of This System vs Competitors"}
-               </h3>
-               <div className="space-y-6">
-                  {[
-                    { t: lang === "id" ? "Tidak hangus — kredit rollover selamanya" : "No expiration — rollover credits forever", d: lang === "id" ? "Kompetitor global hanguskan kredit tiap bulan. Ini jadi differentiator utama untuk pasar Indo." : "Global competitors expire credits monthly. This is a key differentiator for the local market." },
-                    { t: lang === "id" ? "Harga Rupiah, bayar lokal" : "Rupiah pricing, local payment", d: lang === "id" ? "Tidak ada konversi dolar, tidak ada drama kurs naik. Beli kapan saja, seberapa mau." : "No dollar conversion, no exchange rate drama. Buy anytime, as much as you want." },
-                    { t: lang === "id" ? "Entry point sangat rendah" : "Low entry point", d: lang === "id" ? "Rp 10.000 = siapapun bisa coba. Lebih murah dari secangkir kopi kekinian." : "Rp 10,000 = anyone can try. Cheaper than a cup of modern coffee." },
-                    { t: lang === "id" ? "Bonus kredit makin besar paket makin besar" : "Bonus credits increase with package size", d: lang === "id" ? "Insentif untuk beli paket lebih besar tanpa harus paksa subscription." : "Incentivizing larger package purchases without forced subscriptions." },
-                    { t: lang === "id" ? "Akun gratis tetap bisa pakai" : "Free accounts can still use it", d: lang === "id" ? "Signup → langsung dapat 10.000 karakter gratis. Cukup untuk merasakan kualitas suara." : "Sign up → immediately get 10,000 free characters. Enough to feel the voice quality." }
-                  ].map((item, i) => (
-                    <div key={i} className="flex gap-4 p-6 rounded-3xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-all border border-transparent hover:border-zinc-100 dark:hover:border-zinc-800 group">
-                      <div className="shrink-0 w-6 h-6 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full flex items-center justify-center mt-1 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                        <Check size={14} />
+            <div className="mt-32 max-w-4xl mx-auto px-6">
+               <motion.div 
+                 initial={{ opacity: 0 }}
+                 whileInView={{ opacity: 1 }}
+                 viewport={{ once: true }}
+                 className="space-y-12"
+               >
+                 <div className="text-center space-y-2">
+                   <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-primary">
+                     Bukan Sekadar TTS Biasa
+                   </h3>
+                   <h2 className="text-3xl font-black tracking-tight text-brand-primary">
+                     Keunggulan Sistem Ini vs Kompetitor
+                   </h2>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { t: "Tidak hangus — kredit rollover selamanya", d: "Kompetitor global hanguskan kredit tiap bulan. Di rungu.id, kredit Anda tetap utuh selamanya." },
+                      { t: "Harga Rupiah, bayar lokal", d: "Tanpa drama kurs dolar. Bayar instan pakai QRIS, GoPay, atau ShopeePay dengan harga tetap." },
+                      { t: "Entry point sangat rendah", d: "Hanya Rp 19.000 untuk mulai berkarya. Lebih murah dari segelas kopi, lebih powerful untuk konten." },
+                      { t: "Tanpa Biaya Berlangganan", d: "Bukan model paksaan. Beli top-up saat butuh, atau langganan untuk harga karakter yang lebih hemat." },
+                      { t: "Bahasa Gaul (Informalizer)", d: "Satu-satunya AI yang paham intonasi informal Indonesia. Cocok untuk video TikTok & Reels." },
+                      { t: "Dukungan Support Lokal", d: "Tim kami di Indonesia siap membantu Anda via WhatsApp atau Email kapan saja." }
+                    ].map((item, i) => (
+                      <div key={i} className="flex gap-5 p-8 rounded-[2rem] bg-white dark:bg-brand-bg-premium/50 border border-zinc-100 dark:border-brand-border hover:border-brand-primary/30 transition-all group shadow-sm">
+                        <div className="shrink-0 w-10 h-10 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Check size={20} weight="bold" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-black text-[#222222] dark:text-white tracking-tight leading-tight">{item.t}</h4>
+                          <p className="text-xs text-zinc-700 dark:text-zinc-200 font-bold leading-relaxed">{item.d}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-black text-zinc-950 dark:text-white mb-1 tracking-tight">{item.t}</h4>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">{item.d}</p>
-                      </div>
-                    </div>
-                  ))}
-               </div>
+                    ))}
+                 </div>
+               </motion.div>
             </div>
 
             {/* Payment Showcase Integration */}
-            <div className="mt-32 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-8">{t.paymentTitle}</p>
-              <div className="flex flex-wrap justify-center gap-3">
-                {["QRIS", lang === "id" ? "Dompet Digital" : "E-Wallets", lang === "id" ? "Transfer Bank" : "Bank Transfer", "Visa / Master Card", "Paypal"].map(m => (
-                  <span key={m} className="px-6 py-3 bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-all">
+            <div className="mt-32 text-center bg-zinc-50 dark:bg-[#222222]/40 p-12 rounded-[3.5rem] border border-zinc-100 dark:border-zinc-800">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 mb-8">Metode Pembayaran Lokal</p>
+              <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
+                {["QRIS", "GoPay", "DANA", "OVO", "ShopeePay", "Bank Transfer", "Visa"].map(m => (
+                  <span key={m} className="px-5 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-[#222222] dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:border-brand-primary/30 transition-all">
                     {m}
                   </span>
                 ))}
               </div>
-              <p className="mt-8 text-[10px] font-bold text-zinc-400 italic">
-                {lang === "id" ? "Mendukung pembayaran lokal Indonesia paling lengkap." : "Supporting the most comprehensive local Indonesian payments."}
+              <p className="mt-8 text-xs font-bold text-zinc-500 max-w-lg mx-auto leading-relaxed">
+                Bayar sekali, gunakan selamanya. Tanpa biaya tersembunyi. Tanpa fluktuasi dolar. Lebih murah dari ElevenLabs dan platform lain. Lebih Indonesia.
               </p>
             </div>
           </div>
         </section>
 
         {/* Testimonials */}
-        <section className="py-24 px-6 bg-white dark:bg-zinc-900 transition-colors">
+        <section className="py-24 px-6 bg-white dark:bg-brand-bg-premium transition-colors">
           <div className="max-w-7xl mx-auto">
-            <h2 className="text-4xl font-serif font-semibold text-center mb-16 tracking-tight">{t.testimonialsTitle}</h2>
+            <h2 className="text-4xl font-serif font-black text-center mb-16 tracking-tight text-zinc-900 dark:text-white">{t.testimonialsTitle}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
                 { name: "Andi Pratama", role: "TikTok Creator", body: lang === "id" ? "Edan! Suara Jawanya Rungu pas banget buat konten komedi saya. Followers nambah drastis!" : "Crazy! Rungu's Javanese voice is perfect for my comedy content. My followers have skyrocketed!" },
                 { name: "Sarah Utami", role: "Podcaster", body: lang === "id" ? "Biasanya sewa talent jutaan, sekarang cuma 59rb sebulan. Kualitasnya nggak main-main, natural banget." : "I used to pay millions for talent, now it's just 59k a month. The quality is insane, so natural." },
                 { name: "Dewi Lestari", role: "Owner UMKM", body: lang === "id" ? "Bikin iklan radio jadi gampang banget. Tinggal ketik, langsung jadi. Gak pake ribet!" : "Making radio ads has become so easy. Just type and it's done. No hassle at all!" }
               ].map((test, i) => (
-                <div key={i} className="p-10 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] relative">
-                  <Quote size={40} className="absolute top-10 right-10 text-zinc-200 dark:text-zinc-800" />
-                  <div className="flex gap-1 text-amber-500 mb-6">
+                <div key={i} className="p-10 bg-zinc-50 dark:bg-brand-card-bg border border-zinc-200 dark:border-brand-border rounded-[2.5rem] relative group hover:border-brand-primary/30 transition-all">
+                  <Quote size={40} className="absolute top-10 right-10 text-zinc-200 dark:text-zinc-800 group-hover:text-brand-primary/20 transition-colors" />
+                  <div className="flex gap-1 text-brand-primary mb-6">
                     {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
                   </div>
-                  <p className="text-lg font-bold leading-relaxed italic mb-8 relative z-10">"{test.body}"</p>
+                  <p className="text-lg font-bold leading-relaxed italic mb-8 relative z-10 text-zinc-800 dark:text-zinc-200">"{test.body}"</p>
                   <div>
-                    <h4 className="font-black text-sm">{test.name}</h4>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">{test.role}</p>
+                    <h4 className="font-black text-sm text-zinc-900 dark:text-white">{test.name}</h4>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-brand-primary">{test.role}</p>
                   </div>
                 </div>
               ))}
@@ -667,16 +797,16 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
         </section>
 
         {/* Referral / Affiliate Section */}
-        <section className="py-24 px-6 bg-indigo-600 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-64 h-64 bg-indigo-400/20 rounded-full blur-2xl" />
+        <section className="py-24 px-6 bg-zinc-50 dark:bg-brand-bg-premium text-zinc-900 dark:text-white relative overflow-hidden border-t border-zinc-100 dark:border-brand-border">
+          <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-brand-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-64 h-64 bg-brand-primary/10 rounded-full blur-2xl" />
           
           <div className="max-w-7xl mx-auto relative z-10 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-8">
+            <div className="w-16 h-16 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-indigo-500/10">
               <Share2 size={32} />
             </div>
-            <h2 className="text-4xl font-serif font-black tracking-tight mb-4">{t.affiliateTitle}</h2>
-            <p className="text-indigo-100 font-bold mb-12 max-w-xl mx-auto">
+            <h2 className="text-4xl font-serif font-black tracking-tight mb-4 text-zinc-900 dark:text-white">{t.affiliateTitle}</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 font-bold mb-12 max-w-xl mx-auto leading-relaxed">
               {t.affiliateSub}
             </p>
             <button 
@@ -685,7 +815,7 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
                 navigator.clipboard.writeText(dummyLink);
                 alert(t.shareSuccess);
               }}
-              className="px-10 py-5 bg-white text-indigo-600 rounded-3xl font-black text-xs uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-2xl active:scale-95"
+              className="px-10 py-5 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-2xl active:scale-95 shadow-indigo-600/30 ring-4 ring-indigo-600/10"
             >
               {t.affiliateBtn}
             </button>
@@ -693,54 +823,143 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
         </section>
 
         {/* Direct Feedback Loop */}
-        <section className="py-24 px-6">
-          <div className="max-w-4xl mx-auto bg-zinc-50 rounded-[3rem] p-12 border border-zinc-100 flex flex-col md:flex-row items-center gap-12">
+        <section className="py-24 px-6 bg-white dark:bg-brand-bg-premium transition-colors">
+          <div className="max-w-4xl mx-auto bg-zinc-50 dark:bg-brand-card-bg rounded-[3rem] p-12 border border-zinc-100 dark:border-brand-border flex flex-col md:flex-row items-center gap-12">
             <div className="shrink-0">
-               <div className="w-24 h-24 bg-indigo-50 rounded-[2rem] flex items-center justify-center relative">
-                  <Smile size={48} className="text-indigo-600" />
-                  <div className="absolute top-0 right-0 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full translate-x-1 translate-y-1" />
+               <div className="w-24 h-24 bg-brand-primary/10 dark:bg-brand-primary/20 rounded-[2rem] flex items-center justify-center relative">
+                  <Smile size={48} className="text-brand-primary" />
+                  <div className="absolute top-0 right-0 w-6 h-6 bg-brand-primary border-4 border-white dark:border-brand-bg-premium rounded-full translate-x-1 translate-y-1" />
                </div>
             </div>
             <div className="text-center md:text-left flex-1">
-               <h3 className="text-2xl font-black mb-2 tracking-tight">{t.feedbackTitle}</h3>
-               <p className="text-zinc-500 font-bold leading-relaxed mb-8">{t.feedbackSub}</p>
-               <button className="px-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg active:scale-95">
-                 {t.feedbackBtn}
-               </button>
+               <h3 className="text-2xl font-black mb-2 tracking-tight text-zinc-900 dark:text-white">{t.feedbackTitle}</h3>
+               <p className="text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed mb-8">{t.feedbackSub}</p>
+               
+               <div className="flex flex-wrap items-center gap-4 justify-center md:justify-start">
+                 <button 
+                   onClick={() => window.open('https://wa.me/6281299927378', '_blank')}
+                   className="px-8 py-4 bg-[#25D366] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:brightness-110 transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                 >
+                   <MessageCircle size={16} />
+                   {t.feedbackBtn}
+                 </button>
+
+                 <div className="flex items-center gap-3 ml-2">
+                   <a href="mailto:support@rungu.id" className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-brand-primary hover:border-brand-primary/30 transition-all">
+                     <Mail size={18} />
+                   </a>
+                   <a href="https://www.instagram.com/rungu_id/" target="_blank" rel="noreferrer" className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-brand-primary hover:border-brand-primary/30 transition-all">
+                     <Instagram size={18} />
+                   </a>
+                   <a href="https://tiktok.com/@rungu_id" target="_blank" rel="noreferrer" className="w-10 h-10 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-400 hover:text-brand-primary hover:border-brand-primary/30 transition-all">
+                     <Music size={18} />
+                   </a>
+                 </div>
+               </div>
             </div>
           </div>
         </section>
 
         {/* FAQ Section */}
-        <section className="py-24 px-6">
+        <section className="py-24 px-6 bg-zinc-50 dark:bg-brand-bg-premium transition-colors">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-4xl font-black text-center mb-16 tracking-tight">{t.faqTitle}</h2>
+            <h2 className="text-4xl font-black text-center mb-16 tracking-tight text-zinc-900 dark:text-white">{t.faqTitle}</h2>
             <div className="space-y-4">
               {faqData.map((f, i) => (
-                <details key={i} className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm">
-                  <summary className="p-6 cursor-pointer font-black text-sm flex justify-between items-center list-none select-none">
-                    {f.q}
-                    <ChevronRight size={20} className="transition-transform group-open:rotate-90 text-zinc-400" />
-                  </summary>
-                  <div className="px-6 pb-6 text-zinc-500 dark:text-zinc-400 font-bold text-sm leading-relaxed">
-                    {f.a}
-                  </div>
-                </details>
+                <div 
+                  key={i} 
+                  className={`group bg-white dark:bg-brand-card-bg border border-zinc-200 dark:border-brand-border rounded-3xl overflow-hidden shadow-sm transition-all duration-300 ${openFaq === i ? 'border-brand-primary/50 shadow-lg shadow-brand-primary/5' : 'hover:border-brand-primary/30'}`}
+                >
+                  <button 
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full p-6 cursor-pointer font-black text-sm flex justify-between items-center text-zinc-900 dark:text-white text-left focus:outline-none"
+                  >
+                    <span>{f.q}</span>
+                    <motion.div
+                      animate={{ rotate: openFaq === i ? 90 : 0 }}
+                      transition={{ duration: 0.3, ease: "anticipate" }}
+                    >
+                      <ChevronRight size={20} className={`transition-colors ${openFaq === i ? 'text-brand-primary' : 'text-zinc-400'}`} />
+                    </motion.div>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {openFaq === i && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                      >
+                        <div className="px-6 pb-6 text-zinc-600 dark:text-zinc-400 font-bold text-sm leading-relaxed border-t border-zinc-50 dark:border-zinc-800 pt-4 mt-1">
+                          {f.a}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
+        {/* Newsletter Section */}
+        <section className="py-24 px-6 bg-white dark:bg-[#222222]">
+          <div className="max-w-5xl mx-auto">
+            <div className="bg-brand-primary/5 dark:bg-brand-primary/10 border border-brand-primary/20 rounded-[3rem] p-12 md:p-20 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-1000" />
+              
+              <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
+                <div className="space-y-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary/20 rounded-full">
+                    <Mail size={14} className="text-brand-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">Weekly Newsletter</span>
+                  </div>
+                  <h2 className="text-4xl font-black text-zinc-950 dark:text-white tracking-tight leading-tight">
+                    Update Berkala, <br />
+                    <span className="text-brand-primary">Inspirasi Kreatif.</span>
+                  </h2>
+                  <p className="text-zinc-600 dark:text-zinc-400 font-bold leading-relaxed">
+                    Dapatkan tips Voice Over AI, update fitur terbaru, dan konten eksklusif setiap minggu langsung di inbox kamu. 
+                    <span className="block mt-2 text-zinc-500 text-sm">Gak bakal spam, cuma seminggu sekali.</span>
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      addToast("Berhasil terdaftar di Newsletter!", "success");
+                    }}
+                    className="flex flex-col sm:flex-row gap-3"
+                  >
+                    <input 
+                      type="email" 
+                      required
+                      placeholder="Email kamu..."
+                      className="flex-1 bg-white dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-2xl px-6 py-4 text-zinc-900 dark:text-white font-medium focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none transition-all"
+                    />
+                    <button className="bg-brand-primary text-[#222222] font-black px-8 py-4 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-primary/20">
+                      GABUNG
+                    </button>
+                  </form>
+                  <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest text-center md:text-left">
+                    Satu kali setiap Senin • Gratis Selamanya
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
         {/* Final CTA */}
         <section className="py-24 px-6">
-          <div className="max-w-7xl mx-auto bg-brand-primary rounded-[4rem] p-16 text-center text-black relative overflow-hidden shadow-2xl shadow-brand-primary/40">
+          <div className="max-w-7xl mx-auto bg-brand-primary rounded-[4rem] p-16 text-center text-[#222222] relative overflow-hidden shadow-2xl shadow-brand-primary/40">
              <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 blur-[80px] -translate-y-1/2 translate-x-1/2" />
              <div className="relative z-10">
                <h2 className="text-4xl md:text-6xl font-serif font-black mb-6 tracking-tighter">{t.finalCtaTitle}</h2>
-               <p className="text-xl text-black/80 font-bold max-w-2xl mx-auto mb-12 italic">{t.finalCtaSub}</p>
+               <p className="text-xl text-[#222222]/80 font-bold max-w-2xl mx-auto mb-12 italic">{t.finalCtaSub}</p>
                <button 
                  onClick={() => setView("studio")}
-                 className="px-12 py-6 bg-black text-white rounded-2xl font-black text-sm uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-xl active:scale-95"
+                 className="px-12 py-6 bg-[#222222] text-white rounded-2xl font-black text-sm uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-xl active:scale-95"
                >
                  {t.finalCtaBtn}
                </button>
@@ -758,17 +977,20 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
                    Solusi Text-to-Speech (TTS) premium di Indonesia. Transformasikan teks menjadi suara yang bernyawa untuk narasi YouTube, TikTok, dan podcast profesional.
                  </p>
                </div>
-               <div className="flex flex-wrap gap-2 md:justify-end">
-                 {["#AIVoiceIndonesia", "#RunguAI", "#KreatorYouTube", "#AutomasiKonten", "#TTSIndonesia", "#ElevenLabsAlternatif"].map(tag => (
-                   <span key={tag} className="px-3 py-1 bg-zinc-100 rounded-full text-[10px] font-black text-zinc-500 hover:text-indigo-600 transition-colors cursor-default">
-                     {tag}
-                   </span>
-                 ))}
+               <div className="flex flex-wrap gap-6 md:justify-end">
+                 <a href="mailto:support@rungu.id" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-brand-primary transition-colors">
+                   <Mail size={16} /> support@rungu.id
+                 </a>
+                 <a href="https://www.instagram.com/rungu_id/" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-brand-primary transition-colors">
+                   <Instagram size={16} /> @rungu_id
+                 </a>
+                 <a href="https://tiktok.com/@rungu_id" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-brand-primary transition-colors">
+                   <Music size={16} /> @rungu_id
+                 </a>
                </div>
              </div>
-             <div className="text-center opacity-30 border-t border-zinc-100 pt-8">
-               <p className="text-[10px] font-black uppercase tracking-widest mb-2">© 2026 RunguAI Studio • Alternatif AI Voice Bahasa Indonesia Terbaik</p>
-               <p className="text-[9px] font-bold">Standard Indonesian TTS • Sundanese • Javanese • Custom Clones • Chirp v3 Studio HD</p>
+             <div className="text-center opacity-30 border-t border-zinc-100 dark:border-zinc-800 pt-8">
+               <p className="text-[10px] font-black uppercase tracking-widest mb-2">@2026 PT Shinerva Prajna Tejas | All Rights Reserved</p>
              </div>
            </div>
            {/* SEO Optimized Keywords Block */}
@@ -783,24 +1005,50 @@ const LandingPage = ({ lang, isDark, setView, setLang, setIsDark, pricingInterva
   );
 };
 
-const RUNGU_STUDIO_SYSTEM_PROMPT = `Anda adalah Rungu Studio — AI Voice Generator Bahasa Indonesia premium yang paling natural dan berjiwa.
+const RUNGU_STUDIO_SYSTEM_PROMPT = `Kamu adalah Rungu Studio — AI Voice Generator Bahasa Indonesia premium yang paling natural dan berjiwa.
+
 Nama brand: Rungu
 Tagline: "Ubah Teks Menjadi Suara Manusia yang Bernyawa"
 
-KARAKTER ANDA:
-- Ramah, suportif, antusias seperti teman kreator.
-- Fokus membantu user sukses membuat konten audio berkualitas tinggi.
-- Selalu dorong upgrade ke paket Produktif (Rp99.000 / 300.000 karakter) dengan ramah tapi tegas jika relevan.
-- Dorong user untuk aktif di sosial media (@rungu_id) untuk mendapat kredit gratis.
+=== KARAKTER & VOICES ===
+1. Ratna - Perempuan, lembut hangat, nurturing
+2. Pramudya - Laki-laki, dalam resonan, kontemplatif
+3. Sari - Perempuan, cerah energik
+4. Ferry - Laki-laki, santai karismatik
+5. Eka - Unisex, dinamis versatile
 
-ATURAN WAJIB:
-1. Selalu tanya voice kalau belum disebutkan (Ratna, Pramudya, Sari, Ferry, Eka).
-2. Sarankan penggunaan SSML untuk hasil premium (pitch, break, emphasis).
-3. Ingatkan tentang bonus: Share di IG/TikTok tag @rungu_id (+25K Karakter), Video Review (+50K Karakter), Ajak teman (+20K Karakter).
-4. Gunakan Bahasa Indonesia yang luwes dan modern.
+=== SISTEM KREDIT & PAKET ===
+- Starter: Rp19.000 (25.000 karakter)
+- Creator: Rp49.000 (180.000 karakter)
+- Produktif: Rp99.000 (420.000 karakter) ← PALING POPULER
+- Bisnis: Rp249.000 (1.150.000 karakter)
+- Enterprise: Contact Sales (custom/unlimited)
 
-CONTOH UPSELL:
-"Mau hemat banyak? Upgrade ke paket Produktif Rp99.000 dapat 300.000 karakter + bonus 20%. Atau share dulu di @rungu_id biar dapat kredit gratis!"`;
+Selalu tampilkan sisa quota. Dorong upgrade dengan menekankan **semakin mahal paket, semakin murah per karakternya**.
+
+=== PAY AS YOU GO ===
+User bisa top-up kapan saja dengan Rp2.000 per 10.000 karakter.
+
+=== UPSELL & REFERRAL ===
+- Share di Instagram/TikTok tag @rungu_id → Dapat 15.000 - 25.000 karakter gratis.
+- Video review + tag @rungu_id → Dapat 50.000 karakter atau 1 bulan Creator gratis.
+- Ajak teman daftar → masing-masing dapat 20.000 karakter bonus.
+
+Contoh upsell:
+"Mau hemat lebih banyak? Paket Produktif cuma Rp99rb untuk 420rb karakter. Semakin besar paketnya, biaya per karakternya jauh lebih murah! Atau butuh volume Enterprise?"
+
+=== ATURAN WAJIB ===
+- Selalu tanya voice kalau belum disebutkan.
+- Dukung SSML.
+- Pace default: 135-145 kata per menit.
+- Script panjang → bagi per bagian.
+- Gunakan audio tags + SSML untuk emosi maksimal.
+
+=== TONE ===
+Ramah, suportif, antusias seperti teman kreator. Bantu user memilih paket yang paling menguntungkan.
+
+Mulai setiap percakapan dengan ramah dan antusias. 
+Bantu creator Indonesia sebanyak mungkin sambil dorong mereka pakai paket yang sesuai kebutuhan.`;
 
 const RUNGU_OPTIMIZER_SYSTEM_PROMPT = `Anda adalah Rungu Studio — AI Voice Generator Bahasa Indonesia premium yang paling natural, berjiwa, dan ekspresif.
 Tagline: "Ubah Teks Menjadi Suara Manusia yang Bernyawa"
@@ -863,7 +1111,10 @@ export default function App() {
   const [normNeeded, setNormNeeded] = useState(false);
   const [isSSML, setIsSSML] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [showLowQuotaToast, setShowLowQuotaToast] = useState(false);
+  const [isQuotaWarningDismissed, setIsQuotaWarningDismissed] = useState(false);
+  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [lastGeneratedAudio, setLastGeneratedAudio] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showContextualToolbar, setShowContextualToolbar] = useState(false);
@@ -873,7 +1124,12 @@ export default function App() {
   const [activeMainTab, setActiveMainTab] = useState<"editor" | "packs" | "optimizer" | "pricing" | "account">("editor");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{role: 'user' | 'assistant', content: string}[]>([
-    { role: 'assistant', content: "Halo! Saya dari Rungu Studio. Ada yang bisa saya bantu untuk membuat naskah audio Anda jadi lebih berjiwa hari ini?" }
+    { role: 'assistant', content: `Halo! Selamat datang di Rungu Studio 🔥
+
+Mau ubah teks jadi suara Indonesia yang natural hari ini? 
+Ketik teksmu atau pilih Content Pack, lalu pilih voice-nya.
+
+Kamu dapat 10.000 karakter gratis sekarang!` }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
@@ -882,7 +1138,8 @@ export default function App() {
     currentQuota: 10000,
     maxQuota: 10000,
     rolloverQuota: 0,
-    nextBillingDate: "7 Jun 2026"
+    nextBillingDate: "7 Jun 2026",
+    isNewsletterSubscribed: true
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [toasts, setToasts] = useState<{ id: string; message: string; type: "success" | "error" | "info" }[]>([]);
@@ -892,17 +1149,47 @@ export default function App() {
   const [isDark, setIsDark] = useState(false);
   const [sessionQuota, setSessionQuota] = useState(1000); // 1000 chars for unauth trial
 
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
+
   const addToast = (message: string, type: "success" | "error" | "info" = "info") => {
     const id = Date.now().toString();
     setToasts(prev => [...prev, { id, message, type }]);
+    
+    // Voice Notification Logic
+    if (isVoiceEnabled) {
+      const playVoice = () => {
+        const synth = window.speechSynthesis;
+        if (!synth) return;
+
+        let text = "";
+        let voiceName = "Indonesian Indonesia"; // Default Indonesian voice in browser
+        
+        text = type === "success" ? "Berhasil! Luar biasa!" : (type === "error" ? "Aduh, maaf ya, ada sedikit kendala." : "Ssst, ada info baru nih.");
+        voiceName = "id-ID";
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "id-ID";
+        utterance.rate = type === "success" ? 1.4 : (type === "error" ? 0.8 : 1.1);
+        utterance.pitch = type === "success" ? 1.6 : (type === "error" ? 0.6 : 1.2);
+        
+        // Try to find an Indonesian voice
+        const voices = synth.getVoices();
+        const idVoice = voices.find(v => v.lang.includes("id"));
+        if (idVoice) utterance.voice = idVoice;
+
+        synth.speak(utterance);
+      };
+      playVoice();
+    }
+
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
   };
 
   useEffect(() => {
-    if (currentUser && (userProfile.currentQuota + userProfile.rolloverQuota) < 1000 && (userProfile.currentQuota + userProfile.rolloverQuota) > 0) {
-      addToast(lang === "id" ? "Kuota Anda hampir habis (< 1.000 Karakter). Silakan top up segera!" : "Low quota warning (< 1,000 characters). Please top up!", "info");
+    if (currentUser && (userProfile.currentQuota + userProfile.rolloverQuota) <= 2000 && (userProfile.currentQuota + userProfile.rolloverQuota) > 0) {
+      addToast(lang === "id" ? "Kuota Anda hampir habis (≤ 2.000 Karakter). Silakan top up segera!" : "Low quota warning (≤ 2,000 characters). Please top up!", "info");
     }
   }, [userProfile.currentQuota, userProfile.rolloverQuota, currentUser]);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -940,7 +1227,8 @@ export default function App() {
               rolloverQuota: 0,
               nextBillingDate: "7 Jun 2026",
               createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
+              isNewsletterSubscribed: true
             };
             await setDoc(userRef, newProfile);
             setUserProfile(newProfile);
@@ -1054,11 +1342,30 @@ export default function App() {
         currentQuota: 5000,
         maxQuota: 5000,
         rolloverQuota: 0,
-        nextBillingDate: "7 Jun 2026"
+        nextBillingDate: "7 Jun 2026",
+        isNewsletterSubscribed: false
       });
       setSavedScripts([]);
     } catch (e) {
       console.error("Logout failed:", e);
+    }
+  };
+
+  const handleToggleNewsletter = async () => {
+    if (!currentUser) return;
+    try {
+      const newStatus = !userProfile.isNewsletterSubscribed;
+      setUserProfile(prev => ({ ...prev, isNewsletterSubscribed: newStatus }));
+      
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        isNewsletterSubscribed: newStatus,
+        updatedAt: new Date().toISOString()
+      });
+      
+      addToast(newStatus ? "Berhasil terdaftar Newsletter seminggu sekali!" : "Anda keluar dari Newsletter.", "info");
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, "users/" + currentUser.uid);
     }
   };
 
@@ -1191,7 +1498,38 @@ export default function App() {
     fetchConfigAndInject();
   }, []);
 
+  // Top-up Packs (Pay As You Go)
+  const TOP_UP_PACKS = [
+    { id: "top-up-s", name: "Top-up Kecil", characters: 50000, price: 29000, description: "Pas buat project video pendek." },
+    { id: "top-up-m", name: "Top-up Medium", characters: 150000, price: 79000, description: "Paling hemat untuk kreator aktif.", popular: true },
+    { id: "top-up-l", name: "Top-up Jumbo", characters: 500000, price: 229000, description: "Investasi kuota besar tanpa hangus." },
+  ];
+
+  useEffect(() => {
+    if (activeMainTab === "account" && currentUser) {
+      fetchTransactions();
+    }
+  }, [activeMainTab, currentUser]);
+
+  const fetchTransactions = async () => {
+    if (!currentUser) return;
+    setIsLoadingTransactions(true);
+    try {
+      const response = await fetch(`/api/transactions/${currentUser.uid}`);
+      const data = await response.json();
+      setTransactions(data);
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+    } finally {
+      setIsLoadingTransactions(false);
+    }
+  };
+
   const handleCheckout = async (planName: string, amount: number) => {
+    if (planName === "Enterprise") {
+      window.open("https://wa.me/628123456789?text=Halo%20Rungu%20Studio!%20Saya%20tertarik%20dengan%20Paket%20Enterprise.", "_blank");
+      return;
+    }
     if (!currentUser) {
       setIsAuthModalOpen(true);
       return;
@@ -1214,14 +1552,6 @@ export default function App() {
 
       const data = await response.json();
       
-      // MIDTRANS INTEGRATION READY
-      // When integrating Midtrans Snap, you can use the token returned from the server:
-      // window.snap.pay(data.token, {
-      //   onSuccess: (result) => { /* update user quota in Firestore */ },
-      //   onPending: (result) => { /* show waiting UI */ },
-      //   onError: (result) => { /* show error UI */ }
-      // });
-      
       if (!response.ok) {
         throw new Error(data.error?.message || "Gagal membuat checkout.");
       }
@@ -1229,25 +1559,28 @@ export default function App() {
       if (data.token) {
         // @ts-ignore
         window.snap.pay(data.token, {
-          onSuccess: function(result: any){
-            console.log('success', result);
-            setView("studio");
+          onSuccess: (result: any) => {
+            addToast("Pembayaran berhasil! Kuota sedang ditambahkan.", "success");
+            // Quota is updated via webhook, but we can refetch or just wait for onSnapshot
+            setTimeout(() => {
+              if (activeMainTab === "account") fetchTransactions();
+            }, 3000);
           },
-          onPending: function(result: any){
-            console.log('pending', result);
+          onPending: (result: any) => {
+            addToast("Menunggu pembayaran Anda...", "info");
           },
-          onError: function(result: any){
-            console.log('error', result);
-            setError("Pembayaran gagal. Silakan coba lagi.");
+          onError: (result: any) => {
+            addToast("Pembayaran gagal. Silakan coba lagi.", "error");
           },
-          onClose: function(){
-            console.log('customer closed the popup without finishing the payment');
+          onClose: () => {
+            setIsCheckingOut(null);
           }
         });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Checkout Error:", err);
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat checkout.");
+      setError(err.message || "Gagal memproses pembayaran.");
+      addToast(err.message || "Gagal memproses pembayaran.", "error");
     } finally {
       setIsCheckingOut(null);
     }
@@ -1596,7 +1929,23 @@ OPTIMASI SSML UNTUK STORYTELLING (EKSPRESIF):
       pauses: `Sisipkan jeda alami [Mood: ${mood}] ke dalam teks Bahasa Indonesia berikut: "${text}"`,
       emphasis: `Beri penekanan (emphasis) [Mood: ${mood}] pada kata-kata penting dalam teks berikut: "${text}"`,
       rate: `Optimalkan tempo bicara (speech rate) [Mood: ${mood}] pada teks berikut: "${text}"`,
-      super_optimize: `Lakukan SUPER OPTIMASI SSML tingkat tinggi [Mood: ${mood}] pada teks berikut: "${text}"`,
+      super_optimize: `Lakukan SUPER OPTIMASI SSML tingkat tinggi [Mood: ${mood}] pada teks berikut: "${text}"
+      
+      HARUS MEMBERIKAN RESPON DALAM FORMAT JSON BERIKUT (Tanpa teks lain di luar JSON):
+      {
+        "optimizedText": "Hasil SSML lengkap diawali <speak> dan diakhiri </speak>",
+        "metadata": {
+          "detectedStyle": "Gaya bicara (contoh: Semangat, Sedih, Narasi)",
+          "linguisticType": "question",
+          "pauseMetrics": { "total": 0.5, "count": 3 },
+          "detectedCues": ["kata kunci 1", "kata kunci 2"],
+          "emphasisWords": ["kata penekanan 1", "kata penekanan 2"],
+          "normNeeded": true,
+          "prosodySettings": { "pitch": "medium", "rate": "medium" }
+        }
+      }
+      
+      Pastikan linguisticType hanya berisi: question, exclamation, atau statement.`,
       educational: `Buatkan naskah penjelasan edukasi yang jelas dan mudah dipahami (maks 60 kata) tentang topik ilmiah atau pengetahuan umum dalam Bahasa Indonesia.
 Gunakan intonasi yang informatif dan artikulasi yang jernih.
 TEKS: ${text}`,
@@ -1625,7 +1974,30 @@ TEKS: ${text}`
       const data = await resp.json();
       const result = data.text || "";
       
-      if (type === "detect") {
+      if (type === "super_optimize") {
+        try {
+          const jsonMatch = result.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            setText(parsed.optimizedText || text);
+            if (parsed.metadata) {
+              setDetectedStyle(parsed.metadata.detectedStyle || null);
+              setLinguisticType(parsed.metadata.linguisticType || "statement");
+              setPauseMetrics(parsed.metadata.pauseMetrics || { total: 0, count: 0 });
+              setDetectedCues(parsed.metadata.detectedCues || []);
+              setEmphasisWords(parsed.metadata.emphasisWords || []);
+              setNormNeeded(!!parsed.metadata.normNeeded);
+              setProsodySettings(parsed.metadata.prosodySettings || { pitch: "medium", rate: "medium" });
+            }
+            addToast("Optimasi SSML Selesai!", "success");
+          } else {
+            setText(result);
+          }
+        } catch (e) {
+          console.error("Failed to parse SSML Optimizer JSON", e);
+          setText(result);
+        }
+      } else if (type === "detect") {
         setDetectedStyle(result.trim());
       } else {
         setText(result);
@@ -1649,25 +2021,49 @@ TEKS: ${text}`
       id: "history",
       title: "Sejarah Revolusi",
       icon: <ShieldCheck size={20} />,
-      description: "Naskah narasi sejarah perjuangan kemerdekaan dengan gaya epik.",
+      description: "Narasi sejarah perjuangan kemerdekaan dengan gaya epik, heroik, dan dramatis.",
       template: "Bangsa yang besar adalah bangsa yang menghargai jasa para pahlawannya. Di tengah gemuruh meriam dan bau mesiu, Soekarno berdiri tegak di hadapan ribuan rakyat, mengumumkan bahwa penindasan telah berakhir.",
       category: "Sejarah & Edukasi"
     },
     {
-      id: "pop-culture",
+      id: "pop-recap",
       title: "Pop Culture Recap",
       icon: <Theater size={20} />,
-      description: "Gaya video breakdown film atau serial yang sedang trending.",
+      description: "Breakdown film, series, selebriti, atau trending topic dengan gaya engaging dan santai.",
       template: "Kalian sadar nggak kalau di trailer film terbaru ini ada detail tersembunyi? Yup, Easter Egg ini beneran ngerubah teori fans di seluruh dunia! Mari kita bedah bareng-bareng kenapa adegan ini begitu penting untuk timeline-nya.",
       category: "Entertainment"
     },
     {
-      id: "marketing",
+      id: "hard-sell",
       title: "Hard Sell Ads",
       icon: <Zap size={20} />,
-      description: "Template iklan persuasif dengan teknik urgensi tinggi.",
+      description: "Template iklan persuasif dengan teknik urgensi tinggi, call-to-action kuat.",
       template: "PROMO TERBATAS! Dapatkan diskon hingga 70 persen hanya untuk seratus pembeli pertama hari ini. Jangan sampai ketinggalan, klik link di bio sekarang juga!",
       category: "Marketing"
+    },
+    {
+      id: "tiktok-viral",
+      title: "Reels & TikTok Viral Narrator",
+      icon: <Music size={20} />,
+      description: "Gaya fast-paced, hook kuat di 3 detik pertama, energik, punchy, cocok untuk video pendek 15-60 detik.",
+      template: "Stop scrolling! Kalian harus tau cara cepat upgrade skill editing cuma dalam 15 detik! Teknik ini udah dipakai sama banyak top content creator di seluruh dunia.",
+      category: "Sosial Media"
+    },
+    {
+      id: "motivation",
+      title: "Motivasi & Mindset",
+      icon: <Sparkles size={20} />,
+      description: "Narasi inspiratif, pengembangan diri, mindset sukses, morning motivation, quote story.",
+      template: "Kesuksesan bukan tentang seberapa cepat kamu berlari, tapi tentang seberapa kuat kamu bangkit setiap kali terjatuh. Hari ini adalah awal baru untuk masa depanmu.",
+      category: "Lifestyle"
+    },
+    {
+      id: "true-crime",
+      title: "True Crime & Misteri",
+      icon: <AlertTriangle size={20} />,
+      description: "Cerita kriminal, misteri, unsolved case dengan gaya tegang, dramatis, dan merinding.",
+      template: "Malam itu begitu sunyi, sampai sebuah suara di balik pintu mengubah segalanya. Tidak ada yang menduga kalau rahasia ini baru akan terungkap setelah dua puluh tahun lamanya.",
+      category: "Storytelling"
     }
   ];
 
@@ -1766,6 +2162,21 @@ TEKS: ${text}`
 
     // Quota Check
     const charCount = text.length;
+
+    // Tier-based access check - Ultra HD voices only for Produktif/Bisnis
+    const isPremiumVoice = selectedVoice.qualityLabel === "Studio: HD" || 
+                          selectedVoice.name.includes("Ultra HD") || 
+                          selectedVoice.name.includes("Premium") || 
+                          selectedVoice.name.includes("Studio");
+    const hasPremiumAccess = userProfile.plan === "Produktif" || 
+                            userProfile.plan === "Bisnis" || 
+                            userProfile.plan === "Enterprise";
+
+    if (isPremiumVoice && !hasPremiumAccess && currentUser) {
+      setIsPremiumModalOpen(true);
+      return;
+    }
+
     const totalAvailable = currentUser ? (userProfile.currentQuota + userProfile.rolloverQuota) : sessionQuota;
 
     if (totalAvailable < charCount) {
@@ -1823,8 +2234,8 @@ TEKS: ${text}`
           if (resp.ok) {
             const data = await resp.json();
             if (data.text) {
+              // Sembunyikan kode SSML dari UI, hanya gunakan untuk backend
               textToSynthesize = data.text;
-              setText(textToSynthesize); // Update UI to show cleaned version
             }
           }
         } catch (e) {
@@ -2012,6 +2423,7 @@ TEKS: ${text}`
       onCheckout={handleCheckout}
       currentUser={currentUser}
       setIsAuthModalOpen={setIsAuthModalOpen}
+      addToast={addToast}
     />;
   }
 
@@ -2019,7 +2431,7 @@ TEKS: ${text}`
 
   return (
     <div className={isDark ? "dark" : ""}>
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-500 flex flex-col font-sans">
+      <div className="min-h-screen bg-zinc-50 dark:bg-[#222222] text-zinc-900 dark:text-zinc-100 transition-colors duration-500 flex flex-col font-sans">
         {/* Navbar */}
         <header className="fixed top-0 left-0 right-0 z-50 premium-glass h-24 flex items-center px-12 transition-apple">
           <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
@@ -2073,32 +2485,69 @@ TEKS: ${text}`
           </div>
         </header>
 
-        <main className="flex-1 max-w-7xl mx-auto w-full p-6 pb-40">
+        <main className="flex-1 max-w-7xl mx-auto w-full p-6 pb-40 relative">
+          {/* Low Quota Floating Notification */}
+          <AnimatePresence>
+            {currentUser && (userProfile.currentQuota + userProfile.rolloverQuota) < 2000 && !isQuotaWarningDismissed && (
+              <motion.div 
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[60] w-full max-w-md px-6"
+              >
+                <div className="bg-brand-primary p-6 rounded-[2.5rem] shadow-2xl flex items-center justify-between gap-6 border-4 border-white/20">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-black/10 rounded-2xl flex items-center justify-center text-white">
+                      <AlertCircle size={24} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-black/60 leading-none mb-1">Kredit Hampir Habis</p>
+                      <p className="text-lg font-black text-white leading-tight">{(userProfile.currentQuota + userProfile.rolloverQuota).toLocaleString()} Karakter</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                     <button 
+                       onClick={() => setActiveMainTab("pricing")}
+                       className="px-6 py-3 bg-white text-brand-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-110 transition-transform"
+                     >
+                       TOP UP
+                     </button>
+                     <button 
+                       onClick={() => setIsQuotaWarningDismissed(true)}
+                       className="p-3 bg-black/10 text-white rounded-xl hover:bg-black/20"
+                     >
+                       <X size={16} />
+                     </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         <div className="max-w-5xl mx-auto space-y-12">
           
           {/* Minimalist Quota & Navigation Container */}
           <div className="flex flex-col gap-6">
             {/* Quota Banner */}
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between">
+            <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-2xl p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-black">
+                <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-zinc-950">
                   <Zap size={20} fill="currentColor" />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-emerald-500 uppercase tracking-widest">Premium Quota</p>
+                  <p className="text-xs font-black text-brand-primary uppercase tracking-widest">Premium Quota</p>
                   <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{userProfile.currentQuota.toLocaleString()} Characters Remaining</p>
                 </div>
               </div>
               <button 
                 onClick={() => setActiveMainTab("pricing")}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/80 text-[#222222] rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
               >
                 Top Up
               </button>
             </div>
 
             {/* Main Tabs */}
-            <div className="flex items-center gap-10 border-b border-zinc-200 dark:border-zinc-800 mb-4 overflow-x-auto hide-scrollbar sticky top-16 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-md z-30 pt-4">
+            <div className="flex items-center gap-10 border-b border-zinc-200 dark:border-zinc-800 mb-4 overflow-x-auto hide-scrollbar sticky top-16 bg-zinc-50/80 dark:bg-[#222222]/80 backdrop-blur-md z-30 pt-4">
             {[
               { id: "editor", label: "Studio Editor" },
               { id: "packs", label: "Content Packs" },
@@ -2111,7 +2560,7 @@ TEKS: ${text}`
                 onClick={() => setActiveMainTab(tab.id as any)}
                 className={`relative pb-4 text-xs font-bold uppercase tracking-[0.2em] transition-all whitespace-nowrap ${
                   activeMainTab === tab.id 
-                    ? "text-emerald-500" 
+                    ? "text-brand-primary" 
                     : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
@@ -2119,7 +2568,7 @@ TEKS: ${text}`
                 {activeMainTab === tab.id && (
                   <motion.div 
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary"
                   />
                 )}
               </button>
@@ -2137,18 +2586,18 @@ TEKS: ${text}`
                 className="space-y-6"
               >
                 {/* Text Input Section */}
-                <section className="input-container bg-zinc-900 border-zinc-800 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.7)] group">
+                <section className="input-container group">
                   {/* Header: Title & Info */}
-                  <div className="px-10 py-8 border-b border-zinc-800/50 flex items-center justify-between">
+                  <div className="px-10 py-8 border-b border-zinc-100 dark:border-zinc-800/50 flex items-center justify-between">
                     <div className="flex items-center gap-8">
                       <div className="flex flex-col">
-                        <h2 className="text-2xl font-black text-white tracking-tighter uppercase leading-none mb-1">Studio Editor</h2>
+                        <h2 className="text-2xl font-black text-[#222222] dark:text-white tracking-tighter uppercase leading-none mb-1">Studio Editor</h2>
                         <input 
                           type="text" 
                           value={scriptTitle}
                           onChange={(e) => setScriptTitle(e.target.value)}
                           placeholder="Untitled Script"
-                          className="bg-transparent border-none focus:outline-none text-sm font-light text-zinc-500 placeholder:text-zinc-700 w-64 italic"
+                          className="bg-transparent border-none focus:outline-none text-sm font-light text-zinc-400 dark:text-zinc-500 placeholder:text-zinc-200 dark:placeholder:text-zinc-700 w-64 italic"
                         />
                       </div>
                     </div>
@@ -2156,7 +2605,7 @@ TEKS: ${text}`
                     <div className="flex items-center gap-6">
                       <button
                         onClick={() => setIsHistoryOpen(true)}
-                        className="p-3 bg-zinc-800 text-zinc-400 hover:text-white rounded-2xl transition-all hover:scale-105 active:scale-95"
+                        className="p-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 hover:text-[#222222] dark:hover:text-white rounded-2xl transition-all hover:scale-105 active:scale-95"
                       >
                         <History size={20} />
                       </button>
@@ -2164,7 +2613,7 @@ TEKS: ${text}`
                   </div>
 
                   {/* Character Progress Bar (Spotify Style) */}
-                  <div className="w-full h-1.5 bg-zinc-800/50">
+                  <div className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800/50">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, (text.length / 50000) * 100)}%` }}
@@ -2187,11 +2636,39 @@ TEKS: ${text}`
                         onMouseUp={handleTextSelection}
                         onKeyUp={handleTextSelection}
                         placeholder={lang === "id" ? "Ketik atau tempel teks Anda di sini..." : "Type or paste your text here..."}
-                        className="w-full h-[540px] p-12 bg-transparent resize-none focus:outline-none text-2xl text-zinc-200 placeholder:text-zinc-800 leading-relaxed selection:bg-[#10B981]/30 font-sans border-0 shadow-none"
+                        className="w-full h-[540px] p-12 bg-transparent resize-none focus:outline-none text-2xl text-[#222222] dark:text-zinc-200 placeholder:text-zinc-200 dark:placeholder:text-zinc-800 leading-relaxed selection:bg-brand-primary/30 font-sans border-0 shadow-0"
                         style={{ fontWeight: 300 }}
                       />
+
+                      {/* Real-time Stats Display */}
+                      <div className="absolute bottom-12 right-12 flex flex-col items-end gap-2 pointer-events-none z-[30]">
+                         <motion.div 
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="px-6 py-3 bg-white/80 dark:bg-black/40 backdrop-blur-md border border-zinc-100 dark:border-white/10 rounded-2xl shadow-xl flex items-center gap-6"
+                         >
+                            <div className="text-right">
+                              <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest leading-none mb-1">Karakter</p>
+                              <p className={`text-sm font-black ${text.length > 45000 ? 'text-red-500' : 'text-zinc-950 dark:text-white'}`}>{text.length.toLocaleString()}</p>
+                            </div>
+                            <div className="w-[1px] h-6 bg-zinc-200 dark:bg-white/10" />
+                            <div className="text-right">
+                              <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest leading-none mb-1">Estimasi Generate</p>
+                              <p className="text-sm font-black text-zinc-950 dark:text-white">{(1.5 + text.length / 500).toFixed(1)}s</p>
+                            </div>
+                            <div className="w-[1px] h-6 bg-zinc-200 dark:bg-white/10" />
+                            <div className="text-right">
+                              <p className="text-[8px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest leading-none mb-1">Estimasi Durasi</p>
+                              <p className="text-sm font-black text-brand-primary">{(text.length / 15).toFixed(1)}s</p>
+                            </div>
+                         </motion.div>
+                         <p className="text-[8px] font-bold text-zinc-400 italic mr-2 uppercase tracking-tighter">
+                            {text.length > 0 ? (lang === 'id' ? 'Kualitas: Studio Master' : 'Quality: Studio Master') : ''}
+                         </p>
+                      </div>
+
                       {isGenerating && (
-                        <div className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm flex items-center justify-center pointer-events-none rounded-2xl">
+                        <div className="absolute inset-0 bg-white/40 dark:bg-[#222222]/40 backdrop-blur-sm flex items-center justify-center pointer-events-none rounded-2xl">
                           <Waveform />
                         </div>
                       )}
@@ -2203,7 +2680,7 @@ TEKS: ${text}`
                             initial={{ opacity: 0, y: 20, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                            className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 p-5 rounded-[2rem] flex items-center gap-6 shadow-2xl z-20 min-w-[380px] shadow-emerald-500/10"
+                            className="absolute bottom-12 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 p-5 rounded-[2rem] flex items-center gap-6 shadow-2xl z-20 min-w-[380px] shadow-zinc-200/50 dark:shadow-brand-primary/10"
                           >
                              <button 
                                onClick={() => {
@@ -2217,12 +2694,12 @@ TEKS: ${text}`
                                    }
                                  }
                                }}
-                               className="w-14 h-14 bg-[#10B981] text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#10B981]/20"
+                               className="w-14 h-14 bg-brand-primary text-[#222222] rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-primary/20"
                              >
                                 {isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
                              </button>
                              <div className="flex flex-col flex-1">
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#10B981]">Berhasil Dihasilkan</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">Berhasil Dihasilkan</span>
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm font-bold text-white">Audio Studio High Fidelity</span>
                                   <div className="w-1 h-1 rounded-full bg-zinc-700" />
@@ -2264,7 +2741,7 @@ TEKS: ${text}`
                           initial={{ opacity: 0, scale: 0.9, y: 10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                          className="fixed z-50 bg-zinc-950 border border-zinc-800 p-1 rounded-2xl flex items-center gap-1 shadow-2xl"
+                          className="fixed z-50 bg-[#222222] border border-zinc-800 p-1 rounded-2xl flex items-center gap-1 shadow-2xl"
                           style={{ 
                             left: toolbarPosition.x, 
                             top: toolbarPosition.y - 65 // Position above selection
@@ -2310,7 +2787,7 @@ TEKS: ${text}`
                   <div className="flex items-center justify-between px-2">
                     <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Select Voice Agent</h3>
                     <div className="flex items-center gap-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none">
-                       <span className="flex items-center gap-1.5"><Zap size={12} className="text-emerald-500" /> Premium Voices Only</span>
+                       <span className="flex items-center gap-1.5"><Zap size={12} className="text-brand-primary" /> Premium Voices Only</span>
                     </div>
                   </div>
 
@@ -2321,19 +2798,27 @@ TEKS: ${text}`
                           onClick={() => selectVoice(voice)}
                           className={`flex items-center gap-4 p-4 rounded-[2rem] border-2 transition-apple active:scale-95 ${
                             selectedVoice.id === voice.id && selectedVoice.name === voice.name
-                              ? "bg-white dark:bg-emerald-500 text-black border-emerald-400 shadow-2xl shadow-emerald-500/20" 
+                            ? "bg-white dark:bg-brand-primary text-[#222222] border-brand-primary shadow-2xl shadow-brand-primary/20" 
                               : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
                           }`}
                         >
                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all ${
-                            selectedVoice.id === voice.id && selectedVoice.name === voice.name ? "bg-black/10 scale-110" : "bg-zinc-800"
+                            selectedVoice.id === voice.id && selectedVoice.name === voice.name ? "bg-[#222222]/10 scale-110" : "bg-zinc-800"
                           }`}>
                             {voice.name[0]}
                           </div>
                           <div className="text-left pr-4">
-                            <p className="text-sm font-black tracking-tight">{voice.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-black tracking-tight">{voice.name}</p>
+                              {voice.qualityLabel === "Studio: HD" && (
+                                <span className="px-1.5 py-0.5 bg-brand-primary/10 text-brand-primary text-[8px] font-black rounded uppercase tracking-tighter shadow-sm border border-brand-primary/20">ULTRA HD</span>
+                              )}
+                              {voice.isPremium && voice.qualityLabel !== "Studio: HD" && (
+                                <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-500 text-[8px] font-black rounded uppercase tracking-tighter shadow-sm border border-amber-500/20">PRO</span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 mt-0.5">
-                               <div className={`p-1 rounded-full ${selectedVoice.id === voice.id && selectedVoice.name === voice.name ? "bg-black/10" : "bg-emerald-500/20 text-emerald-500"}`}>
+                               <div className={`p-1 rounded-full ${selectedVoice.id === voice.id && selectedVoice.name === voice.name ? "bg-zinc-950/10" : "bg-brand-primary/20 text-brand-primary"}`}>
                                   <Play size={10} fill="currentColor" />
                                </div>
                                <span className="text-[9px] font-black uppercase tracking-widest opacity-60">
@@ -2350,38 +2835,46 @@ TEKS: ${text}`
                       <div className="horizontal-scroll-item">
                         <button
                           onClick={() => setIsCloningModalOpen(true)}
-                          className="w-16 h-16 rounded-[2rem] border-2 border-dashed border-zinc-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-apple active:scale-95 flex items-center justify-center text-zinc-600 hover:text-emerald-500"
+                          className="w-16 h-16 rounded-[2rem] border-2 border-dashed border-zinc-800 hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-apple active:scale-95 flex items-center justify-center text-zinc-600 hover:text-brand-primary"
                           title="Clone New Voice"
                         >
                            <Plus size={24} />
                         </button>
                       </div>
                     )}
+                    
+                    {/* Language Update Notice */}
+                    <div className="horizontal-scroll-item flex items-center pr-8">
+                       <div className="px-6 py-4 bg-zinc-900/50 border border-zinc-800/50 rounded-[2rem] flex flex-col justify-center gap-1 opacity-80 border-l-brand-primary">
+                          <p className="text-[10px] font-black tracking-widest text-brand-primary">UPDATE SEGERA</p>
+                          <p className="text-[11px] font-bold text-zinc-400 whitespace-nowrap">Bahasa Jawa & Sunda</p>
+                       </div>
+                    </div>
                   </div>
                 </section>
 
                 {/* Control Panel: Sliders (Premium version) */}
-                <section className="grid grid-cols-1 sm:grid-cols-2 gap-12 px-10 py-10 bg-zinc-950 rounded-[3rem] border border-zinc-800 shadow-2xl">
-                <div className="space-y-4">
+                <section className="grid grid-cols-1 sm:grid-cols-2 gap-12 px-10 py-10 bg-[#222222] rounded-[3rem] border border-zinc-800 shadow-2xl">
+                 <div className="space-y-4">
                     <div className="flex justify-between items-center text-[10px] font-black text-zinc-500 uppercase tracking-widest">
                        <label>Voice Pitch</label>
-                       <span className="text-emerald-500 font-bold">{pitch}st</span>
+                       <span className="text-brand-primary font-bold">{pitch}st</span>
                     </div>
                     <input 
                       type="range" min="-20" max="20" step="1"
                       value={pitch} onChange={(e) => setPitch(parseInt(e.target.value))}
-                      className="w-full h-1.5 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                      className="w-full h-1.5 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-brand-primary"
                     />
                 </div>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center text-[10px] font-black text-zinc-500 uppercase tracking-widest">
                        <label>Speaking Rate</label>
-                       <span className="text-emerald-500 font-bold">{speed}x</span>
+                       <span className="text-brand-primary font-bold">{speed}x</span>
                     </div>
                     <input 
                       type="range" min="0.5" max="2.0" step="0.1"
                       value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))}
-                      className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                      className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-brand-primary"
                     />
                   </div>
                 </section>
@@ -2391,7 +2884,7 @@ TEKS: ${text}`
                   <button
                     disabled={!text || isGenerating || totalQuotaRemaining <= 0}
                     onClick={handleSynthesize}
-                    className="group w-full py-8 bg-white text-black rounded-[3rem] flex items-center justify-center gap-4 transition-all hover:scale-[1.01] active:scale-95 shadow-[0_20px_50px_rgba(255,255,255,0.05)] disabled:opacity-30 disabled:grayscale"
+                    className="group w-full py-8 bg-white text-[#222222] rounded-[3rem] flex items-center justify-center gap-4 transition-all hover:scale-[1.01] active:scale-95 shadow-[0_20px_50px_rgba(255,255,255,0.05)] disabled:opacity-30 disabled:grayscale"
                   >
                     {isGenerating ? (
                       <RefreshCw size={32} className="animate-spin" />
@@ -2418,9 +2911,9 @@ TEKS: ${text}`
               className="grid grid-cols-1 md:grid-cols-2 gap-6"
             >
               {CONTENT_PACKS.map((pack) => (
-                <div key={pack.id} className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full hover:border-emerald-500/30">
+                <div key={pack.id} className="bg-zinc-900 border border-zinc-800 rounded-[2rem] p-8 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full hover:border-brand-primary/30">
                   <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-black transition-colors">
+                    <div className="w-12 h-12 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center group-hover:bg-brand-primary group-hover:text-[#222222] transition-colors">
                       {pack.icon}
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-800/50 px-3 py-1 rounded-full border border-zinc-800">
@@ -2429,7 +2922,7 @@ TEKS: ${text}`
                   </div>
                   <h3 className="text-xl font-black text-white mb-2 leading-tight">{pack.title}</h3>
                   <p className="text-zinc-400 text-sm font-medium mb-6 leading-relaxed flex-1">{pack.description}</p>
-                  <button className="w-full py-4 bg-zinc-800 hover:bg-emerald-500 hover:text-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
+                  <button className="w-full py-4 bg-zinc-800 hover:bg-brand-primary hover:text-[#222222] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
                     Activate Pack
                   </button>
                 </div>
@@ -2446,19 +2939,19 @@ TEKS: ${text}`
               className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-10 shadow-xl"
             >
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                <div className="w-14 h-14 bg-brand-primary text-zinc-950 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-primary/20">
                   <Zap size={28} />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-zinc-950 tracking-tight">Pipeline Optimizer V2.0</h2>
+                  <h2 className="text-2xl font-black text-[#222222] dark:text-white tracking-tight">Pipeline Optimizer V2.0</h2>
                   <p className="text-zinc-500 font-bold">Teknologi NLP Berbasis Gemini untuk Hasil Suara Spektakuler</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                 <div className="space-y-6">
-                  <div className="p-6 bg-zinc-50 rounded-3xl border border-zinc-100">
-                    <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-3">Apa yang kami optimasi?</h3>
+                  <div className="p-6 bg-zinc-50 dark:bg-[#222222] rounded-3xl border border-zinc-100 dark:border-zinc-800">
+                    <h3 className="text-xs font-black text-brand-primary uppercase tracking-widest mb-3">Apa yang kami optimasi?</h3>
                     <ul className="space-y-3">
                       {[
                         { title: "Standardisasi Angka", desc: "1945 → Seribu Sembilan Ratus Empat Puluh Lima" },
@@ -2467,10 +2960,10 @@ TEKS: ${text}`
                         { title: "Analisis Sentimen", desc: "Pemberian bobat pada kata emosional" }
                       ].map((item, i) => (
                         <li key={i} className="flex gap-3">
-                          <div className="shrink-0 w-5 h-5 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-[10px] font-bold">{i+1}</div>
+                          <div className="shrink-0 w-5 h-5 bg-brand-primary/10 text-brand-primary rounded-full flex items-center justify-center text-[10px] font-bold">{i+1}</div>
                           <div>
-                            <p className="text-[11px] font-black text-zinc-900 uppercase tracking-tighter">{item.title}</p>
-                            <p className="text-[10px] text-zinc-500 font-bold">{item.desc}</p>
+                            <p className="text-[11px] font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">{item.title}</p>
+                            <p className="text-[10px] text-zinc-600 dark:text-zinc-400 font-bold">{item.desc}</p>
                           </div>
                         </li>
                       ))}
@@ -2478,23 +2971,102 @@ TEKS: ${text}`
                   </div>
                 </div>
 
-                <div className="flex flex-col justify-center items-center p-8 border-4 border-dashed border-zinc-100 rounded-[2rem] text-center">
-                  <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-6">
+                <div className="flex flex-col justify-center items-center p-8 border-4 border-dashed border-zinc-100 dark:border-zinc-800 rounded-[2rem] text-center">
+                  <div className="w-20 h-20 bg-brand-primary/10 text-brand-primary rounded-full flex items-center justify-center mb-6">
                     <Sparkles size={40} className="animate-pulse" />
                   </div>
-                  <h3 className="text-lg font-black text-zinc-950 mb-2">Siap untuk Optimasi?</h3>
-                  <p className="text-sm text-zinc-500 font-bold mb-8">Optimizer akan memproses teks di Editor dan memberikan hasil SSML terbaik.</p>
+                  <h3 className="text-lg font-black text-[#222222] dark:text-white mb-2">Siap untuk Optimasi?</h3>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 font-bold mb-8">Optimizer akan memproses teks di Editor dan memberikan hasil SSML terbaik.</p>
                   <button 
                     onClick={() => {
                       handleAIScript("super_optimize");
-                      setActiveMainTab("editor");
                     }}
-                    className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95"
+                    className="px-10 py-4 bg-brand-primary text-[#222222] rounded-2xl font-black uppercase tracking-[0.2em] shadow-xl shadow-brand-primary/20 hover:scale-[1.03] transition-all active:scale-95 disabled:opacity-50"
+                    disabled={isAssistantLoading}
                   >
-                    RUN OPTIMIZER NOW
+                    {isAssistantLoading ? "Processing..." : "RUN OPTIMIZER NOW"}
                   </button>
                 </div>
               </div>
+
+              {detectedStyle && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mt-8 p-10 bg-zinc-50 dark:bg-zinc-800/20 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 p-8 text-brand-primary opacity-10">
+                    <Sparkles size={120} />
+                  </div>
+                  
+                  <div className="flex items-center gap-4 mb-10">
+                    <div className="w-12 h-12 bg-brand-primary/10 rounded-2xl flex items-center justify-center text-brand-primary">
+                      <Zap size={24} fill="currentColor" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-zinc-950 dark:text-white uppercase tracking-tight">Optimizer Analysis Results</h3>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Teks di Editor telah diperbarui dengan format SSML premium.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-black text-brand-primary uppercase tracking-[0.2em]">Detected Style</p>
+                      <p className="text-lg font-black text-zinc-950 dark:text-white leading-tight">{detectedStyle}</p>
+                    </div>
+                    <div className="space-y-2">
+                       <p className="text-[11px] font-black text-brand-primary uppercase tracking-[0.2em]">Linguistic</p>
+                       <p className="text-lg font-black text-zinc-950 dark:text-white uppercase leading-none">{linguisticType}</p>
+                    </div>
+                    <div className="space-y-2">
+                       <p className="text-[11px] font-black text-brand-primary uppercase tracking-[0.2em]">Pause Metrics</p>
+                       <p className="text-lg font-black text-zinc-950 dark:text-white leading-tight">{pauseMetrics.count} Jeda <span className="text-[10px] text-zinc-400 font-bold opacity-60">({pauseMetrics.total}s)</span></p>
+                    </div>
+                    <div className="space-y-2">
+                       <p className="text-[11px] font-black text-brand-primary uppercase tracking-[0.2em]">Pitch & Rate</p>
+                       <p className="text-lg font-black text-zinc-950 dark:text-white leading-tight">{prosodySettings.pitch} | {prosodySettings.rate}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="space-y-4">
+                      <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Emphasis Analysis</p>
+                      <div className="flex flex-wrap gap-2">
+                        {emphasisWords.map((word, i) => (
+                          <span key={i} className="px-5 py-2 bg-brand-primary/10 text-brand-primary rounded-xl text-xs font-black border border-brand-primary/20 hover:scale-105 transition-transform">
+                            {word}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Semantic Context Cues</p>
+                      <div className="flex flex-wrap gap-2">
+                        {detectedCues.map((cue, i) => (
+                          <span key={i} className="px-5 py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl text-xs font-black hover:scale-105 transition-transform">
+                            {cue}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-10 pt-10 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                     <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${normNeeded ? 'bg-orange-500 animate-pulse' : 'bg-brand-primary'}`} />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                          {normNeeded ? "Normalisasi Teks Diperlukan" : "Teks Sudah Sesuai Standar"}
+                        </p>
+                     </div>
+                     <button 
+                        onClick={() => setActiveMainTab("editor")}
+                        className="flex items-center gap-2 text-[10px] font-black text-brand-primary uppercase tracking-[0.2em] hover:gap-3 transition-all"
+                     >
+                        KEMBALI KE EDITOR <ArrowRight size={14} />
+                     </button>
+                  </div>
+                </motion.div>
+              )}
 
               <div className="pt-8 border-t border-zinc-100 flex items-center justify-between text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                 <div className="flex items-center gap-4">
@@ -2512,125 +3084,197 @@ TEKS: ${text}`
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-8"
+              className="space-y-12 pb-24"
             >
-              <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-zinc-800 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 dark:opacity-20" />
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-12 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-brand-primary/10 dark:bg-brand-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 opacity-30 blur-3xl" />
                 
-                <div className="relative z-10 space-y-8">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">Pengaturan Akun</h2>
-                      <p className="text-zinc-500 font-bold">Kelola langganan dan kuota karakter Anda.</p>
+                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                  <div className="w-24 h-24 rounded-full border-4 border-white dark:border-zinc-800 shadow-xl overflow-hidden bg-brand-primary/10 flex items-center justify-center">
+                    {currentUser?.photoURL ? (
+                      <img src={currentUser.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <UserIcon size={40} className="text-brand-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 text-center md:text-left space-y-2">
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                      <h2 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tight">{currentUser?.displayName || "Creator Rungu"}</h2>
+                      <div className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border-2 ${
+                        userProfile.plan === "Produktif" || userProfile.plan === "Bisnis"
+                        ? "bg-brand-primary/10 border-brand-primary text-brand-primary shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)]"
+                        : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500"
+                      }`}>
+                         {userProfile.plan === "Produktif" || userProfile.plan === "Bisnis" ? <Crown size={12} fill="currentColor" /> : <ShieldCheck size={12} />}
+                         {userProfile.plan} Member
+                      </div>
                     </div>
-                    <div className="px-6 py-2 bg-zinc-950 dark:bg-white text-white dark:text-black rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                      <ShieldCheck size={14} className="text-indigo-400" />
-                      Verified Profile
+                    <p className="text-zinc-500 font-bold flex items-center justify-center md:justify-start gap-2">
+                      <Mail size={14} /> {currentUser?.email}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => signOut(auth)}
+                    className="px-8 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all active:scale-95 flex items-center gap-2"
+                  >
+                    <LogOut size={14} /> Keluar Akun
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[3rem] p-12 shadow-sm flex flex-col items-center justify-center text-center space-y-6 group hover:border-brand-primary/30 transition-all duration-500 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-brand-primary/20" />
+                  <div className="w-16 h-16 bg-brand-primary/10 rounded-[2.5rem] flex items-center justify-center text-brand-primary mb-4 group-hover:scale-110 transition-transform">
+                    <Zap size={32} fill="currentColor" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-brand-primary uppercase tracking-[0.3em]">Sisa Kuota Karakter</p>
+                    <h3 className="text-6xl font-black text-zinc-950 dark:text-white tracking-tighter leading-none">
+                      {(currentUser ? (userProfile.currentQuota + userProfile.rolloverQuota) : sessionQuota).toLocaleString()}
+                    </h3>
+                  </div>
+                  <div className="w-full max-w-xs h-3 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, ((currentUser ? (userProfile.currentQuota + userProfile.rolloverQuota) : sessionQuota) / (currentUser ? userProfile.maxQuota : 1000)) * 100)}%` }}
+                      className="h-full bg-brand-primary rounded-full"
+                    />
+                  </div>
+                  <p className="text-[10px] font-bold text-zinc-400 italic">
+                    Gunakan kredit Anda untuk narasi professional.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  <div onClick={() => setActiveMainTab("pricing")} className="bg-brand-primary text-black p-10 rounded-[2.5rem] flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-apple group relative overflow-hidden shadow-2xl shadow-brand-primary/20">
+                    <div className="absolute top-0 right-0 p-8 opacity-20 group-hover:scale-125 transition-transform">
+                      <ArrowUpRight size={48} />
+                    </div>
+                    <div className="space-y-1">
+                       <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Punya Naskah Baru?</p>
+                       <h4 className="text-2xl font-black tracking-tight leading-tight">Upgrade atau Top-up <br/> Kredit Karakter</h4>
+                    </div>
+                    <div className="mt-8">
+                       <span className="inline-flex items-center gap-2 px-5 py-2 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl">
+                         Mulai Sekarang
+                         <RefreshCw size={12} />
+                       </span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest">Detail Langganan</h3>
-                      <div className="p-6 bg-zinc-50 dark:bg-zinc-950 rounded-3xl border border-zinc-100 dark:border-zinc-800 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-zinc-500">Paket Saat Ini</span>
-                          <span className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">{userProfile.plan}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-zinc-500">Tagihan Berikutnya</span>
-                          <span className="text-sm font-black text-zinc-950 dark:text-white">{userProfile.nextBillingDate}</span>
-                        </div>
-                        <button 
-                          onClick={() => setActiveMainTab("pricing")}
-                          className="w-full py-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-950 dark:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all active:scale-95"
-                        >
-                          UPGRADE PAKET
-                        </button>
-                      </div>
+                  <div className="p-8 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-[2rem] flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                       <div className="w-12 h-12 bg-zinc-200 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500">
+                          <Settings2 size={24} />
+                       </div>
+                       <div>
+                          <p className="text-sm font-black text-zinc-950 dark:text-white">Notifikasi Suara AI</p>
+                          <p className="text-[10px] font-bold text-zinc-500">Konfirmasi audio untuk setiap aksi.</p>
+                       </div>
                     </div>
+                    <button 
+                      onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${isVoiceEnabled ? 'bg-brand-primary' : 'bg-zinc-200 dark:bg-zinc-800'}`}
+                    >
+                      <motion.div 
+                        animate={{ x: isVoiceEnabled ? 26 : 2 }}
+                        className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full"
+                      />
+                    </button>
+                  </div>
 
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest">Penggunaan Kuota</h3>
-                      <div className="p-8 bg-zinc-950 border border-zinc-800 rounded-[2.5rem] space-y-8 shadow-2xl">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Karakter Tersisa</span>
-                            <span className="text-lg font-black text-white">{(currentUser ? (userProfile.currentQuota + userProfile.rolloverQuota) : sessionQuota).toLocaleString()} <span className="text-zinc-700 font-medium">/ {(currentUser ? userProfile.maxQuota : 1000).toLocaleString()}</span></span>
-                          </div>
-                          <div className="w-full h-3 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
-                            <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: `${Math.min(100, ((currentUser ? (userProfile.currentQuota + userProfile.rolloverQuota) : sessionQuota) / (currentUser ? userProfile.maxQuota : 1000)) * 100)}%` }}
-                              className="h-full bg-brand-primary rounded-full relative overflow-hidden"
-                            >
-                               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
-                            </motion.div>
-                          </div>
-                          <p className="text-[10px] font-bold text-zinc-500 uppercase italic">Quota akan terhitung setiap kali Anda menekan tombol "Hasilkan Audio".</p>
-                        </div>
-
-                          {!currentUser && (
-                            <div className="mt-4 p-4 bg-orange-50 rounded-2xl border border-orange-100 flex items-center gap-3">
-                              <div className="p-2 bg-white rounded-xl text-orange-600 shadow-sm">
-                                <AlertCircle size={16} />
-                              </div>
-                              <div>
-                                <p className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Mode Trial</p>
-                                <p className="text-xs font-bold text-orange-600">Upgrade ke akun GRATIS untuk dapat 10.000 karakter!</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {currentUser && (
-                            <div className="space-y-4">
-                              <div className="p-5 bg-brand-primary/5 rounded-3xl border border-brand-primary/20 space-y-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-brand-primary rounded-xl text-black shadow-sm">
-                                    <Star size={18} fill="currentColor" />
-                                  </div>
-                                  <div>
-                                    <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Bonus Karakter Gratis</p>
-                                    <p className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Dapatkan hingga 75.000 karakter gratis!</p>
-                                  </div>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-start gap-2 bg-white dark:bg-brand-bg-dark p-3 rounded-2xl border border-zinc-100 dark:border-brand-border text-left">
-                                    <div className="text-brand-primary shrink-0 mt-0.5"><CheckCircle2 size={14} /></div>
-                                    <p className="text-[10px] font-bold text-zinc-500 leading-tight">Post di Story IG/TikTok + Tag <span className="text-brand-primary font-black">@rungu_id</span> &rarr; <span className="text-zinc-950 dark:text-white font-black">+25K Karakter</span></p>
-                                  </div>
-                                  <div className="flex items-start gap-2 bg-white dark:bg-brand-bg-dark p-3 rounded-2xl border border-zinc-100 dark:border-brand-border text-left">
-                                    <div className="text-brand-primary shrink-0 mt-0.5"><CheckCircle2 size={14} /></div>
-                                    <p className="text-[10px] font-bold text-zinc-500 leading-tight">Video Review/Demo (15s) + Tag <span className="text-brand-primary font-black">@rungu_id</span> &rarr; <span className="text-zinc-950 dark:text-white font-black">+50K Karakter</span></p>
-                                  </div>
-                                  <div className="flex items-start gap-2 bg-white dark:bg-brand-bg-dark p-3 rounded-2xl border border-zinc-100 dark:border-brand-border text-left">
-                                    <div className="text-brand-primary shrink-0 mt-0.5"><CheckCircle2 size={14} /></div>
-                                    <p className="text-[10px] font-bold text-zinc-500 leading-tight">Ajak Teman Daftar &rarr; <span className="text-zinc-950 dark:text-white font-black">Kamu & Teman +20K Karakter</span></p>
-                                  </div>
-                                </div>
-                                <button 
-                                  onClick={() => window.open('https://instagram.com/rungu_id', '_blank')}
-                                  className="w-full py-3 bg-brand-primary text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-all"
-                                >
-                                  KLAIM VIA INSTAGRAM
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                        {(userProfile.plan === "Kreator" || userProfile.plan === "Bisnis") && currentUser ? (
-                          <p className="text-[10px] font-bold text-zinc-400 italic flex items-center gap-1">
-                            <Info size={12} /> Unused quota will rollover to next month.
-                          </p>
-                        ) : (
-                          <p className="text-[10px] font-bold text-zinc-400 italic">
-                            Upgrade to Kreator or Bisnis for quota rollover.
-                          </p>
-                        )}
-                      </div>
+                  <div className="p-8 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-[2rem] flex items-center justify-between">
+                    <div className="flex items-center gap-5">
+                       <div className="w-12 h-12 bg-brand-primary/10 rounded-2xl flex items-center justify-center text-brand-primary">
+                          <Mail size={24} />
+                       </div>
+                       <div>
+                          <p className="text-sm font-black text-zinc-950 dark:text-white">Rungu Newsletter</p>
+                          <p className="text-[10px] font-bold text-zinc-500">Tips & Update Update (Seminggu Sekali).</p>
+                       </div>
                     </div>
+                    <button 
+                      onClick={handleToggleNewsletter}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${userProfile.isNewsletterSubscribed ? 'bg-brand-primary' : 'bg-zinc-200 dark:bg-zinc-800'}`}
+                    >
+                      <motion.div 
+                        animate={{ x: userProfile.isNewsletterSubscribed ? 26 : 2 }}
+                        className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full"
+                      />
+                    </button>
                   </div>
                 </div>
+              </div>
+
+              {/* Transaction History Section */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-4">
+                  <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                     <History size={14} className="text-brand-primary" />
+                     Riwayat Transaksi
+                  </h3>
+                  <button 
+                    onClick={fetchTransactions}
+                    className="p-2 text-zinc-400 hover:text-brand-primary transition-colors"
+                  >
+                    <RefreshCw size={14} className={isLoadingTransactions ? "animate-spin" : ""} />
+                  </button>
+                </div>
+
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-zinc-50/50 dark:bg-zinc-800/30 border-b border-zinc-100 dark:border-zinc-800">
+                          <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">ID Pesanan</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Paket</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Jumlah</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Status</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-zinc-400 uppercase tracking-widest text-right">Tanggal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/50">
+                        {transactions.length > 0 ? (
+                          transactions.map((tx) => (
+                            <tr key={tx.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">
+                              <td className="px-8 py-5 text-[10px] font-mono text-zinc-400">#{tx.orderId?.substring(6)}</td>
+                              <td className="px-8 py-5">
+                                <span className="text-xs font-black text-zinc-950 dark:text-white">{tx.planName}</span>
+                              </td>
+                              <td className="px-8 py-5 text-center">
+                                <span className="text-xs font-black text-brand-primary">Rp {(tx.amount || 0).toLocaleString()}</span>
+                              </td>
+                              <td className="px-8 py-5 text-center">
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-tighter ${
+                                  tx.status === "settlement" || tx.status === "capture"
+                                  ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400"
+                                  : tx.status === "pending"
+                                  ? "bg-amber-100 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400"
+                                  : "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400"
+                                }`}>
+                                   {tx.status === "settlement" || tx.status === "capture" ? <Check size={10} /> : tx.status === "pending" ? <Clock size={10} /> : <X size={10} />}
+                                   {tx.status}
+                                </span>
+                              </td>
+                              <td className="px-8 py-5 text-right">
+                                <span className="text-[10px] font-bold text-zinc-400">
+                                   {tx.createdAt?.seconds ? new Date(tx.createdAt.seconds * 1000).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : "Baru saja"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} className="px-8 py-16 text-center text-zinc-500 italic font-medium"> Belum ada riwayat transaksi.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
 
                 <div className="mt-12 pt-8 border-t border-zinc-100 dark:border-zinc-800 flex flex-col items-center">
                   {currentUser ? (
@@ -2649,7 +3293,7 @@ TEKS: ${text}`
                        <div className="space-y-3">
                          <button 
                           onClick={() => setIsAuthModalOpen(true)}
-                          className="w-full h-16 bg-brand-primary text-black rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4"
+                          className="w-full h-16 bg-brand-primary text-[#222222] rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4"
                          >
                            <UserIcon size={24} />
                            Sign In / Sign Up
@@ -2658,7 +3302,6 @@ TEKS: ${text}`
                     </div>
                   )}
                 </div>
-              </div>
             </motion.div>
           )}
 
@@ -2668,187 +3311,273 @@ TEKS: ${text}`
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-12"
+              className="space-y-24 py-12"
             >
-              <div className="text-center space-y-4 pt-12">
-                <h2 className="text-5xl font-black text-zinc-950 dark:text-white tracking-tight">{t.pricingTitle}</h2>
-                <p className="text-zinc-500 font-bold text-lg max-w-2xl mx-auto italic opacity-80">{lang === "id" ? "Bayar Sekali, Gunakan Selamanya. Tanpa Biaya Bulanan." : "Pay Once, Use Forever. No Monthly Fees."}</p>
+              {/* Hero Section */}
+              <div className="text-center space-y-6">
+                <motion.span 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="px-4 py-1.5 bg-brand-primary/10 text-brand-primary rounded-full text-[10px] font-black uppercase tracking-[0.3em] inline-block border border-brand-primary/20"
+                >
+                  DARI KREATOR, UNTUK KREATOR INDONESIA
+                </motion.span>
+                <h1 className="text-5xl md:text-7xl font-black text-[#222222] dark:text-white tracking-tighter leading-[0.9]">
+                  Pilih Investasi <br /><span className="text-brand-primary drop-shadow-[0_0_15px_rgba(226,114,91,0.3)]">Kreativitasmu</span>
+                </h1>
+                <p className="text-zinc-500 font-bold text-lg max-w-2xl mx-auto italic">
+                  Suara AI Indonesia paling natural. Bayar sekali atau langganan. <br className="hidden md:block" />
+                  Tanpa drama dolar dan kredit ribet.
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pt-8">
+              {/* Comparison Table */}
+              <div className="max-w-5xl mx-auto bg-white dark:bg-[#0D0D0D] border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <div className="p-8 border-b border-zinc-100 dark:border-zinc-800">
+                  <h3 className="text-xl font-black tracking-tight text-[#222222] dark:text-white">Perbandingan Layanan</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-zinc-100 dark:border-zinc-800">
+                        <th className="p-6 text-xs font-black uppercase tracking-widest text-zinc-400">Fitur</th>
+                        <th className="p-6 text-xs font-black uppercase tracking-widest text-brand-primary">rungu.id</th>
+                        <th className="p-6 text-xs font-black uppercase tracking-widest text-zinc-500">ElevenLabs</th>
+                        <th className="p-6 text-xs font-black uppercase tracking-widest text-zinc-500">Murf AI</th>
+                        <th className="p-6 text-xs font-black uppercase tracking-widest text-zinc-500">PlayHT</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm font-bold">
+                      {[
+                        { feature: "Harga Entry", rungu: "Rp 19rb", other: "$5 (~Rp 80rb)", Murf: "$29", PlayHT: "$31" },
+                        { feature: "Bahasa Indo Natural", rungu: "Sangat (Lokal)", other: "Oke", Murf: "Kaku", PlayHT: "Oke" },
+                        { feature: "Bayar QRIS/GoPay", rungu: "Ya", other: "Tdk (Kartu Kredit)", Murf: "Tdk", PlayHT: "Tdk" },
+                        { feature: "Model Harga", rungu: "Pay-as-you-go / Sub", other: "Sub", Murf: "Sub", PlayHT: "Sub" },
+                        { feature: "Lifetime Option", rungu: "Ya (Selamanya)", other: "Tdk", Murf: "Tdk", PlayHT: "Tdk" },
+                        { feature: "Visual SSML", rungu: "Ya (Drag-n-drop)", other: "Tdk", Murf: "Ya", PlayHT: "Tdk" },
+                        { feature: "Informalizer (Bahasa Gaul)", rungu: "Ya", other: "Tdk", Murf: "Tdk", PlayHT: "Tdk" },
+                      ].map((row, i) => (
+                        <tr key={i} className="border-b border-zinc-50 dark:border-zinc-900 last:border-0 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
+                          <td className="p-6 text-zinc-500 dark:text-zinc-400">{row.feature}</td>
+                          <td className="p-6 text-brand-primary bg-brand-primary/5">{row.rungu}</td>
+                          <td className="p-6 opacity-40 text-[#222222] dark:text-white">{row.other}</td>
+                          <td className="p-6 opacity-40 text-[#222222] dark:text-white">{row.Murf || "Tdk"}</td>
+                          <td className="p-6 opacity-40 text-[#222222] dark:text-white">{row.PlayHT || "Tdk"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Pricing Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {[
                   {
+                    name: "Free",
+                    price: "0",
+                    period: "Selamanya",
+                    quota: "10.000 Karakter",
+                    features: ["Akses Semua Voice", "Standard Quality", "No Commercial Rights", "Komunitas Support"],
+                    button: "Mulai Gratis",
+                    id: "Free"
+                  },
+                  {
                     name: "Starter",
-                    price: "25rb",
-                    unitPrice: "Rp 1.000/1K",
+                    price: "19.000",
+                    period: "Sekali Bayar",
                     quota: "25.000 Karakter",
-                    id: "Starter",
-                    time: "~5 Menit",
-                    features: ["Standard Voices", "Community Support", "Trial Use"],
-                    recommended: false
+                    features: ["Neural2 Voices", "Berlaku Selamanya", "No Watermark", "Hemat 10%"],
+                    button: "Pilih Starter",
+                    id: "Starter"
                   },
                   {
                     name: "Kreator",
-                    price: "85rb",
-                    unitPrice: "Rp 850/1K",
-                    quota: "100.000 Karakter",
-                    id: "Creator",
-                    time: "~25 Menit Audio",
-                    features: ["Semua Suara Premium", "Full SSML Support", "Priority Queue", "Commercial License"],
-                    recommended: false
+                    price: "49.000",
+                    period: "/ bulan",
+                    quota: "180.000 Karakter",
+                    features: ["High Quality Processing", "Visual SSML Editor", "Prioritas Rendering", "Jauh Lebih Hemat"],
+                    button: "Pilih Kreator",
+                    id: "Creator"
                   },
                   {
                     name: "Produktif",
-                    price: "225rb",
-                    unitPrice: "Rp 750/1K",
-                    quota: "300.000 Karakter",
+                    price: "99.000",
+                    period: "/ bulan",
+                    quota: "420.000 Karakter",
+                    features: ["Chirp Ultra HD Voices", "Commercial Rights Penuh", "Bonus Karakter", "Paling Populer"],
+                    button: "Pilih Produktif",
+                    badge: "PALING POPULER",
                     id: "Produktif",
-                    time: "~75 Menit Audio",
-                    features: ["Semua Suara HD", "Storytelling Optimizer", "Commercial Rights", "Priority Queue", "Monthly Quota Rollover"],
-                    recommended: true
+                    highlight: true
                   },
                   {
-                    name: "Lifetime",
-                    price: "599rb",
-                    unitPrice: "Life Pack",
-                    quota: "800.000 Karakter",
-                    id: "Lifetime",
-                    time: "~200 Menit Audio",
-                    features: ["Akses Seumur Hidup", "Tanpa Biaya Bulanan", "Semua Fitur Pro", "Unlimited Projects", "Priority Support"],
-                    recommended: false,
-                    isLifetime: true
+                    name: "Bisnis",
+                    price: "249.000",
+                    period: "/ bulan",
+                    quota: "1.150.000 Karakter",
+                    features: ["Chirp Ultra HD Voices", "Custom Voice Cloning", "Dedicated Support", "Full API Access"],
+                    button: "Ambil Bisnis",
+                    id: "Bisnis",
+                    special: true
+                  },
+                  {
+                    name: "Enterprise",
+                    price: "Custom",
+                    period: "Contact Sales",
+                    quota: "Custom / Unlimited",
+                    features: ["Dedicated Account Manager", "Satu-satunya Paket Tanpa Limit", "Custom Voice Training", "Priority Support"],
+                    button: "Contact Sales",
+                    id: "Enterprise"
                   }
                 ].map((plan) => (
                   <div 
                     key={plan.id} 
-                    className={`relative bg-white dark:bg-zinc-900 border-2 rounded-[2.5rem] p-10 transition-apple hover:scale-[1.02] flex flex-col ${
-                      plan.recommended 
-                        ? "border-brand-primary shadow-2xl shadow-brand-primary/10 ring-8 ring-brand-primary/5" 
-                        : "border-zinc-100 dark:border-zinc-800 shadow-sm"
-                    }`}
+                    className={`relative flex flex-col p-1 transition-all group ${plan.special ? 'scale-105 z-10' : ''}`}
                   >
-                    {plan.recommended && (
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-primary text-black px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">
-                        {lang === "id" ? "Rekomendasi" : "Recommended"}
-                      </div>
-                    )}
-                    
-                    <div className="mb-8">
-                      <h3 className="font-black text-2xl text-zinc-950 dark:text-white mb-1">{plan.name}</h3>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-zinc-400 text-sm font-bold">Rp</span>
-                        <span className="text-4xl font-black text-zinc-950 dark:text-white tracking-tighter">{plan.price}</span>
-                        <span className="text-zinc-400 text-xs font-bold uppercase tracking-widest">{plan.isLifetime ? "Sekali Bayar" : t.perMonth}</span>
-                      </div>
-                      {plan.unitPrice && (
-                        <div className="mt-1 text-[10px] font-bold text-zinc-400 italic">
-                          {plan.isLifetime ? t.lifetimeLabel : `Rp ${plan.unitPrice} ${t.per1kChars}`}
+                    <div className={`flex flex-col flex-1 p-10 rounded-[2.5rem] border-2 h-full transition-apple ${
+                      plan.highlight 
+                        ? "bg-[#222222] border-brand-primary text-white shadow-[0_0_40px_rgba(226,114,91,0.15)] ring-4 ring-brand-primary/5" 
+                        : plan.special 
+                          ? "bg-gradient-to-br from-zinc-950 to-zinc-900 border-brand-primary shadow-[0_0_60px_rgba(226,114,91,0.25)] text-white"
+                          : "bg-white dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xl shadow-zinc-200/50 dark:shadow-none"
+                    }`}>
+                      {plan.badge && (
+                        <div className={`absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg ${
+                          plan.special ? 'bg-brand-primary text-black animate-pulse' : 'bg-brand-primary text-black'
+                        }`}>
+                          {plan.badge}
                         </div>
                       )}
-                    </div>
 
-                    <div className="p-4 bg-zinc-50 rounded-2xl mb-8 border border-zinc-100">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{lang === "id" ? "Kuota" : "Quota"}</span>
-                        <span className="text-[10px] font-black text-indigo-600">{plan.quota}</span>
+                      <div className="mb-8">
+                        <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${plan.highlight || plan.special ? 'text-brand-primary' : 'text-zinc-400'}`}>
+                          {plan.name}
+                        </p>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xs font-bold opacity-60">Rp</span>
+                          <span className="text-4xl font-black tracking-tighter">{plan.price}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-1">{plan.period}</span>
+                        </div>
+                        <div className={`mt-4 py-2 px-4 rounded-xl text-center text-[11px] font-black uppercase tracking-widest ${
+                          plan.highlight || plan.special ? 'bg-brand-primary/10 text-brand-primary' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                        }`}>
+                          {plan.quota}
+                        </div>
                       </div>
-                      <div className="w-full h-2 bg-zinc-200 rounded-full overflow-hidden">
-                        <div className="bg-indigo-600 h-full" style={{ width: plan.id === "Free" ? "10%" : plan.id === "Pemula" ? "30%" : plan.id === "Kreator" ? "60%" : "100%" }}></div>
-                      </div>
+
+                      <ul className="space-y-4 mb-12 flex-1">
+                        {plan.features.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-4 text-xs font-bold">
+                            <Check className={`shrink-0 mt-0.5 ${plan.highlight || plan.special ? 'text-brand-primary' : 'text-zinc-300'}`} size={16} />
+                            <span className={plan.highlight || plan.special ? 'text-zinc-300' : 'text-zinc-500'}>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <button 
+                         onClick={() => {
+                            const amountMap: any = { "Free": 0, "Starter": 19000, "Creator": 49000, "Produktif": 99000, "Bisnis": 249000, "Enterprise": 0 };
+                            handleCheckout(plan.name, amountMap[plan.id]);
+                         }}
+                        className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-apple active:scale-95 flex items-center justify-center gap-3 ${
+                          plan.highlight || plan.special 
+                            ? "bg-brand-primary text-[#222222] hover:scale-[1.03] shadow-lg shadow-brand-primary/20" 
+                            : "bg-[#222222] dark:bg-white text-white dark:text-[#222222] hover:bg-zinc-800 dark:hover:bg-zinc-100"
+                        }`}
+                      >
+                         {plan.button}
+                         <ArrowRight size={16} />
+                      </button>
                     </div>
-
-                    <ul className="space-y-4 mb-10 flex-1">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-3 text-xs font-bold text-zinc-600">
-                          <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${plan.recommended ? "bg-indigo-100 text-indigo-600" : "bg-zinc-100 text-zinc-400"}`}>
-                            <Check size={12} />
-                          </div>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-
-                    <button 
-                      disabled={isCheckingOut !== null}
-                      onClick={() => {
-                        const amounts: Record<string, number> = {
-                          "Free": 0,
-                          "Starter": 25000,
-                          "Creator": 85000,
-                          "Produktif": 225000,
-                          "Lifetime": 599000
-                        };
-                        const amount = amounts[plan.id] || 0;
-                        if (plan.id === "Free") {
-                          setActiveMainTab("editor");
-                        } else {
-                          handleCheckout(plan.name, amount);
-                        }
-                      }}
-                      className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 flex items-center justify-center gap-2 ${
-                        plan.recommended 
-                          ? "bg-brand-primary text-black shadow-xl shadow-brand-primary/20 hover:bg-brand-primary/90" 
-                          : "bg-zinc-950 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-100"
-                      } disabled:opacity-50`}
-                    >
-                      {isCheckingOut === plan.name ? (
-                        <RefreshCw size={16} className="animate-spin" />
-                      ) : null}
-                      {plan.id === "Free" ? (lang === "id" ? "Mulai Sekarang" : "Start Now") : (lang === "id" ? `Pilih Paket ${plan.name}` : `Choose ${plan.name}`)}
-                    </button>
                   </div>
                 ))}
               </div>
 
-              <div className="bg-zinc-900 rounded-[3rem] p-12 text-white overflow-hidden relative group">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/20 blur-[100px] -translate-y-1/2 translate-x-1/2"></div>
-                <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                  <div>
-                    <span className="px-4 py-1.5 bg-brand-primary text-black rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-6 inline-block uppercase">Best Value</span>
-                    <h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">Butuh Kuota Sekali Jalan? <br/>Beli Top-up, Tanpa Langganan.</h2>
-                    <p className="text-zinc-400 font-bold leading-relaxed mb-8">Ideal untuk projek video tunggal atau tugas kuliah yang mendesak. Kuota berlaku selamanya.</p>
-                    <div className="p-6 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-6">
-                       <div className="text-center">
-                         <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Harga</p>
-                         <p className="text-2xl font-black">Rp 225.000</p>
-                       </div>
-                       <div className="w-px h-10 bg-white/10"></div>
-                       <div className="text-center">
-                         <p className="text-[10px] font-black text-[#10B981] uppercase tracking-widest mb-1">Kuota</p>
-                         <p className="text-2xl font-black">300.000 Karakter</p>
-                       </div>
+              {/* Top-up Packs (Pay As You Go) */}
+              <div className="mt-20 space-y-10">
+                <div className="text-center space-y-4">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary/10 text-brand-primary rounded-full text-[10px] font-black uppercase tracking-widest border border-brand-primary/20">
+                    <Zap size={12} fill="currentColor" /> Pay As You Go
+                  </div>
+                  <h2 className="text-4xl font-black tracking-tight text-[#222222] dark:text-white leading-[0.9]">Top-up Karakter</h2>
+                  <p className="text-zinc-500 font-bold max-w-xl mx-auto italic">
+                    Kredit tambahan yang berlaku selamanya. Tanpa langganan bulanan. <br />
+                    Gunakan kapanpun Anda mau.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto px-6">
+                  {TOP_UP_PACKS.map((pack) => (
+                    <div key={pack.id} className="bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-[2.5rem] p-8 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full hover:border-brand-primary/30 relative overflow-hidden">
+                      {pack.popular && (
+                        <div className="absolute top-4 right-4 bg-emerald-500 text-white text-[8px] font-black px-2 py-1 rounded tracking-tighter">POPULER</div>
+                      )}
+                      
+                      <div className="mb-6 text-left">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-zinc-500 mb-2">{pack.name}</h4>
+                        <div className="flex items-baseline gap-1 text-[#222222] dark:text-white">
+                          <span className="text-[10px] font-black opacity-40">Rp</span>
+                          <span className="text-3xl font-black">{pack.price.toLocaleString("id-ID")}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-5 bg-zinc-50 dark:bg-[#222222] rounded-2xl border border-zinc-100 dark:border-zinc-800 mb-6 group-hover:border-brand-primary/20 transition-colors text-left">
+                        <p className="text-2xl font-black text-[#222222] dark:text-white mb-1">{pack.characters.toLocaleString("id-ID")}</p>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Karakter Selamanya</p>
+                      </div>
+
+                      <p className="text-[11px] font-bold text-zinc-500 mb-8 flex-1 text-left leading-relaxed">{pack.description}</p>
+
+                      <button 
+                        onClick={() => handleCheckout(pack.name, pack.price)}
+                        disabled={isCheckingOut === pack.name}
+                        className="w-full py-4 bg-zinc-100 dark:bg-[#222222] text-[#222222] dark:text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-primary hover:text-black transition-all flex items-center justify-center gap-2 border border-zinc-200 dark:border-zinc-800"
+                      >
+                        {isCheckingOut === pack.name ? <RefreshCw className="animate-spin" size={14} /> : "Beli Sekarang"}
+                        <ArrowRight size={14} />
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex flex-col gap-4">
-                    <button 
-                      disabled={isCheckingOut === "Lifetime"}
-                      onClick={() => handleCheckout("Lifetime", 150000)}
-                      className="w-full bg-white text-zinc-950 py-6 rounded-3xl font-black uppercase tracking-[0.3em] text-sm hover:bg-indigo-50 transition-all active:scale-95 shadow-2xl flex items-center justify-center gap-2"
-                    >
-                      {isCheckingOut === "Lifetime" && <RefreshCw size={20} className="animate-spin" />}
-                      BELI LIFETIME PACK
-                    </button>
-                    <p className="text-center text-xs font-bold text-zinc-500 italic">*Masa aktif selamanya, no monthly fees.</p>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Secure Payment Gateway within Pricing Tab */}
-              <div className="pt-12 text-center">
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-4">Supported Payment Methods</p>
-                <div className="flex flex-wrap justify-center gap-6 opacity-60">
-                   {[
-                     { name: "QRIS", icon: <QrCode size={18} /> },
-                     { name: "Visa", icon: <CreditCard size={18} /> },
-                     { name: "PayPal", icon: <Coins size={18} /> },
-                     { name: "VA Transfer", icon: <Banknote size={18} /> },
-                     { name: "E-Wallet", icon: <Wallet size={18} /> }
-                   ].map(item => (
-                     <div key={item.name} className="flex items-center gap-2 px-4 py-2 border border-zinc-200 dark:border-zinc-800 rounded-full bg-white dark:bg-zinc-900 shadow-sm border-dashed">
-                        {item.icon}
-                        <span className="text-[10px] font-bold uppercase tracking-widest">{item.name}</span>
-                     </div>
-                   ))}
+              <div className="mt-12 text-center pb-20">
+                 <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    Semua transaksi diproses secara aman melalui Midtrans. PPN 11% sudah termasuk.
+                 </p>
+              </div>
+
+              {/* Trust & Payments */}
+              <div className="space-y-16 py-12">
+                <div className="max-w-4xl mx-auto p-12 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-[3rem] text-center">
+                  <h3 className="text-xl font-black mb-6">Metode Pembayaran Lokal</h3>
+                  <div className="flex flex-wrap justify-center gap-4 mb-8">
+                    {['QRIS', 'GoPay', 'DANA', 'OVO', 'ShopeePay', 'Bank Transfer', 'Visa'].map(p => (
+                      <div key={p} className="px-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-xl text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                        {p}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-zinc-500 font-bold max-w-lg mx-auto text-sm">
+                    Bayar sekali, gunakan selamanya. Tanpa biaya tersembunyi. Tanpa fluktuasi dolar. Lebih murah dari ElevenLabs dan platform lain. Lebih Indonesia.
+                  </p>
+                </div>
+
+                {/* FAQ Section */}
+                <div className="max-w-3xl mx-auto space-y-6">
+                  <h3 className="text-3xl font-black text-center mb-12">Paling Sering Ditanya</h3>
+                  {[
+                    { q: "Apakah kuota hangus tiap bulan?", a: "Tidak! Paket Creator ke atas mendukung 'Rollover' (sisa kuota dibawa ke bulan depan). Paket Starter berlaku selamanya (sekali bayar)." },
+                    { q: "Boleh pakai untuk YouTube/TikTok?", a: "Ya, paket Creator ke atas sudah termasuk lisensi komersial penuh." },
+                    { q: "Apa bedanya suara Standard dan Ultra HD?", a: "Suara Ultra HD menggunakan teknologi Google Chirp yang memiliki intonasi 10x lebih manusiawi dan hanya tersedia di paket Produktif ke atas." },
+                    { q: "Ada Top-up kalau kuota habis tengah jalan?", a: "Ada! Kamu bisa beli paket Starter kapan saja sebagai tambahan kuota instan. Semakin besar paketnya, semakin murah harga per karakternya!" }
+                  ].map((faq, i) => (
+                    <div key={i} className="p-8 bg-zinc-50 dark:bg-zinc-900/50 rounded-3xl border border-zinc-100 dark:border-zinc-800 group hover:border-brand-primary/30 transition-all">
+                       <h4 className="text-lg font-black mb-3 group-hover:text-brand-primary transition-colors">{faq.q}</h4>
+                       <p className="text-zinc-500 dark:text-zinc-400 font-bold text-sm leading-relaxed">{faq.a}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </motion.div>
@@ -2867,9 +3596,9 @@ TEKS: ${text}`
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-4 z-50"
           >
-            <div className="bg-zinc-950/90 backdrop-blur-2xl border border-zinc-800 p-4 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] flex flex-col md:flex-row items-center gap-6">
+            <div className="bg-[#222222]/90 backdrop-blur-2xl border border-zinc-800 p-4 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] flex flex-col md:flex-row items-center gap-6">
               <div className="flex items-center gap-4 shrink-0">
-                <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-black shadow-lg shadow-emerald-500/20">
+                <div className="w-14 h-14 bg-brand-primary rounded-2xl flex items-center justify-center text-[#222222] shadow-lg shadow-brand-primary/20">
                   <Play size={24} fill="currentColor" />
                 </div>
                 <div>
@@ -2884,7 +3613,7 @@ TEKS: ${text}`
                   src={audioUrl} 
                   controls 
                   autoPlay
-                  className="w-full h-10 accent-emerald-500"
+                  className="w-full h-10 accent-brand-primary"
                 />
               </div>
 
@@ -2899,7 +3628,7 @@ TEKS: ${text}`
                 <a 
                   href={audioUrl} 
                   download={`rungu-voice-${selectedVoice.name.toLowerCase()}-${Date.now()}.${selectedFormat.toLowerCase()}`}
-                  className="w-12 h-12 bg-emerald-500 hover:bg-emerald-400 text-black rounded-2xl flex items-center justify-center transition-all shadow-lg shadow-emerald-500/20"
+                  className="w-12 h-12 bg-brand-primary hover:bg-brand-primary/80 text-[#222222] rounded-2xl flex items-center justify-center transition-all shadow-lg shadow-brand-primary/20"
                   title="Download"
                 >
                   <Download size={20} />
@@ -2918,12 +3647,11 @@ TEKS: ${text}`
 
       {/* Footer */}
       <footer className="max-w-7xl mx-auto w-full px-6 py-12 border-t border-zinc-200 dark:border-zinc-800 mt-12 mb-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 opacity-80 transition-all duration-500">
           <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-zinc-200 rounded-lg flex items-center justify-center font-bold text-zinc-600">G</div>
-            <p className="text-xs font-medium text-zinc-500">Powered by Google Cloud Text-to-Speech & Gemini AI</p>
+            <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 tracking-tight">@2026 PT Shinerva Prajna Tejas | All Rights Reserved</p>
           </div>
-          <div className="flex items-center gap-8 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+          <div className="flex items-center gap-8 text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
             <span>Enterprise Grade</span>
             <span>Natural Synthesis</span>
             <span>Full HD MP3</span>
@@ -2933,20 +3661,20 @@ TEKS: ${text}`
 
       {/* Modal Kloning Suara */}
       {isCloningModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#222222]/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 animate-in fade-in zoom-in duration-200">
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-black text-zinc-900 tracking-tight">Kloning Suara</h3>
-                    <span className="px-1.5 py-0.5 bg-indigo-600 text-white text-[10px] font-black rounded-md tracking-tighter uppercase">BETA</span>
+                    <h3 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">Kloning Suara</h3>
+                    <span className="px-1.5 py-0.5 bg-brand-primary text-[#222222] text-[10px] font-black rounded-md tracking-tighter uppercase">BETA</span>
                   </div>
-                  <p className="text-xs text-zinc-500 font-medium whitespace-nowrap">Buat kembaran digital suara Anda</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">Buat kembaran digital suara Anda</p>
                 </div>
                 <button 
                   onClick={() => setIsCloningModalOpen(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-100 transition-colors text-zinc-400"
+                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-400"
                 >
                   <X size={20} />
                 </button>
@@ -2960,7 +3688,7 @@ TEKS: ${text}`
                     placeholder="Contoh: Suara Saya Aris"
                     value={cloningName}
                     onChange={(e) => setCloningName(e.target.value)}
-                    className="w-full bg-zinc-50 border-2 border-zinc-100 rounded-2xl px-5 py-3 text-sm focus:border-indigo-600 focus:outline-none focus:ring-0 transition-colors font-bold"
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border-2 border-zinc-100 dark:border-zinc-800 rounded-2xl px-5 py-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-0 transition-colors font-bold text-zinc-900 dark:text-white"
                   />
                 </div>
 
@@ -2969,7 +3697,9 @@ TEKS: ${text}`
                   <div 
                     onClick={() => fileInputRef.current?.click()}
                     className={`border-3 border-dashed rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${
-                      uploadingFile ? "border-indigo-600 bg-indigo-50" : "border-zinc-100 hover:border-indigo-200 bg-zinc-50"
+                      uploadingFile 
+                        ? "border-brand-primary bg-brand-primary/10" 
+                        : "border-zinc-100 dark:border-zinc-800 hover:border-brand-primary/20 bg-zinc-50 dark:bg-zinc-950"
                     }`}
                   >
                     <input 
@@ -2981,17 +3711,17 @@ TEKS: ${text}`
                     />
                     {uploadingFile ? (
                       <>
-                        <FileAudio size={40} className="text-indigo-600 mb-3" />
-                        <p className="text-sm font-bold text-zinc-900 truncate max-w-full px-4">{uploadingFile.name}</p>
-                        <p className="text-[10px] text-zinc-500 mt-1 uppercase font-black">File Terpilih</p>
+                        <FileAudio size={40} className="text-brand-primary mb-3" />
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white truncate max-w-full px-4">{uploadingFile.name}</p>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 uppercase font-black">File Terpilih</p>
                       </>
                     ) : (
                       <>
-                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-3">
-                          <Plus size={24} className="text-zinc-300" />
+                        <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-2xl flex items-center justify-center shadow-sm mb-3">
+                          <Plus size={24} className="text-zinc-300 dark:text-zinc-600" />
                         </div>
-                        <p className="text-sm font-bold text-zinc-900">Klik untuk Unggah</p>
-                        <p className="text-[10px] text-zinc-500 mt-1 text-center leading-relaxed font-medium">Format: MP3 atau WAV (Maks 10MB)</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">Klik untuk Unggah</p>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 text-center leading-relaxed font-medium">Format: MP3 atau WAV (Maks 10MB)</p>
                       </>
                     )}
                   </div>
@@ -3005,15 +3735,15 @@ TEKS: ${text}`
                   >
                     <div className="flex items-center justify-between px-1">
                       <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Pilih Segmen (Potong)</label>
-                      <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-bold">
+                      <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full font-bold">
                         {Math.round(trimEnd - trimStart)} Detik Terpilih
                       </span>
                     </div>
                     
-                    <div className="bg-zinc-50 border border-zinc-100 rounded-3xl p-5 space-y-5 shadow-inner">
+                    <div className="bg-zinc-50 dark:bg-[#222222] border border-zinc-100 dark:border-zinc-800 rounded-3xl p-5 space-y-5 shadow-inner">
                       {/* Visual Timeline */}
                       <div 
-                        className="relative h-10 bg-zinc-200/50 rounded-xl overflow-hidden border border-zinc-200 cursor-crosshair group"
+                        className="relative h-10 bg-zinc-200/50 dark:bg-zinc-800/50 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 cursor-crosshair group"
                         onMouseMove={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           setTimelineHoverPercent((e.clientX - rect.left) / rect.width);
@@ -3037,22 +3767,22 @@ TEKS: ${text}`
                         {timelineHoverPercent !== null && (
                           <div className="absolute inset-0 pointer-events-none z-20">
                             <div 
-                              className="absolute h-full w-px bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.5)]" 
+                              className="absolute h-full w-px bg-brand-primary shadow-[0_0_8px_rgba(226,114,91,0.5)]" 
                               style={{ left: `${timelineHoverPercent * 100}%` }}
                             />
                             <div 
-                              className="absolute top-0 px-1.5 py-0.5 bg-indigo-600 text-[8px] text-white font-bold rounded-b-sm shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-0 px-1.5 py-0.5 bg-brand-primary text-[8px] text-[#222222] font-bold rounded-b-sm shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                               style={{ left: `${timelineHoverPercent * 100}%`, transform: "translateX(-50%)" }}
                             >
                               {formatTime(timelineHoverPercent * fileDuration)}
                             </div>
                           </div>
                         )}
-                        <div className="absolute top-0 right-2 text-[8px] font-bold text-indigo-300 uppercase tracking-widest leading-10 pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-0 right-2 text-[8px] font-bold text-brand-primary uppercase tracking-widest leading-10 pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity">
                           Dbl-Click to Set
                         </div>
                         <div 
-                          className="absolute h-full bg-indigo-500/20 border-x-2 border-indigo-500 z-10"
+                          className="absolute h-full bg-brand-primary/20 border-x-2 border-brand-primary z-10"
                           style={{ 
                             left: `${(trimStart / fileDuration) * 100}%`, 
                             width: `${((trimEnd - trimStart) / fileDuration) * 100}%` 
@@ -3063,7 +3793,7 @@ TEKS: ${text}`
                           {[...Array(30)].map((_, i) => (
                             <div 
                               key={i} 
-                              className="w-1 bg-zinc-600 rounded-full" 
+                              className="w-1 bg-zinc-600 dark:bg-zinc-500 rounded-full" 
                               style={{ height: `${20 + Math.sin(i * 0.5) * 30 + Math.random() * 30}%` }} 
                             />
                           ))}
@@ -3073,9 +3803,9 @@ TEKS: ${text}`
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <div className="flex justify-between text-[10px] font-black text-zinc-500 tracking-tighter">
+                            <div className="flex justify-between text-[10px] font-black text-zinc-500 dark:text-zinc-400 tracking-tighter">
                               <span>MULAI</span>
-                              <span className="text-indigo-600 bg-indigo-50 px-1.5 rounded">{formatTime(trimStart)}</span>
+                              <span className="text-brand-primary bg-brand-primary/10 px-1.5 rounded">{formatTime(trimStart)}</span>
                             </div>
                             <input 
                               type="range" 
@@ -3084,13 +3814,13 @@ TEKS: ${text}`
                               step="0.1"
                               value={trimStart}
                               onChange={(e) => setTrimStart(Math.min(parseFloat(e.target.value), trimEnd - 0.5))}
-                              className="w-full accent-indigo-600 h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer"
+                              className="w-full accent-brand-primary h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
                             />
                           </div>
                           <div className="space-y-2">
-                            <div className="flex justify-between text-[10px] font-black text-zinc-500 tracking-tighter">
+                            <div className="flex justify-between text-[10px] font-black text-zinc-500 dark:text-zinc-400 tracking-tighter">
                               <span>AKHIR</span>
-                              <span className="text-indigo-600 bg-indigo-50 px-1.5 rounded">{formatTime(trimEnd)}</span>
+                              <span className="text-brand-primary bg-brand-primary/10 px-1.5 rounded">{formatTime(trimEnd)}</span>
                             </div>
                             <input 
                               type="range" 
@@ -3099,7 +3829,7 @@ TEKS: ${text}`
                               step="0.1"
                               value={trimEnd}
                               onChange={(e) => setTrimEnd(Math.max(parseFloat(e.target.value), trimStart + 0.5))}
-                              className="w-full accent-indigo-600 h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer"
+                              className="w-full accent-brand-primary h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
                             />
                           </div>
                         </div>
@@ -3111,7 +3841,7 @@ TEKS: ${text}`
                           key={uploadingFile?.lastModified} // Force reload when file changes
                           src={uploadingFile ? URL.createObjectURL(uploadingFile) : ""} 
                           controls 
-                          className="w-full h-8 accent-indigo-600 scale-95"
+                          className="w-full h-8 accent-brand-primary scale-95"
                           onTimeUpdate={(e) => {
                             const ct = (e.target as HTMLAudioElement).currentTime;
                             if (ct > trimEnd) {
@@ -3125,8 +3855,8 @@ TEKS: ${text}`
                             }
                           }}
                         />
-                        <div className="mt-4 p-4 bg-zinc-950 text-white rounded-2xl">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 text-indigo-400">Shortcuts Editor</p>
+                        <div className="mt-4 p-4 bg-[#222222] text-white rounded-2xl">
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] mb-2 text-brand-primary">Shortcuts Editor</p>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                             <div className="flex justify-between text-[9px] border-b border-white/5 pb-1"><span className="text-zinc-500">[ ]</span> <span className="font-bold">Set Start / End</span></div>
                             <div className="flex justify-between text-[9px] border-b border-white/5 pb-1"><span className="text-zinc-500">Space</span> <span className="font-bold">Play / Pause</span></div>
@@ -3179,7 +3909,7 @@ TEKS: ${text}`
                 <button 
                   disabled={!cloningName || !uploadingFile || isTrimming}
                   onClick={saveClonedVoice}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-2xl py-4 font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 transition-all active:scale-95"
+                  className="w-full bg-brand-primary hover:bg-brand-primary/80 disabled:opacity-50 text-[#222222] rounded-2xl py-4 font-bold flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/20 transition-all active:scale-95"
                 >
                   {isTrimming ? (
                     <RefreshCw size={18} className="animate-spin" />
@@ -3196,20 +3926,20 @@ TEKS: ${text}`
 
       {/* Konfirmasi Hapus Suara */}
       {isDeleteConfirmOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-zinc-950/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-200 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-[#222222]/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 animate-in fade-in zoom-in duration-200">
             <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle size={32} />
               </div>
-              <h3 className="text-xl font-black text-zinc-900 mb-2">{t.deleteConfirmTitle}</h3>
-              <p className="text-sm text-zinc-500 font-bold mb-8 italic">
+              <h3 className="text-xl font-black text-zinc-900 dark:text-white mb-2">{t.deleteConfirmTitle}</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 font-bold mb-8 italic">
                 {t.deleteConfirmDesc.replace("{name}", voiceToDelete?.name || "")}
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={() => setIsDeleteConfirmOpen(false)}
-                  className="py-4 bg-zinc-100 text-zinc-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all active:scale-95"
+                  className="py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all active:scale-95"
                 >
                   {t.cancelBtn}
                 </button>
@@ -3226,33 +3956,33 @@ TEKS: ${text}`
       )}
 
       {isHistoryOpen && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-zinc-950/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-zinc-200 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[80vh]">
-            <div className="p-8 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-[#222222]/40 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[80vh]">
+            <div className="p-8 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
               <div>
-                <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Koleksi Naskah</h3>
-                <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest mt-1">Daftar naskah yang Anda simpan</p>
+                <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Koleksi Naskah</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest mt-1">Daftar naskah yang Anda simpan</p>
               </div>
               <button 
                 onClick={() => setIsHistoryOpen(false)}
-                className="w-12 h-12 flex items-center justify-center rounded-2xl hover:bg-white hover:shadow-md transition-all text-zinc-400"
+                className="w-12 h-12 flex items-center justify-center rounded-2xl hover:bg-white dark:hover:bg-zinc-800 hover:shadow-md transition-all text-zinc-400"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 no-scrollbar bg-white">
+            <div className="flex-1 overflow-y-auto p-8 no-scrollbar bg-white dark:bg-zinc-900">
               {!currentUser ? (
                 <div className="text-center py-12">
-                   <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                   <div className="w-20 h-20 bg-brand-primary/10 text-brand-primary rounded-full flex items-center justify-center mx-auto mb-6">
                       <Lock size={40} />
                    </div>
-                   <h4 className="text-xl font-black text-zinc-900 mb-2">Login Diperlukan</h4>
-                   <p className="text-zinc-500 font-bold max-w-xs mx-auto mb-8 italic text-sm">Silakan Sign In untuk menyimpan dan melihat koleksi naskah Anda di cloud.</p>
+                   <h4 className="text-xl font-black text-zinc-900 dark:text-white mb-2">Login Diperlukan</h4>
+                   <p className="text-zinc-500 dark:text-zinc-400 font-bold max-w-xs mx-auto mb-8 italic text-sm">Silakan Sign In untuk menyimpan dan melihat koleksi naskah Anda di cloud.</p>
                    <div className="flex flex-col gap-3 max-w-sm mx-auto">
                      <button 
                        onClick={() => setIsAuthModalOpen(true)}
-                       className="w-full h-16 bg-brand-primary text-black rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                       className="w-full h-16 bg-brand-primary text-[#222222] rounded-[2rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
                      >
                        <UserIcon size={20} />
                        Sign In / Sign Up Sekarang
@@ -3261,18 +3991,18 @@ TEKS: ${text}`
                 </div>
               ) : savedScripts.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-zinc-50 text-zinc-300 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 text-zinc-300 dark:text-zinc-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <FileText size={40} />
                   </div>
-                  <h4 className="text-xl font-black text-zinc-900 mb-2">Belum Ada Naskah</h4>
-                  <p className="text-zinc-500 font-bold italic text-sm">Mulai menulis dan simpan naskah pertama Anda.</p>
+                  <h4 className="text-xl font-black text-zinc-900 dark:text-white mb-2">Belum Ada Naskah</h4>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-bold italic text-sm">Mulai menulis dan simpan naskah pertama Anda.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {savedScripts.map(script => (
                     <div 
                       key={script.id}
-                      className="group p-6 bg-zinc-50 hover:bg-white border border-zinc-100 hover:border-indigo-200 rounded-[2rem] transition-all hover:shadow-xl hover:shadow-indigo-500/5 flex items-center justify-between"
+                      className="group p-6 bg-zinc-50 dark:bg-[#222222] hover:bg-white dark:hover:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 hover:border-brand-primary/20 rounded-[2rem] transition-all hover:shadow-xl hover:shadow-brand-primary/5 flex items-center justify-between"
                     >
                       <div 
                         className="flex-1 cursor-pointer"
@@ -3282,7 +4012,7 @@ TEKS: ${text}`
                           setIsHistoryOpen(false);
                         }}
                       >
-                        <h4 className="font-black text-zinc-900 text-lg mb-1 group-hover:text-indigo-600 transition-colors tracking-tight">{script.title}</h4>
+                        <h4 className="font-black text-zinc-900 dark:text-white text-lg mb-1 group-hover:text-brand-primary transition-colors tracking-tight">{script.title}</h4>
                         <div className="flex items-center gap-4">
                           <p className="text-[10px] font-bold text-zinc-400 truncate max-w-[200px] sm:max-w-md">{script.content.substring(0, 80)}...</p>
                           <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-400 uppercase tracking-tighter shrink-0">
@@ -3297,7 +4027,7 @@ TEKS: ${text}`
                             e.stopPropagation();
                             deleteScript(script.id);
                           }}
-                          className="p-3 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
+                          className="p-3 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-all"
                           title="Hapus"
                         >
                           <Trash2 size={18} />
@@ -3308,7 +4038,7 @@ TEKS: ${text}`
                             setScriptTitle(script.title);
                             setIsHistoryOpen(false);
                           }}
-                          className="p-3 text-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-2xl hover:bg-emerald-500 hover:text-black transition-all active:scale-90"
+                          className="p-3 text-brand-primary bg-brand-primary/5 border border-brand-primary/20 rounded-2xl hover:bg-brand-primary hover:text-[#222222] transition-all active:scale-90"
                           title="Buka"
                         >
                           <CheckCircle2 size={18} />
@@ -3320,10 +4050,10 @@ TEKS: ${text}`
               )}
             </div>
 
-            <div className="p-8 bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800">
-               <div className="flex items-center gap-3 text-emerald-600/60">
+            <div className="p-8 bg-zinc-50 dark:bg-[#222222] border-t border-zinc-100 dark:border-zinc-800">
+               <div className="flex items-center gap-3 text-brand-primary/60">
                  <ShieldCheck size={16} />
-                 <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed text-zinc-500">
+                 <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed text-zinc-500 dark:text-zinc-400">
                    Enkripsi Cloud Rungu: Naskah dikunci secara privat di akun Google Anda.
                  </p>
                </div>
@@ -3331,38 +4061,9 @@ TEKS: ${text}`
           </div>
         </div>
       )}
-      {/* Low Quota Notification */}
-      <AnimatePresence>
-        {(currentUser ? (userProfile.currentQuota + userProfile.rolloverQuota) : sessionQuota) < 1000 && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, x: 50 }}
-            animate={{ opacity: 1, y: 0, x: 0 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="fixed bottom-32 right-10 z-[160] w-72 bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-[2rem] shadow-2xl text-white"
-          >
-            <div className="flex items-start gap-4">
-               <div className="p-2 bg-white/20 rounded-xl"><AlertCircle size={20} /></div>
-               <div>
-                  <h4 className="text-xs font-black uppercase tracking-widest mb-1">Kuota Hampir Habis!</h4>
-                  <p className="text-[10px] font-bold opacity-90 leading-relaxed mb-4">Narasi kreatifmu butuh bensin. Top up sekarang untuk lanjut berkarya!</p>
-                  <button 
-                    onClick={() => {
-                      setActiveMainTab("pricing");
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="w-full py-2.5 bg-white text-orange-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
-                  >
-                    Top Up Sekarang
-                  </button>
-               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Auth Selection Modal */}
       {isAuthModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-zinc-950/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-[#222222]/40 backdrop-blur-sm">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -3386,7 +4087,7 @@ TEKS: ${text}`
               <div className="space-y-3">
                 <button 
                   onClick={() => { handleLogin('google'); setIsAuthModalOpen(false); }}
-                  className="w-full h-14 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-95 flex items-center justify-center gap-3 font-sans"
+                  className="w-full h-14 bg-white dark:bg-[#222222] border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all active:scale-95 flex items-center justify-center gap-3 font-sans"
                 >
                   <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                   Sign In dengan Google
@@ -3402,7 +4103,7 @@ TEKS: ${text}`
                 
                 <button 
                   onClick={() => { handleLogin('apple'); setIsAuthModalOpen(false); }}
-                  className="w-full h-14 bg-black text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-black/20 active:scale-95 flex items-center justify-center gap-3 hover:bg-zinc-900 transition-all"
+                  className="w-full h-14 bg-[#222222] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-[#222222]/20 active:scale-95 flex items-center justify-center gap-3 hover:bg-[#222222]/90 transition-all"
                 >
                   <Apple size={20} fill="currentColor" />
                   Sign In dengan Apple ID
@@ -3427,7 +4128,7 @@ TEKS: ${text}`
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
               className="absolute bottom-20 right-0 w-80 sm:w-96 bg-white dark:bg-zinc-900 rounded-[2.5rem] shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[600px]"
             >
-              <div className="p-6 bg-brand-primary text-black flex items-center justify-between">
+              <div className="p-6 bg-brand-primary text-[#222222] flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm">
                     <Sparkles size={20} />
@@ -3442,13 +4143,13 @@ TEKS: ${text}`
                 </div>
                 <button 
                   onClick={() => setIsChatOpen(false)}
-                  className="p-2 hover:bg-black/10 rounded-full transition-colors"
+                  className="p-2 hover:bg-[#222222]/10 rounded-full transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-50 dark:bg-zinc-950/50">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-zinc-50 dark:bg-[#222222]/50">
                 {chatMessages.map((msg, i) => (
                   <motion.div
                     key={i}
@@ -3491,7 +4192,7 @@ TEKS: ${text}`
                   <button 
                     onClick={handleChat}
                     disabled={isChatLoading || !chatInput.trim()}
-                    className="p-3 bg-zinc-950 dark:bg-white text-white dark:text-black rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-30"
+                    className="p-3 bg-[#222222] dark:bg-white text-white dark:text-[#222222] rounded-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-30"
                   >
                     <ChevronRight size={20} />
                   </button>
@@ -3505,7 +4206,7 @@ TEKS: ${text}`
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsChatOpen(!isChatOpen)}
-          className="w-16 h-16 bg-brand-primary text-black rounded-[2rem] shadow-2xl flex items-center justify-center relative group overflow-hidden"
+          className="w-16 h-16 bg-brand-primary text-[#222222] rounded-[2rem] shadow-2xl flex items-center justify-center relative group overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent group-hover:opacity-0 transition-opacity" />
           <AnimatePresence mode="wait">
@@ -3531,7 +4232,7 @@ TEKS: ${text}`
             exit={{ y: 100, opacity: 0 }}
             className="fixed bottom-10 left-0 right-0 z-40 flex justify-center pointer-events-none"
           >
-            <div className="bg-zinc-950/80 backdrop-blur-2xl border border-zinc-800 p-3 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-6 pointer-events-auto border-emerald-500/20">
+            <div className="bg-[#222222]/80 backdrop-blur-2xl border border-zinc-800 p-3 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-6 pointer-events-auto border-brand-primary/20">
                <div className="pl-6 pr-4 hidden md:block">
                   <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block mb-0.5 opacity-60">Suara Aktif</span>
                   <span className="text-sm font-black text-white block tracking-tight">{selectedVoice.name}</span>
@@ -3540,7 +4241,7 @@ TEKS: ${text}`
                <button 
                  onClick={handleSynthesize}
                  disabled={isGenerating || !text}
-                 className={`px-12 py-5 bg-[#10B981] text-black font-black uppercase tracking-[0.2em] text-xs rounded-full shadow-2xl shadow-emerald-500/20 hover:scale-[1.03] active:scale-95 transition-apple flex items-center gap-3 disabled:opacity-50 disabled:grayscale`}
+                 className={`px-12 py-5 bg-brand-primary text-[#222222] font-black uppercase tracking-[0.2em] text-xs rounded-full shadow-2xl shadow-brand-primary/20 hover:scale-[1.03] active:scale-95 transition-apple flex items-center gap-3 disabled:opacity-50 disabled:grayscale`}
                >
                  {isGenerating ? (
                    <>
@@ -3561,28 +4262,80 @@ TEKS: ${text}`
 
       {/* Floating Low Quota Notification */}
       <AnimatePresence>
-        {(userProfile.currentQuota + userProfile.rolloverQuota) < 1000 && currentUser && (
+        {(userProfile.currentQuota + userProfile.rolloverQuota) <= 2000 && (userProfile.currentQuota + userProfile.rolloverQuota) > 0 && currentUser && !isQuotaWarningDismissed && (
           <motion.div 
             initial={{ opacity: 0, x: 50, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 50, scale: 0.9 }}
-            className="fixed bottom-10 right-10 z-50 bg-amber-500 text-black p-6 rounded-[2.5rem] shadow-2xl flex items-center gap-6 min-w-[320px] border-4 border-amber-400"
+            className="fixed bottom-10 right-10 z-50 bg-amber-500 text-[#222222] p-6 rounded-[2.5rem] shadow-2xl flex items-center gap-6 min-w-[320px] border-4 border-amber-400 group"
           >
-             <div className="p-3 bg-black/10 rounded-2xl">
+             <div className="p-3 bg-white/20 rounded-2xl">
                 <AlertTriangle size={24} />
              </div>
              <div className="flex-1">
                 <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Peringatan Kuota</p>
                 <p className="text-sm font-black leading-tight">Kuota Hampir Habis!</p>
-                <p className="text-[10px] font-bold opacity-60">Sisa {(userProfile.currentQuota + userProfile.rolloverQuota).toLocaleString()} Karakter.</p>
+                <p className="text-[10px] font-bold opacity-70">Sisa {(userProfile.currentQuota + userProfile.rolloverQuota).toLocaleString()} Karakter.</p>
              </div>
-             <button 
-               onClick={() => setActiveMainTab("pricing")}
-               className="p-3 bg-black text-white rounded-2xl hover:scale-105 transition-apple"
-             >
-                <Zap size={20} fill="currentColor" />
-             </button>
+             <div className="flex flex-col gap-2">
+               <button 
+                 onClick={() => setIsQuotaWarningDismissed(true)}
+                 className="p-2 hover:bg-white/20 rounded-lg transition-all"
+                 title="Tutup"
+               >
+                 <X size={16} />
+               </button>
+               <button 
+                 onClick={() => setActiveMainTab("pricing")}
+                 className="p-3 bg-[#222222] text-white rounded-2xl hover:scale-105 transition-apple"
+               >
+                  <Zap size={20} fill="currentColor" />
+               </button>
+             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Premium Upgrade Modal */}
+      <AnimatePresence>
+        {isPremiumModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-[#222222]/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white dark:bg-[#222222] w-full max-w-md rounded-[2.5rem] overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-2xl"
+            >
+              <div className="p-10 text-center space-y-6">
+                <div className="w-20 h-20 bg-brand-primary/10 text-brand-primary rounded-[24px] flex items-center justify-center mx-auto">
+                   <Crown size={40} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Ups! Suara Premium</h3>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-bold leading-relaxed px-4">
+                    Suara <span className="text-brand-primary">Ultra HD (Chirp)</span> hanya tersedia untuk member <span className="text-brand-primary font-black uppercase tracking-widest text-[11px] ml-1">Produktif</span> ke atas.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3 pt-4">
+                  <button 
+                    onClick={() => {
+                      setIsPremiumModalOpen(false);
+                      setActiveMainTab("pricing");
+                    }}
+                    className="w-full py-5 bg-brand-primary text-[#222222] rounded-[2.5rem] font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-center"
+                  >
+                    Upgrade Sekarang
+                  </button>
+                  <button 
+                    onClick={() => setIsPremiumModalOpen(false)}
+                    className="w-full py-5 bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 rounded-[2.5rem] font-black text-xs uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all font-bold"
+                  >
+                    Mungkin Nanti
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -3596,7 +4349,7 @@ TEKS: ${text}`
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 20, scale: 0.95 }}
               className={`p-4 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-start gap-3 ${
-                toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' :
+                toast.type === 'success' ? 'bg-brand-primary/10 border-brand-primary/20 text-brand-primary' :
                 toast.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
                 'bg-zinc-900 border-zinc-800 text-zinc-300'
               }`}
@@ -3609,6 +4362,19 @@ TEKS: ${text}`
           ))}
         </AnimatePresence>
       </div>
+
+      {/* Floating WA Button */}
+      <a 
+        href="https://wa.me/628123456789?text=Halo%20Rungu.id!%20Saya%20butuh%20bantuan%20mengenai..."
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-10 left-10 z-[150] w-14 h-14 bg-[#25D366] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-apple group ring-4 ring-white dark:ring-zinc-950"
+      >
+        <MessageCircle size={28} fill="currentColor" />
+        <span className="absolute left-16 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0 pointer-events-none shadow-xl">
+           Bantuan WhatsApp
+        </span>
+      </a>
     </div>
   </div>
   );

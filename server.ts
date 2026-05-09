@@ -8,8 +8,19 @@ import dotenv from "dotenv";
 import midtransClient from "midtrans-client";
 import fs from "fs";
 import crypto from "crypto";
+import admin from "firebase-admin";
+
+import { convertToIndoSSML } from "./src/lib/ssmlWrapper.ts";
 
 dotenv.config();
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault()
+  });
+}
+const fdb = admin.firestore();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -113,8 +124,22 @@ async function startServer() {
       const synthesizeVoice = async (voiceName: string) => {
         // Detect if input is SSML or should be treated as SSML
         const isSSML = text.trim().startsWith("<speak>") || text.includes("<break") || text.includes("<emphasis") || text.includes("<phoneme") || text.includes("<prosody");
-        const inputPayload = isSSML 
-          ? { ssml: text.trim().startsWith("<speak>") ? text : `<speak>${text}</speak>` }
+        
+        let finalInput = text;
+        
+        // Auto-naturalize if not already SSML and mood/intent suggests it (or if explicitly requested)
+        const shouldNaturalize = !isSSML && (mood === 'natural' || !mood);
+        
+        if (shouldNaturalize) {
+          finalInput = convertToIndoSSML(text, { 
+            isSerious: mood === 'serious',
+            speed: speed || 1.0,
+            pitch: pitch ? `${pitch}st` : "0st"
+          });
+        }
+
+        const inputPayload = (isSSML || shouldNaturalize)
+          ? { ssml: (finalInput.trim().startsWith("<speak>") ? finalInput : `<speak>${finalInput}</speak>`) }
           : { text };
 
         return await fetch(
@@ -286,22 +311,112 @@ async function startServer() {
 
       if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
         if (fraudStatus === 'challenge') {
-          // TODO: handle fraud challenge
-        } else if (fraudStatus === 'accept') {
-          // TODO: update user balance in Firestore
-          // Since we don't have the user ID directly in the callback (unless we put it in metadata or orderId)
-          // We should ideally use custom_field1 for userId
+          console.log(`Transaction challenge for ${orderId}`);
+        } else if (fraudStatus === 'accept' || !fraudStatus) {
+          const userId = notification.custom_field1;
+          const planName = notification.item_details?.[0]?.name?.split(": ")?.[1] || "";
+          
+          if (userId) {
+            console.log(`Updating quota for user ${userId} based on plan ${planName}`);
+            const userRef = fdb.collection('users').doc(userId);
+            const userDoc = await userRef.get();
+
+            if (userDoc.exists) {
+              const userData = userDoc.data() || {};
+              let currentQuota = userData.currentQuota || 0;
+              let rolloverQuota = userData.rolloverQuota || 0;
+              let addedQuota = 0;
+              let isSubscription = false;
+
+              const quotas: Record<string, number> = {
+                "Starter": 25000,
+                "Creator": 180000,
+                "Produktif": 420000,
+                "Bisnis": 1150000,
+                "Top-up Kecil": 50000,
+                "Top-up Medium": 150000,
+                "Top-up Jumbo": 500000
+              };
+
+              addedQuota = quotas[planName] || 0;
+              isSubscription = ["Creator", "Produktif", "Bisnis"].includes(planName);
+
+              if (addedQuota > 0) {
+                const batch = fdb.batch();
+                
+                if (isSubscription) {
+                  batch.update(userRef, {
+                    plan: planName,
+                    currentQuota: addedQuota,
+                    maxQuota: addedQuota,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                  });
+                } else {
+                  batch.update(userRef, {
+                    rolloverQuota: rolloverQuota + addedQuota,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                  });
+                }
+
+                // Record transaction
+                const transactionRef = fdb.collection('transactions').doc(orderId);
+                batch.set(transactionRef, {
+                  userId,
+                  orderId,
+                  planName,
+                  amount: statusResponse.gross_amount,
+                  status: transactionStatus,
+                  paymentType: statusResponse.payment_type,
+                  createdAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                await batch.commit();
+                console.log(`Successfully updated quota and recorded transaction for ${userId}: +${addedQuota}`);
+              }
+            } else {
+              console.error(`User document ${userId} not found for payment processing.`);
+            }
+          }
         }
       } else if (transactionStatus === 'cancel' || transactionStatus === 'deny' || transactionStatus === 'expire') {
-        // TODO: handle failure
-      } else if (transactionStatus === 'pending') {
-        // TODO: handle pending
+        // Record failed transaction too
+        const userId = notification.custom_field1;
+        if (userId) {
+          await fdb.collection('transactions').doc(orderId).set({
+            userId,
+            orderId,
+            status: transactionStatus,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        }
       }
 
       res.status(200).send('OK');
     } catch (error) {
       console.error("Midtrans Callback Error:", error);
       res.status(500).send('Error');
+    }
+  });
+
+  // API Route for Transaction History
+  app.get("/api/transactions/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const snapshot = await fdb.collection('transactions')
+        .where('userId', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .limit(20)
+        .get();
+      
+      const transactions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      res.json(transactions);
+    } catch (error) {
+      console.error("Fetch Transactions Error:", error);
+      res.status(500).json({ error: "Failed to fetch transactions." });
     }
   });
 
