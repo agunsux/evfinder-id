@@ -129,7 +129,8 @@ async function createServer() {
       monthly_chars: 10000,
       earned_chars: 0, // social + referral
       used_chars: 0,
-      generation_count: 0
+      generation_count: 0,
+      pronunciations: {}
     };
 
     users.set(newUser.id, newUser);
@@ -196,7 +197,8 @@ async function createServer() {
         monthly_chars: 10000,
         earned_chars: 0,
         used_chars: 0,
-        generation_count: 0
+        generation_count: 0,
+        pronunciations: {}
       };
       users.set(id, foundUser);
     }
@@ -208,6 +210,28 @@ async function createServer() {
   app.get('/api/user/me', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ user: req.user });
+  });
+
+  app.get('/api/user/pronunciations', authenticate, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+    res.json({ pronunciations: req.user.pronunciations || {} });
+  });
+
+  app.post('/api/user/pronunciations', authenticate, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+    const { word, pronunciation } = req.body;
+    if (!word) return res.status(400).json({ error: 'Word is required' });
+    
+    if (!req.user.pronunciations) req.user.pronunciations = {};
+    
+    if (pronunciation === null) {
+      delete req.user.pronunciations[word];
+    } else {
+      req.user.pronunciations[word] = pronunciation;
+    }
+    
+    saveUsers();
+    res.json({ success: true, pronunciations: req.user.pronunciations });
   });
 
   app.post('/api/user/social-share', authenticate, (req, res) => {
@@ -393,8 +417,20 @@ async function createServer() {
          actualVoice = actualVoice.replace('Studio', 'Neural2');
       }
 
-      // Apply watermark SSML logic for FREE tier
-      let modifiedText = text
+      // Apply custom pronunciations
+      let modifiedText = text;
+      
+      if (user.pronunciations) {
+        // Sort keys by length descending to avoid partial matches on shorter words first
+        const sortedWords = Object.keys(user.pronunciations).sort((a, b) => b.length - a.length);
+        for (const word of sortedWords) {
+          const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+          modifiedText = modifiedText.replace(regex, user.pronunciations[word]);
+        }
+      }
+
+      modifiedText = modifiedText
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/\.id\b/gi, " dot ay di ")

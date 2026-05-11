@@ -14,6 +14,9 @@ import {
   Share2,
   UserPlus,
   Gift,
+  BookOpen,
+  Trash2,
+  Plus,
 } from "lucide-react";
 
 const PACKS = [
@@ -116,6 +119,10 @@ function App() {
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [socialUrl, setSocialUrl] = useState("");
 
+  const [isPronunciationOpen, setIsPronunciationOpen] = useState(false);
+  const [newWord, setNewWord] = useState("");
+  const [newPronunciation, setNewPronunciation] = useState("");
+
   const refreshUser = async () => {
     if (!user) return;
     try {
@@ -125,6 +132,32 @@ function App() {
       const data = await res.json();
       if (data.user) setUser(data.user);
     } catch (e) {}
+  };
+
+  const handleUpdatePronunciation = async (word, pronunciation) => {
+    if (!user) {
+      alert("Harap login terlebih dahulu untuk menggunakan fitur ini.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/user/pronunciations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": user.email,
+        },
+        body: JSON.stringify({ word, pronunciation }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUser({ ...user, pronunciations: data.pronunciations });
+      } else {
+        alert(data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memperbarui panduan pengucapan.");
+    }
   };
 
   const maxChars = 5000;
@@ -778,6 +811,17 @@ function App() {
                         className="text-xs bg-surface2 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 cursor-pointer"
                       >
                         Terapkan
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-400">
+                        Panduan Pengucapan
+                      </span>
+                      <button
+                        onClick={() => setIsPronunciationOpen(true)}
+                        className="text-xs bg-surface2 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 cursor-pointer"
+                      >
+                        Kelola
                       </button>
                     </div>
                   </div>
@@ -1490,6 +1534,96 @@ function App() {
                 Submit Link
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Pronunciation Guide Modal */}
+      {isPronunciationOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsPronunciationOpen(false)}
+          ></div>
+          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-lg relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
+            <button
+              onClick={() => setIsPronunciationOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center mb-8">
+              <BookOpen className="w-16 h-16 text-terracotta mx-auto mb-4" />
+              <h2 className="text-2xl font-black text-white">Panduan Pengucapan</h2>
+              <p className="text-gray-400 text-sm mt-2">
+                Atur cara AI menyebutkan kata-kata tertentu (misal: "Shinerva" dibaca "shi ner va").
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-400 mb-2">Kata Asli</label>
+                  <input
+                    type="text"
+                    value={newWord}
+                    onChange={(e) => setNewWord(e.target.value)}
+                    className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none"
+                    placeholder="Contoh: AI"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-400 mb-2">Cara Baca</label>
+                  <input
+                    type="text"
+                    value={newPronunciation}
+                    onChange={(e) => setNewPronunciation(e.target.value)}
+                    className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none"
+                    placeholder="Contoh: ey ai"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (newWord.trim() && newPronunciation.trim()) {
+                    handleUpdatePronunciation(newWord.trim(), newPronunciation.trim());
+                    setNewWord("");
+                    setNewPronunciation("");
+                  }
+                }}
+                className="w-full bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border-none cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Tambah Aturan
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                Aturan Tersimpan ({Object.keys(user?.pronunciations || {}).length})
+              </h3>
+              <div className="space-y-3">
+                {user?.pronunciations && Object.keys(user.pronunciations).length > 0 ? (
+                  Object.entries(user.pronunciations).map(([word, pron]) => (
+                    <div key={word} className="flex items-center justify-between bg-dark p-4 rounded-xl border border-surface2">
+                      <div className="flex flex-col">
+                        <span className="text-white font-bold">{word}</span>
+                        <span className="text-terracotta text-sm">Dibaca: {pron}</span>
+                      </div>
+                      <button
+                        onClick={() => handleUpdatePronunciation(word, null)}
+                        className="text-gray-500 hover:text-red-500 transition-colors p-2 cursor-pointer bg-transparent border-none"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500 italic text-sm">
+                    Belum ada aturan pengucapan khusus.
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
