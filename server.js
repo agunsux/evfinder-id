@@ -347,7 +347,7 @@ async function createServer() {
 
   app.post('/api/tts', authenticate, ttsRateLimiter, async (req, res) => {
     try {
-      const { text, voice, speed } = req.body;
+      const { text, voice, speed, pitch, volume } = req.body;
       const apiKey = process.env.GOOGLE_API_KEY;
       const user = req.user;
 
@@ -417,7 +417,12 @@ async function createServer() {
         body: JSON.stringify({
           input: { ssml: ssmlText },
           voice: { languageCode: 'id-ID', name: actualVoice },
-          audioConfig: { audioEncoding: 'MP3', speakingRate: speed || 1.0 }
+          audioConfig: { 
+            audioEncoding: 'MP3', 
+            speakingRate: speed || 1.0,
+            pitch: pitch || 0.0,
+            volumeGainDb: volume || 0.0
+          }
         })
       });
 

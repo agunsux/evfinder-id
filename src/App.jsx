@@ -92,6 +92,8 @@ function App() {
   const [text, setText] = useState("");
   const [voice, setVoice] = useState("id-ID-Wavenet-A");
   const [speed, setSpeed] = useState(1);
+  const [pitch, setPitch] = useState(0);
+  const [volume, setVolume] = useState(0);
   const [status, setStatus] = useState("idle"); // idle, loading, success
   const [isAudioVisible, setIsAudioVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -196,7 +198,7 @@ function App() {
           "Content-Type": "application/json",
           "x-user-email": user ? user.email : "",
         },
-        body: JSON.stringify({ text, voice, speed }),
+        body: JSON.stringify({ text, voice, speed: parseFloat(speed), pitch: parseFloat(pitch), volume: parseFloat(volume) }),
       });
 
       const data = await res.json();
@@ -244,6 +246,10 @@ function App() {
     synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = parseFloat(speed);
+    // map pitch -20 to 20 into 0 to 2
+    utterance.pitch = 1 + (parseFloat(pitch) / 20);
+    // map volume -10 to 10 into 0 to 1
+    utterance.volume = 0.5 + (parseFloat(volume) / 20);
 
     const voices = synth.getVoices();
     const idVoices = voices.filter((v) => v.lang.includes("id"));
@@ -634,7 +640,7 @@ function App() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-400 mb-2">
                       Suara Pilihan
@@ -683,23 +689,63 @@ function App() {
                       </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
-                      Kecepatan
-                    </label>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="2"
-                      step="0.1"
-                      value={speed}
-                      onChange={(e) => setSpeed(e.target.value)}
-                      className="w-full h-2 bg-dark rounded-lg appearance-none cursor-pointer mt-3 accent-terracotta"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500 mt-2">
-                      <span>Lambat</span>
-                      <span>Normal</span>
-                      <span>Cepat</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-2">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-400 mb-2">
+                        Kecepatan ({speed}x)
+                      </label>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="2"
+                        step="0.1"
+                        value={speed}
+                        onChange={(e) => setSpeed(e.target.value)}
+                        className="w-full h-2 bg-dark rounded-lg appearance-none cursor-pointer mt-3 accent-terracotta"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>Lambat</span>
+                        <span>Normal</span>
+                        <span>Cepat</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-400 mb-2">
+                        Pitch ({pitch})
+                      </label>
+                      <input
+                        type="range"
+                        min="-20"
+                        max="20"
+                        step="1"
+                        value={pitch}
+                        onChange={(e) => setPitch(e.target.value)}
+                        className="w-full h-2 bg-dark rounded-lg appearance-none cursor-pointer mt-3 accent-terracotta"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>Rendah</span>
+                        <span>Normal</span>
+                        <span>Tinggi</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-400 mb-2">
+                        Volume ({volume > 0 ? `+${volume}` : volume} dB)
+                      </label>
+                      <input
+                        type="range"
+                        min="-10"
+                        max="10"
+                        step="1"
+                        value={volume}
+                        onChange={(e) => setVolume(e.target.value)}
+                        className="w-full h-2 bg-dark rounded-lg appearance-none cursor-pointer mt-3 accent-terracotta"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>Kecil</span>
+                        <span>Normal</span>
+                        <span>Besar</span>
+                      </div>
                     </div>
                   </div>
                 </div>
