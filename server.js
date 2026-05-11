@@ -44,7 +44,7 @@ function generateRefCode() {
 
 // Ensure an admin user exists for exports
 users.set('admin', {
-  id: 'admin', name: 'Admin', email: 'admin@rungu.id', password: 'admin', tier: 'ENTERPRISE', valid_referrals: 0, has_received_referral_bonus: false, signup_bonus_chars: 10000, monthly_chars: 1000000, earned_chars: 0, used_chars: 0, generation_count: 0, email_subscribed: true, whatsapp_opted_in: false
+  id: 'admin', name: 'Admin', email: 'admin@shinerva.id', password: 'admin', tier: 'ENTERPRISE', valid_referrals: 0, has_received_referral_bonus: false, signup_bonus_chars: 10000, monthly_chars: 1000000, earned_chars: 0, used_chars: 0, generation_count: 0, email_subscribed: true, whatsapp_opted_in: false
 });
 
 async function createServer() {
@@ -179,7 +179,7 @@ async function createServer() {
       foundUser = {
         id,
         name: 'User ' + whatsapp.slice(-4),
-        email: whatsapp + '@rungu.id', // temp email
+        email: whatsapp + '@shinerva.id', // temp email
         password: generateId(),
         whatsapp: whatsapp,
         whatsapp_opted_in: true,
@@ -406,7 +406,7 @@ async function createServer() {
         
       let ssmlText = `<speak>${modifiedText}`;
       if (tier === 'FREE' || isTeaser) {
-         ssmlText += `<break time="0.5s"/><prosody volume="-6dB">Dibuat dengan rungu dot ay di.</prosody>`;
+         ssmlText += `<break time="0.5s"/><prosody volume="-6dB">Dibuat dengan shinerva dot ay di.</prosody>`;
       }
       ssmlText += `</speak>`;
 

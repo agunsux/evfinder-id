@@ -1,6 +1,6 @@
-# RUNGU - AI Text-to-Speech Application
+# SHINERVA - AI Text-to-Speech Application
 
-This is the fully packaged source code for the RUNGU web application, ready to be self-hosted on a VPS (like Hostinger). It uses a Vite (React) frontend and a Node.js (Express) backend server.
+This is the fully packaged source code for the SHINERVA web application, ready to be self-hosted on a VPS (like Hostinger). It uses a Vite (React) frontend and a Node.js (Express) backend server.
 
 ## Project Structure
 
@@ -20,12 +20,12 @@ This is the fully packaged source code for the RUNGU web application, ready to b
 
 ### 1. Transfer Files to Your Server
 Export this project as a ZIP file from AI Studio.
-Upload and extract the ZIP file onto your VPS (for example, into `/var/www/rungu-app`).
+Upload and extract the ZIP file onto your VPS (for example, into `/var/www/shinerva-app`).
 
 ### 2. Install Dependencies
 SSH into your VPS, navigate to the project folder, and run:
 ```bash
-cd /var/www/rungu-app
+cd /var/www/shinerva-app
 npm install
 ```
 
@@ -55,7 +55,7 @@ npm start
 To keep the server running after you close SSH:
 ```bash
 sudo npm install -g pm2
-pm2 start npm --name "rungu" -- start
+pm2 start npm --name "shinerva" -- start
 pm2 save
 pm2 startup
 ```

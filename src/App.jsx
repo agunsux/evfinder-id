@@ -68,7 +68,7 @@ const PACKS = [
   },
 ];
 
-const RunguLogo = ({ className }) => (
+const ShinervaLogo = ({ className }) => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
@@ -295,20 +295,20 @@ function App() {
       try {
         const response = await fetch(audioUrl);
         const blob = await response.blob();
-        const file = new File([blob], "rungu-audio.mp3", {
+        const file = new File([blob], "shinerva-audio.mp3", {
           type: "audio/mpeg",
         });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: "Audio dari RUNGU.id",
-            text: "Cek audio dari RUNGU.id - Generator Suara AI Indonesia",
+            title: "Audio dari Shinerva Text To Speech",
+            text: "Cek audio dari Shinerva Text To Speech - Generator Suara AI Indonesia",
           });
         } else {
           await navigator.share({
-            title: "RUNGU.id",
-            text: "Saya baru saja membuat audio keren di RUNGU.id!",
+            title: "Shinerva Text To Speech",
+            text: "Saya baru saja membuat audio keren di Shinerva Text To Speech!",
             url: window.location.href,
           });
         }
@@ -318,11 +318,11 @@ function App() {
         }
       }
     } else {
-      const shareText = `Saya baru saja membuat audio keren di RUNGU.id! Coba sekarang: ${window.location.href}`;
+      const shareText = `Saya baru saja membuat audio keren di Shinerva Text To Speech! Coba sekarang: ${window.location.href}`;
       try {
         await navigator.clipboard.writeText(shareText);
         alert(
-          "Pesan dan tautan RUNGU.id berhasil disalin ke clipboard! Bagikan sekarang ke temanmu.",
+          "Pesan dan tautan Shinerva Text To Speech berhasil disalin ke clipboard! Bagikan sekarang ke temanmu.",
         );
       } catch (err) {
         window.open(
@@ -444,9 +444,9 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             <div className="flex items-center gap-2">
-              <RunguLogo className="w-10 h-10 text-terracotta" />
+              <ShinervaLogo className="w-10 h-10 text-terracotta" />
               <span className="font-black text-2xl tracking-tight text-white hover:text-terracotta transition-colors cursor-pointer">
-                RUNGU<span className="text-terracotta">.id</span>
+                Shinerva Text To Speech
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -836,7 +836,7 @@ function App() {
                             </button>
                             <a
                               href={audioUrl}
-                              download="rungu-audio.mp3"
+                              download="shinerva-audio.mp3"
                               className="text-gray-400 hover:text-white transition-colors cursor-pointer"
                             >
                               <Download className="w-4 h-4" />
@@ -1138,9 +1138,9 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center gap-2 mb-6">
-                  <RunguLogo className="w-10 h-10 text-terracotta" />
+                  <ShinervaLogo className="w-10 h-10 text-terracotta" />
                   <span className="font-black text-2xl tracking-tight text-white">
-                    RUNGU<span className="text-terracotta">.id</span>
+                    Shinerva Text To Speech
                   </span>
                 </div>
                 <p className="text-gray-400 max-w-sm">
@@ -1209,7 +1209,7 @@ function App() {
               </div>
             </div>
             <div className="flex flex-col md:flex-row justify-between items-center pt-10 border-t border-surface2 text-gray-500 text-xs">
-              <p>© 2024 RUNGU.id. All rights reserved.</p>
+              <p>© 2024 Shinerva Text To Speech. All rights reserved.</p>
               <div className="flex gap-6 mt-4 md:mt-0">
                 <a href="#" className="hover:text-white transition-colors">
                   Privacy Policy
@@ -1238,9 +1238,9 @@ function App() {
               <X className="w-5 h-5" />
             </button>
             <div className="text-center mb-8">
-              <RunguLogo className="w-16 h-16 text-terracotta mx-auto mb-4" />
+              <ShinervaLogo className="w-16 h-16 text-terracotta mx-auto mb-4" />
               <h2 className="text-2xl font-black">
-                {authMode === "login" ? "Masuk ke RUNGU" : authMode === "whatsapp" ? "Masuk dengan WhatsApp" : "Daftar Akun Baru"}
+                {authMode === "login" ? "Masuk ke SHINERVA" : authMode === "whatsapp" ? "Masuk dengan WhatsApp" : "Daftar Akun Baru"}
               </h2>
               <p className="text-gray-400 text-sm mt-2">
                 {authMode === "login" || authMode === "whatsapp"
@@ -1465,7 +1465,7 @@ function App() {
               </h2>
               <p className="text-gray-400 text-sm mt-2">
                 Dapatkan ~20 menit audio tambahan gratis! Bagikan audio buatanmu
-                di TikTok atau Instagram Reels, tag @rungu.id, dan paste linknya
+                di TikTok atau Instagram Reels, tag @shinerva.id, dan paste linknya
                 di bawah.
               </p>
             </div>

@@ -1,7 +1,7 @@
 {
-  "name": "rungu-app",
+  "name": "shinerva-app",
   "version": "1.0.0",
-  "description": "RUNGU AI Text-to-Speech Application",
+  "description": "SHINERVA AI Text-to-Speech Application",
   "type": "module",
   "scripts": {
     "dev": "node server.js",

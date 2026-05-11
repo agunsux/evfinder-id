@@ -2,7 +2,7 @@ import re
 
 def convert_to_indo_ssml(text, is_serious=False, speed=1.0, pitch="0st"):
     """
-    Rungu Studio - Indonesian SSML Wrapper Utility (Python Version)
+    Shinerva Studio - Indonesian SSML Wrapper Utility (Python Version)
     Optimized for Google Cloud Text-to-Speech
     """
     
@@ -67,5 +67,5 @@ def convert_to_indo_ssml(text, is_serious=False, speed=1.0, pitch="0st"):
     return f'<speak>{final_ssml}</speak>'
 
 # Example Usage:
-# ssml = convert_to_indo_ssml("Halo PT Rungu, jam berapa sekarang WIB?", is_serious=False)
+# ssml = convert_to_indo_ssml("Halo PT Shinerva, jam berapa sekarang WIB?", is_serious=False)
 # print(ssml)

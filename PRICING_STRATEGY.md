@@ -1,6 +1,6 @@
-# Strategi Penetapan Harga & Launching RUNGU
+# Strategi Penetapan Harga & Launching SHINERVA
 
-Dokumen ini berisi keputusan final untuk strategi harga, penggunaan unit kredit, manajemen risiko, dan rencana peluncuran RUNGU. 
+Dokumen ini berisi keputusan final untuk strategi harga, penggunaan unit kredit, manajemen risiko, dan rencana peluncuran SHINERVA. 
 
 ## A. Tabel Pricing Final
 Paket dirancang berdasarkan psikologi harga lokal. Konsep "Kredit" digunakan di mana **1 Kredit = 1 Karakter Standard/WaveNet**. Semua paket menggunakan estimasi "Video Pendek" (asumsi 1 menit = ~1.000 karakter) agar mudah dipahami user awam.
