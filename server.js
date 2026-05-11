@@ -18,8 +18,37 @@ if (!fs.existsSync(dataFolder)) {
   fs.mkdirSync(dataFolder);
 }
 const usersFile = path.join(dataFolder, 'users.json');
+const voiceConfigFile = path.join(dataFolder, 'voice_config.json');
 
 const otps = new Map(); // Store temporary OTPs { phone: { otp, expiresAt } }
+
+let voiceConfig = {
+  tiers: {
+    'Standard': 1,
+    'Wavenet': 1,
+    'Neural2': 4,
+    'Studio': 40,
+    'Chirp': 8
+  },
+  limits: {
+    free_request_chars: 500,
+    paid_request_chars: 5000,
+    free_cooldown_sec: 15,
+    paid_cooldown_sec: 2
+  }
+};
+
+if (fs.existsSync(voiceConfigFile)) {
+  try {
+    voiceConfig = JSON.parse(fs.readFileSync(voiceConfigFile, 'utf8'));
+  } catch(e) {
+    console.error("Error reading voice_config.json", e);
+  }
+}
+
+function saveVoiceConfig() {
+  fs.writeFileSync(voiceConfigFile, JSON.stringify(voiceConfig, null, 2));
+}
 
 let users = new Map();
 if (fs.existsSync(usersFile)) {
@@ -119,18 +148,20 @@ async function createServer() {
       email_subscribed: true,
       tier: 'FREE',
       signup_date: Date.now(),
+      last_generation_at: 0,
       referral_code: generateRefCode(),
       referred_by: referredBy,
       valid_referrals: 0,
       has_received_referral_bonus: false,
       social_bonus_status: 'none',
       social_url: '',
-      signup_bonus_chars: 10000,
-      monthly_chars: 10000,
+      signup_bonus_chars: 5000,
+      monthly_chars: 0, 
       earned_chars: 0, // social + referral
       used_chars: 0,
       generation_count: 0,
-      pronunciations: {}
+      pronunciations: {},
+      history: []
     };
 
     users.set(newUser.id, newUser);
@@ -198,7 +229,8 @@ async function createServer() {
         earned_chars: 0,
         used_chars: 0,
         generation_count: 0,
-        pronunciations: {}
+        pronunciations: {},
+        history: []
       };
       users.set(id, foundUser);
     }
@@ -215,6 +247,34 @@ async function createServer() {
   app.get('/api/user/pronunciations', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ pronunciations: req.user.pronunciations || {} });
+  });
+
+  app.get('/api/user/history', authenticate, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+    res.json({ history: req.user.history || [] });
+  });
+
+  app.get('/api/admin/voice-config', authenticate, (req, res) => {
+    // Let all users see it, but only admin can change
+    res.json(voiceConfig);
+  });
+
+  app.post('/api/admin/voice-config', authenticate, (req, res) => {
+    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+    const { tiers, limits } = req.body;
+    if (tiers) {
+      voiceConfig.tiers = { ...voiceConfig.tiers, ...tiers };
+    }
+    if (limits) {
+      voiceConfig.limits = { ...voiceConfig.limits, ...limits };
+    }
+    
+    if (tiers || limits) {
+      saveVoiceConfig();
+      res.json({ success: true, voiceConfig });
+    } else {
+      res.status(400).json({ error: 'Invalid config' });
+    }
   });
 
   app.post('/api/user/pronunciations', authenticate, (req, res) => {
@@ -308,18 +368,32 @@ async function createServer() {
     const user = req.user;
     const tier = user ? user.tier : 'FREE';
     const clientId = user ? user.id : getClientIp(req);
+    const now = Date.now();
     
+    // IP Logging for abuse detection
+    const ip = getClientIp(req);
+    console.log(`[TTS_REQUEST] User: ${user?.email || 'GUEST'} | IP: ${ip} | Tier: ${tier}`);
+
+    // Cooldown check
+    if (user) {
+      const cooldownSec = tier === 'FREE' ? voiceConfig.limits.free_cooldown_sec : voiceConfig.limits.paid_cooldown_sec;
+      const cooldownMs = cooldownSec * 1000;
+      const timeSinceLast = now - (user.last_generation_at || 0);
+      if (timeSinceLast < cooldownMs) {
+        const remaining = Math.ceil((cooldownMs - timeSinceLast) / 1000);
+        return res.status(429).json({ 
+          error: `Cooldown aktif. Silakan tunggu ${remaining} detik lagi.`,
+          cooldownRemaining: remaining
+        });
+      }
+    }
+
     let maxRequestsPerMinute = 3;
     let maxSimultaneous = 1;
 
-    // Additional Daily limit for free
     if (tier === 'FREE') {
-      maxRequestsPerMinute = 3; // using per minute as per hour proxy for this implementation
-      // "max 3 generations per hour, max 10 generations per day"
-      // We will simplify to per-minute for in-memory, or implement precise check.
-    }
-
-    if (tier === 'STARTER' || tier === 'KREATOR') {
+      maxRequestsPerMinute = 2; // Strict for free
+    } else if (tier === 'STARTER' || tier === 'KREATOR') {
       maxRequestsPerMinute = 10;
       maxSimultaneous = 2;
     } else if (tier === 'PRODUKTIF' || tier === 'BISNIS' || tier === 'ENTERPRISE') {
@@ -327,7 +401,6 @@ async function createServer() {
       maxSimultaneous = 5;
     }
 
-    const now = Date.now();
     const windowMs = 60 * 1000; // 1 min
 
     // Concurrency Check
@@ -347,9 +420,8 @@ async function createServer() {
     }
 
     // Daily Check for FREE
-    if (tier === 'FREE' && user && user.generation_count >= 10) {
-      // Just simple global count for demo, ideally track by day
-      // return res.status(429).json({ error: 'Batas 10 generasi per hari telah tercapai.' });
+    if (tier === 'FREE' && user && user.generation_count >= 20) {
+       return res.status(429).json({ error: 'Batas 20 generasi harian untuk paket FREE telah tercapai. Nikmati tak terbatas dengan paket STARTER hanya Rp19rb!' });
     }
 
     userStats.count += 1;
@@ -383,45 +455,52 @@ async function createServer() {
         return res.status(401).json({ error: 'Missing GOOGLE_API_KEY in .env' });
       }
 
-      // Check Quota
-      const charCost = text.length;
-      const totalAvailable = user.monthly_chars + user.signup_bonus_chars + user.earned_chars;
+      // Tier Specific Constraints
+      const tier = user.tier;
+      const maxRequestChars = tier === 'FREE' ? voiceConfig.limits.free_request_chars : voiceConfig.limits.paid_request_chars;
       
-      // Calculate remaining chars properly
-      // We will deduct sequentially: 1. Monthly, 2. Earned, 3. Signup
-      let remaining = totalAvailable - user.used_chars;
-      
-      if (charCost > remaining) {
-        return res.status(402).json({ error: 'Kredit karakter tidak mencukupi. Sisa: ' + remaining });
+      if (text.length > maxRequestChars) {
+        return res.status(400).json({ error: `Batas karakter per request untuk paket Anda adalah ${maxRequestChars}. Upgrade untuk limit lebih besar.` });
       }
 
-      // SMART VOICE ROUTING
-      let actualVoice = voice || 'id-ID-Standard-A';
-      const tier = user.tier;
-      let isTeaser = false;
+      // Check Quota
+      const totalAvailable = user.monthly_chars + user.signup_bonus_chars + user.earned_chars;
+      let remaining = totalAvailable - user.used_chars;
       
-      // Prevent Studio voices on lower tiers
-      if (actualVoice.includes('Studio') && tier !== 'BISNIS' && tier !== 'ENTERPRISE') {
-         if (tier === 'FREE' || tier === 'STARTER') {
-           return res.status(403).json({ error: 'Fitur Suara Studio (Teaser) ini hanya untuk paket Kreator ke atas. Silakan upgrade paket Anda.' });
-         }
-         isTeaser = true;
-         if (text.length > 100) {
-           return res.status(403).json({ error: 'Preview Suara Studio dibatasi maks 100 karakter. Upgrade ke paket Bisnis untuk akses penuh.' });
-         }
-      } else if (tier === 'FREE') {
-         // Free users only get standard/wavenet
-         actualVoice = actualVoice.replace('Neural2', 'Wavenet').replace('Studio', 'Wavenet');
+      // Voice Authorization
+      let actualVoice = voice || 'id-ID-Standard-A';
+      
+      const isPremiumVoice = actualVoice.includes('Neural2') || actualVoice.includes('Studio') || actualVoice.includes('Chirp');
+      const isStudioVoice = actualVoice.includes('Studio') || actualVoice.includes('Chirp');
+
+      if (tier === 'FREE') {
+        if (isPremiumVoice) {
+          return res.status(403).json({ error: 'Suara premium (Neural2/Studio) hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
+        }
       } else if (tier === 'STARTER' || tier === 'KREATOR') {
-         // Cap to Neural2
-         actualVoice = actualVoice.replace('Studio', 'Neural2');
+        if (isStudioVoice) {
+          return res.status(403).json({ error: 'Suara Studio/Chirp hanya tersedia untuk paket PRODUKTIF ke atas. Silakan upgrade paket Anda.' });
+        }
+      }
+
+      // Multiplier logic
+      let voiceTierName = 'Standard';
+      if (actualVoice.includes('Wavenet')) voiceTierName = 'Wavenet';
+      else if (actualVoice.includes('Neural2')) voiceTierName = 'Neural2';
+      else if (actualVoice.includes('Studio')) voiceTierName = 'Studio';
+      else if (actualVoice.includes('Chirp')) voiceTierName = 'Chirp';
+
+      const multiplier = voiceConfig.tiers[voiceTierName] || 1;
+      const totalCharCost = text.length * multiplier;
+
+      if (totalCharCost > remaining) {
+        return res.status(402).json({ error: `Kredit karakter tidak mencukupi (Membutuhkan ${totalCharCost} kredit). Anda memiliki ${remaining} kredit.` });
       }
 
       // Apply custom pronunciations
       let modifiedText = text;
       
       if (user.pronunciations) {
-        // Sort keys by length descending to avoid partial matches on shorter words first
         const sortedWords = Object.keys(user.pronunciations).sort((a, b) => b.length - a.length);
         for (const word of sortedWords) {
           const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -441,12 +520,12 @@ async function createServer() {
         .replace(/\bAPI\b/gi, "ei pi ay");
         
       let ssmlText = `<speak>${modifiedText}`;
-      if (tier === 'FREE' || isTeaser) {
+      if (tier === 'FREE') {
          ssmlText += `<break time="0.5s"/><prosody volume="-6dB">Dibuat dengan shinerva dot ay di.</prosody>`;
       }
       ssmlText += `</speak>`;
 
-      // Proxy request to Google Cloud TTS API using REST
+      // Synthesize
       const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -468,26 +547,43 @@ async function createServer() {
       }
 
       // Success generation logic
-      user.used_chars += charCost;
+      user.used_chars += totalCharCost;
       user.generation_count += 1;
+      user.last_generation_at = Date.now();
 
-      // Referral system hook: on first generation, grant referral bonus
+      if (!user.history) user.history = [];
+      user.history.unshift({
+        id: generateId(),
+        date: Date.now(),
+        text_length: text.length,
+        voice: actualVoice,
+        tier: tier,
+        is_teaser: false,
+        credits_used: totalCharCost,
+        multiplier: multiplier
+      });
+
+      if (user.history.length > 50) {
+        user.history = user.history.slice(0, 50);
+      }
+
+      // Referral system hook
       if (user.generation_count === 1 && user.referred_by && !user.has_triggered_ref) {
         user.has_triggered_ref = true;
         const referrer = users.get(user.referred_by);
         if (referrer && referrer.valid_referrals < 2) {
           referrer.valid_referrals += 1;
-          user.earned_chars += 5000; // referred user bonus
+          user.earned_chars += 5000;
           
           if (referrer.valid_referrals >= 2 && !referrer.has_received_referral_bonus) {
             referrer.has_received_referral_bonus = true;
-            referrer.earned_chars += 20000; // referrer bonus
+            referrer.earned_chars += 20000;
           }
         }
       }
 
       saveUsers();
-      res.json({ ...data, isTeaser });
+      res.json({ ...data, isTeaser: false });
     } catch (error) {
       console.error('TTS proxy error:', error);
       res.status(500).json({ error: 'Server error processing TTS' });

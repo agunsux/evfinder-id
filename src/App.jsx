@@ -17,6 +17,9 @@ import {
   BookOpen,
   Trash2,
   Plus,
+  Sun,
+  Moon,
+  History,
 } from "lucide-react";
 
 const PACKS = [
@@ -71,24 +74,75 @@ const PACKS = [
   },
 ];
 
+const FAQS = [
+  {
+    question: "Apa itu Shinerva.id?",
+    answer:
+      "Shinerva.id adalah platform AI Text-to-Speech (TTS) tercanggih untuk Bahasa Indonesia yang mampu menghasilkan suara manusiawi yang alami dan emosional.",
+  },
+  {
+    question: "Apakah kredit saya bisa hangus?",
+    answer:
+      "Tergantung paket Anda. Kredit dari paket Top-Up tidak akan pernah hangus. Untuk paket bulanan (Kreator ke atas), sisa kredit akan rollover ke bulan berikutnya. Namun untuk paket FREE, kuota akan diperbarui setiap bulan dan sisa kuota yang tidak terpakai akan hangus.",
+  },
+  {
+    question: "Apakah suara AI ini bisa dipakai di TikTok atau YouTube?",
+    answer:
+      "Sangat bisa! Suara kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Untuk paket Kreator ke atas, Anda mendapatkan hak komersial penuh.",
+  },
+  {
+    question: "Apa perbedaan teknologi Standard dan Neural2?",
+    answer:
+      "Standard adalah teknologi TTS dasar, sementara Neural2 menggunakan pemrosesan saraf terbaru yang menghasilkan intonasi, jeda, dan emosi yang jauh lebih mirip manusia asli.",
+  },
+  {
+    question: "Bagaimana cara menghubungi bantuan?",
+    answer:
+      "Anda bisa menghubungi tim kami melalui WhatsApp atau Email yang tersedia di bagian bawah website jika mengalami kendala atau membutuhkan integrasi khusus.",
+  },
+];
+
+const VOICES = {
+  Standard: [
+    { id: "id-ID-Standard-A", name: "Ratna (Wanita)", type: "Standard" },
+    { id: "id-ID-Standard-B", name: "Bambang (Pria)", type: "Standard" },
+    { id: "id-ID-Wavenet-A", name: "Siti (Wanita)", type: "Wavenet" },
+    { id: "id-ID-Wavenet-B", name: "Sambas (Pria)", type: "Wavenet" },
+  ],
+  Neural2: [
+    { id: "id-ID-Neural2-A", name: "Ratna (Neural2)", type: "Neural2", premium: true, tier: "STARTER" },
+    { id: "id-ID-Neural2-D", name: "Bambang (Neural2)", type: "Neural2", premium: true, tier: "STARTER" },
+  ],
+  "Studio Premium": [
+    { id: "id-ID-Studio-A", name: "Agus (Iklan)", type: "Studio", premium: true, glow: true, tier: "KREATOR" },
+    { id: "id-ID-Studio-D", name: "Citra (Narasi)", type: "Studio", premium: true, glow: true, tier: "KREATOR" },
+  ],
+  Regional: [
+    { id: "jv-ID-Wavenet-A", name: "Jawa - Siti", type: "Regional" },
+    { id: "jv-ID-Wavenet-B", name: "Jawa - Sambas", type: "Regional" },
+  ]
+};
+
 const ShinervaLogo = ({ className }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    {/* Concentric arcs */}
-    <path d="M2 17 A 10 10 0 0 1 22 17" />
-    <path d="M5 17 A 7 7 0 0 1 19 17" />
-    <path d="M8 17 A 4 4 0 0 1 16 17" />
-    {/* Inner ear styling resembling an abstract ear */}
-    <path d="M11 16c-1 0-1-1-1-2s1-1.5 1-2.5a2 2 0 0 1 4 0c0 1-1 1.5-1 2.5s1 2 1 3a2 2 0 0 1-4 0v-.5" />
-    <path d="M12.5 14c-.5 0-1-.5-1-1s.5-1 .5-2a1 1 0 0 1 2 0c0 .5-.5 1-.5 1.5" />
-  </svg>
+  <div className={`flex items-center justify-center ${className} bg-dark rounded-xl border border-surface2 shadow-inner overflow-hidden p-1.5`}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#E2725B"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-full h-full"
+    >
+      {/* Concentric waves */}
+      <path d="M2 12 A 10 10 0 0 1 22 12" className="opacity-40" />
+      <path d="M5 12 A 7 7 0 0 1 19 12" className="opacity-70" />
+      <path d="M8 12 A 4 4 0 0 1 16 12" />
+      {/* Abstract ear shape */}
+      <path d="M12 15c-1.5 0-2-1-2-2.5 0-1.5 1-2 1-3a2.5 2.5 0 0 1 5 0c0 1-1 1.5-1 3s.5 2.5-1 2.5" />
+      <path d="M12.5 12c-.5 0-1-.5-1-1s.5-1 .5-2a1 1 0 0 1 2 0c0 .5-.5 1-.5 1.5" strokeWidth="1.5" />
+    </svg>
+  </div>
 );
 
 function App() {
@@ -123,6 +177,30 @@ function App() {
   const [newWord, setNewWord] = useState("");
   const [newPronunciation, setNewPronunciation] = useState("");
 
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const [isVoiceMgmtOpen, setIsVoiceMgmtOpen] = useState(false);
+  const [voiceConfig, setVoiceConfig] = useState({ tiers: {} });
+  const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
+
+  const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
+  const [billingCycle, setBillingCycle] = useState("monthly"); // monthly, yearly
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   const refreshUser = async () => {
     if (!user) return;
     try {
@@ -133,6 +211,75 @@ function App() {
       if (data.user) setUser(data.user);
     } catch (e) {}
   };
+
+  const fetchHistory = async () => {
+    if (!user) return;
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/user/history", {
+        headers: { "x-user-email": user.email },
+      });
+      const data = await res.json();
+      if (data.history) setHistory(data.history);
+    } catch (e) {
+      console.error("Error fetching history:", e);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const fetchVoiceConfig = async () => {
+    setVoiceConfigLoading(true);
+    try {
+      const res = await fetch("/api/admin/voice-config", {
+        headers: { "x-user-email": user?.email || "" },
+      });
+      const data = await res.json();
+      if (data.tiers) setVoiceConfig(data);
+    } catch (e) {
+      console.error("Error fetching voice config:", e);
+    } finally {
+      setVoiceConfigLoading(false);
+    }
+  };
+
+  const saveVoiceConfig = async (newTiers, newLimits) => {
+    if (!user || user.tier !== "ENTERPRISE") return;
+    try {
+      const res = await fetch("/api/admin/voice-config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": user.email,
+        },
+        body: JSON.stringify({ tiers: newTiers, limits: newLimits }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVoiceConfig(data.voiceConfig);
+        alert("Konfigurasi berhasil disimpan!");
+      }
+    } catch (e) {
+      console.error("Error saving config:", e);
+      alert("Gagal menyimpan konfigurasi.");
+    }
+  };
+
+  useEffect(() => {
+    fetchVoiceConfig();
+  }, [user]);
+
+  useEffect(() => {
+    if (isVoiceMgmtOpen) {
+      fetchVoiceConfig();
+    }
+  }, [isVoiceMgmtOpen]);
+
+  useEffect(() => {
+    if (isHistoryOpen) {
+      fetchHistory();
+    }
+  }, [isHistoryOpen]);
 
   const handleUpdatePronunciation = async (word, pronunciation) => {
     if (!user) {
@@ -216,27 +363,55 @@ function App() {
     }, 0);
   };
 
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      cooldownTimerRef.current = setInterval(() => {
+        setCooldown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    } else {
+      clearInterval(cooldownTimerRef.current);
+    }
+    return () => clearInterval(cooldownTimerRef.current);
+  }, [cooldown]);
+
   const handleGenerate = async () => {
     if (!text.trim()) {
       alert("Silakan tulis naskah terlebih dahulu.");
       return;
     }
+
+    if (cooldown > 0) {
+      alert(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
+      return;
+    }
+
     setStatus("loading");
 
     try {
-      // Call our backend API which proxies to Google TTS
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-user-email": user ? user.email : "",
         },
-        body: JSON.stringify({ text, voice, speed: parseFloat(speed), pitch: parseFloat(pitch), volume: parseFloat(volume) }),
+        body: JSON.stringify({ 
+          text, 
+          voice, 
+          speed: parseFloat(speed), 
+          pitch: parseFloat(pitch), 
+          volume: parseFloat(volume) 
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 429 && data.cooldownRemaining) {
+          setCooldown(data.cooldownRemaining);
+        }
         throw new Error(data.error || "Failed to synthesize speech");
       }
 
@@ -246,6 +421,11 @@ function App() {
         setIsTeaser(data.isTeaser || false);
         setStatus("success");
         setIsAudioVisible(true);
+        
+        // Success: Trigger cooldown on client side too
+        const cdTime = (!user || user.tier === 'FREE') ? 15 : 2;
+        setCooldown(cdTime);
+
         setTimeout(() => setStatus("idle"), 3000);
         refreshUser();
       } else {
@@ -253,24 +433,8 @@ function App() {
       }
     } catch (err) {
       console.error("TTS Generation Error:", err);
-
-      let errorMessage = "Gagal menghasilkan suara.";
-      const errMsg = err.message || "";
-
-      if (errMsg.includes("Failed to fetch")) {
-        errorMessage =
-          "Gagal terhubung ke server. Periksa koneksi internet Anda atau pastikan server berjalan.";
-      } else if (errMsg.includes("GOOGLE_API_KEY")) {
-        errorMessage =
-          "Google API Key belum dikonfigurasi di server. Menggunakan suara cadangan (Browser TTS) untuk sementara.";
-      } else {
-        errorMessage = `Terjadi kesalahan: ${errMsg}. Menggunakan suara cadangan (Browser TTS) untuk sementara.`;
-      }
-
-      alert(errorMessage);
-
-      // Fallback to browser TTS for demo if the primary API call fails
-      fallbackTTS();
+      setStatus("idle");
+      alert(err.message || "Gagal menghasilkan suara.");
     }
   };
 
@@ -475,34 +639,57 @@ function App() {
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 glass-panel border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-20 items-center">
-            <div className="flex items-center gap-2">
-              <ShinervaLogo className="w-10 h-10 text-terracotta" />
-              <span className="font-black text-2xl tracking-tight text-white hover:text-terracotta transition-colors cursor-pointer">
-                Shinerva Text To Speech
+          <div className="flex justify-between h-24 items-center">
+            <div className="flex items-center gap-4">
+              <ShinervaLogo className="w-12 h-12" />
+              <span className="font-black text-3xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer">
+                Shinerva<span className="text-terracotta">.id</span>
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a
                 href="#studio"
-                className="text-gray-300 hover:text-white font-medium transition-colors"
+                className="text-text-muted hover:text-text font-medium transition-colors"
               >
                 Studio
               </a>
               <a
                 href="#packs"
-                className="text-gray-300 hover:text-white font-medium transition-colors"
+                className="text-text-muted hover:text-text font-medium transition-colors"
               >
                 Content Packs
               </a>
               <a
                 href="#pricing"
-                className="text-gray-300 hover:text-white font-medium transition-colors"
+                className="text-text-muted hover:text-text font-medium transition-colors"
               >
                 Pricing
               </a>
+              <a
+                href="#faq"
+                className="text-text-muted hover:text-text font-medium transition-colors"
+              >
+                FAQ
+              </a>
+              <a
+                href="#contact"
+                className="text-text-muted hover:text-text font-medium transition-colors"
+              >
+                Hubungi Kami
+              </a>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-full hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text-muted hover:text-text"
+                aria-label="Toggle Theme"
+              >
+                {theme === "dark" ? (
+                  <Sun className="w-5 h-5" />
+                ) : (
+                  <Moon className="w-5 h-5" />
+                )}
+              </button>
               {user ? (
                 <span className="font-bold text-terracotta">{user.email}</span>
               ) : (
@@ -512,7 +699,7 @@ function App() {
                       switchAuthMode("login");
                       setIsAuthOpen(true);
                     }}
-                    className="hidden md:block text-gray-300 hover:text-white font-medium transition-colors border-none bg-transparent cursor-pointer"
+                    className="hidden md:block text-text-muted hover:text-text font-medium transition-colors border-none bg-transparent cursor-pointer"
                   >
                     Masuk
                   </button>
@@ -536,18 +723,18 @@ function App() {
         {/* Hero Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-24 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-terracotta/10 rounded-full blur-[120px] -z-10"></div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-tight">
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-tight text-text">
             Ubah Teks Menjadi <br />
             <span className="gradient-text">Suara Manusiawi</span>
           </h1>
-          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto font-medium">
+          <p className="text-xl text-text-muted mb-10 max-w-2xl mx-auto font-medium">
             Generator suara AI paling realistis di Indonesia. Sempurna untuk
             konten TikTok, YouTube, Podcast, dan Iklan Anda tanpa harus rekaman.
           </p>
           <div className="flex justify-center gap-4">
-            <div className="flex items-center gap-2 bg-surface2 px-4 py-2 rounded-full border border-gray-700">
+            <div className="flex items-center gap-2 bg-surface2 px-4 py-2 rounded-full border border-surface2">
               <Check className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-bold text-gray-300">
+              <span className="text-sm font-bold text-text-muted">
                 Bonus 5.000 Karakter Signup
               </span>
             </div>
@@ -587,24 +774,50 @@ function App() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-4">
                   <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                    <div className="text-gray-500 text-xs mb-1">Bulanan</div>
-                    <div className="font-bold text-white">{user.monthly_chars.toLocaleString("id-ID")}</div>
+                    <div className="text-text-muted text-xs mb-1">Bulanan</div>
+                    <div className="font-bold text-text">{user.monthly_chars.toLocaleString("id-ID")}</div>
                   </div>
                   <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                    <div className="text-gray-500 text-xs mb-1">Bonus Signup</div>
-                    <div className="font-bold text-white">{user.signup_bonus_chars.toLocaleString("id-ID")}</div>
+                    <div className="text-text-muted text-xs mb-1">Bonus Signup</div>
+                    <div className="font-bold text-text">{user.signup_bonus_chars.toLocaleString("id-ID")}</div>
                   </div>
                   <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                    <div className="text-gray-500 text-xs mb-1">Ekstra</div>
-                    <div className="font-bold text-white">{user.earned_chars.toLocaleString("id-ID")}</div>
+                    <div className="text-text-muted text-xs mb-1">Ekstra</div>
+                    <div className="font-bold text-text">{user.earned_chars.toLocaleString("id-ID")}</div>
                   </div>
                   <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                    <div className="text-gray-500 text-xs mb-1">Digunakan</div>
+                    <div className="text-text-muted text-xs mb-1">Digunakan</div>
                     <div className="font-bold text-terracotta">{user.used_chars.toLocaleString("id-ID")}</div>
                   </div>
                 </div>
               </div>
               <div className="flex flex-col gap-2 min-w-[250px]">
+                <button
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-terracotta" />{" "}
+                    <span className="text-sm font-bold">
+                      Riwayat Penggunaan
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
+                </button>
+                {user.tier === "ENTERPRISE" && (
+                  <button
+                    onClick={() => setIsVoiceMgmtOpen(true)}
+                    className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="w-4 h-4 text-terracotta" />{" "}
+                      <span className="text-sm font-bold">
+                        Voice Management
+                      </span>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
+                  </button>
+                )}
                 <div className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <UserPlus className="w-4 h-4 text-terracotta" />{" "}
@@ -626,10 +839,10 @@ function App() {
                 >
                   <div className="flex items-center gap-2">
                     <Share2
-                      className={`w-4 h-4 ${user.social_bonus_status === "none" ? "text-terracotta" : "text-gray-500"}`}
+                      className={`w-4 h-4 ${user.social_bonus_status === "none" ? "text-terracotta" : "text-text-muted"}`}
                     />{" "}
                     <span
-                      className={`text-sm font-bold ${user.social_bonus_status === "none" ? "text-white" : "text-gray-400"}`}
+                      className={`text-sm font-bold ${user.social_bonus_status === "none" ? "text-text" : "text-text-muted"}`}
                     >
                       Social Bonus
                     </span>
@@ -655,11 +868,11 @@ function App() {
               <div className="flex-1 space-y-6">
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <label className="font-bold text-gray-200">
+                    <label className="font-bold text-text-muted">
                       Editor Naskah
                     </label>
                     <span
-                      className={`text-xs font-mono ${text.length > maxChars * 0.9 ? "text-terracotta" : "text-gray-500"}`}
+                      className={`text-xs font-mono ${text.length > maxChars * 0.9 ? "text-terracotta" : "text-text-muted"}`}
                     >
                       {text.length} / {maxChars}
                     </span>
@@ -668,63 +881,53 @@ function App() {
                     ref={textAreaRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className="w-full h-64 bg-dark text-gray-100 rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all"
+                    className="w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all"
                     placeholder="Ketik naskah Anda di sini..."
                   />
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
+                    <label className="block text-sm font-bold text-text-muted mb-2">
                       Suara Pilihan
                     </label>
                     <div className="relative">
                       <select
                         value={voice}
                         onChange={(e) => setVoice(e.target.value)}
-                        className="w-full bg-dark text-gray-100 appearance-none rounded-xl py-3 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-medium"
+                        className="w-full bg-dark text-text appearance-none rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide"
                       >
-                        <option value="id-ID-Standard-A">
-                          Ratna (Standard - Wanita)
-                        </option>
-                        <option value="id-ID-Standard-B">
-                          Bambang (Standard - Pria)
-                        </option>
-                        <option value="id-ID-Wavenet-A">
-                          Siti (Wavenet - Wanita)
-                        </option>
-                        <option value="id-ID-Wavenet-B">
-                          Sambas (Wavenet - Pria)
-                        </option>
-                        <option value="id-ID-Neural2-A">
-                          Ratna (Neural2 - Wanita)
-                        </option>
-                        <option value="id-ID-Neural2-D">
-                          Bambang (Neural2 - Pria)
-                        </option>
-                        <option disabled>──────────</option>
-                        <option value="id-ID-Studio-A">
-                          Agus (Studio Teaser - Iklan)
-                        </option>
-                        <option value="id-ID-Studio-D">
-                          Citra (Studio Teaser - Narasi)
-                        </option>
-                        <option disabled>──────────</option>
-                        <option value="jv-ID-Wavenet-A">
-                          Slamet (Bahasa Jawa - Coming Soon)
-                        </option>
-                        <option value="su-ID-Wavenet-A">
-                          Cecep (Bahasa Sunda - Coming Soon)
-                        </option>
+                        {Object.entries(VOICES).map(([category, voiceList]) => (
+                          <optgroup key={category} label={category.toUpperCase()}>
+                            {voiceList.map((v) => {
+                              const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
+                              const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
+                              const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
+                              const isLocked = v.premium && userTierIndex < requiredTierIndex;
+                              
+                              return (
+                                <option key={v.id} value={v.id} disabled={isLocked}>
+                                  {isLocked ? "🔒 " : ""}{v.name} ({v.type} - {voiceConfig.tiers[v.type] || 1}x)
+                                </option>
+                              );
+                            })}
+                          </optgroup>
+                        ))}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
                         <ChevronDown className="w-4 h-4" />
                       </div>
                     </div>
+                    {(!user || user.tier === 'FREE') && (
+                      <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20 animate-pulse">
+                        <Gift className="w-3 h-3" />
+                        <span className="font-bold">Buka suara Neural2 & Studio Premium dengan paket Kreator! <a href="#pricing" className="underline">Upgrade Sekarang</a></span>
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-2">
                     <div>
-                      <label className="block text-sm font-bold text-gray-400 mb-2">
+                      <label className="block text-sm font-bold text-text-muted mb-2">
                         Kecepatan ({speed}x)
                       </label>
                       <input
@@ -743,7 +946,7 @@ function App() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-400 mb-2">
+                      <label className="block text-sm font-bold text-text-muted mb-2">
                         Pitch ({pitch})
                       </label>
                       <input
@@ -762,7 +965,7 @@ function App() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-gray-400 mb-2">
+                      <label className="block text-sm font-bold text-text-muted mb-2">
                         Volume ({volume > 0 ? `+${volume}` : volume} dB)
                       </label>
                       <input
@@ -919,19 +1122,26 @@ function App() {
 
                   <button
                     onClick={handleGenerate}
-                    disabled={status === "loading" || status === "success"}
+                    disabled={status === "loading" || status === "success" || cooldown > 0}
                     className={`w-full py-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-all shadow-lg border-none cursor-pointer 
                       ${
                         status === "success"
                           ? "bg-green-600 text-white"
                           : status === "loading"
                             ? "bg-terracotta/75 text-white cursor-not-allowed"
-                            : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-white"
+                            : cooldown > 0
+                              ? "bg-surface2 text-text-muted cursor-not-allowed border border-surface2"
+                              : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-white"
                       }`}
                   >
-                    {status === "idle" && (
+                    {status === "idle" && cooldown === 0 && (
                       <>
                         <Mic className="w-5 h-5" /> Hasilkan Suara Sekarang
+                      </>
+                    )}
+                    {status === "idle" && cooldown > 0 && (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" /> Tunggu {cooldown}s...
                       </>
                     )}
                     {status === "loading" && (
@@ -1009,9 +1219,24 @@ function App() {
             <h2 className="text-3xl md:text-4xl font-black mb-4">
               Pilih Paket Anda
             </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <p className="text-gray-400 max-w-2xl mx-auto mb-8">
               Mulai gratis, upgrade saat Anda siap untuk produksi profesional.
             </p>
+
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-4 mb-12">
+              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-text-muted'}`}>Bulanan</span>
+              <button 
+                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                className="w-14 h-7 bg-surface2 rounded-full relative p-1 transition-colors cursor-pointer border-none"
+              >
+                <div className={`w-5 h-5 bg-terracotta rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'}`}></div>
+              </button>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-text-muted'}`}>Tahunan</span>
+                <span className="bg-green-500/20 text-green-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Hemat 27%</span>
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {/* Free */}
@@ -1020,16 +1245,20 @@ function App() {
               <div className="text-2xl font-black mb-6">
                 Rp 0{" "}
                 <span className="text-xs font-medium text-gray-500">
-                  /selamanya
+                  /bulan
                 </span>
               </div>
               <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
                 ≈ 10 menit audio ≈ 10 video
               </div>
-              <ul className="space-y-4 mb-10 flex-grow text-gray-400 text-xs">
+              <ul className="space-y-4 mb-8 flex-grow text-gray-400 text-xs">
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  10.000 Kredit
+                  10.000 Kredit / Bulan
+                </li>
+                <li className="flex items-center gap-2 text-red-400">
+                  <X className="w-3 h-3 text-red-500 flex-shrink-0" />{" "}
+                  Kredit Sisa Hangus
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
@@ -1051,12 +1280,15 @@ function App() {
               </button>
             </div>
             {/* Starter */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
+            <div className="bg-surface border border-terracotta p-6 rounded-3xl flex flex-col relative shadow-[0_0_30px_rgba(226,114,91,0.15)]">
+              <div className="absolute top-0 right-6 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
+                Paling Populer
+              </div>
               <h3 className="text-lg font-bold mb-2">Starter</h3>
               <div className="text-2xl font-black mb-6">
                 Rp 19rb{" "}
                 <span className="text-xs font-medium text-gray-500">
-                  /sekali
+                  /skali
                 </span>
               </div>
               <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
@@ -1065,32 +1297,42 @@ function App() {
               <ul className="space-y-4 mb-10 flex-grow text-gray-400 text-xs">
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  50.000 Kredit
+                  50.000 Kredit (Top Up)
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Tier 1 & 2 (Neural2)
+                  Neural2 Suara Manusiawi
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Aktif 30 Hari
+                  Hak Penggunaan Komersial
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
+                  Kredit Tidak Akan Hangus
                 </li>
               </ul>
-              <button className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer">
+              <button className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer">
                 Pilih Paket
               </button>
             </div>
             {/* Kreator */}
-            <div className="bg-surface border border-terracotta p-6 rounded-3xl flex flex-col relative shadow-[0_0_30px_rgba(226,114,91,0.15)]">
-              <div className="absolute top-0 right-6 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
-                Populer
-              </div>
+            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
               <h3 className="text-lg font-bold mb-2">Kreator</h3>
-              <div className="text-2xl font-black mb-6">
-                Rp 49rb{" "}
-                <span className="text-xs font-medium text-gray-500">
-                  /bulan
-                </span>
+              <div className="mb-6">
+                {billingCycle === 'monthly' ? (
+                  <div className="text-2xl font-black">
+                    Rp 49rb <span className="text-xs font-medium text-gray-500">/bulan</span>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-xs text-gray-500 line-through">Rp 49rb</div>
+                    <div className="text-2xl font-black">
+                      Rp 35rb <span className="text-xs font-medium text-gray-500">/bulan</span>
+                    </div>
+                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 429rb ditagih tahunan</div>
+                  </div>
+                )}
               </div>
               <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
                 ≈ 100 menit audio ≈ 100 video
@@ -1116,11 +1358,20 @@ function App() {
             {/* Produktif */}
             <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
               <h3 className="text-lg font-bold mb-2">Produktif</h3>
-              <div className="text-2xl font-black mb-6">
-                Rp 99rb{" "}
-                <span className="text-xs font-medium text-gray-500">
-                  /bulan
-                </span>
+              <div className="mb-6">
+                {billingCycle === 'monthly' ? (
+                  <div className="text-2xl font-black">
+                    Rp 99rb <span className="text-xs font-medium text-gray-500">/bulan</span>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-xs text-gray-500 line-through">Rp 99rb</div>
+                    <div className="text-2xl font-black">
+                      Rp 72rb <span className="text-xs font-medium text-gray-500">/bulan</span>
+                    </div>
+                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 869rb ditagih tahunan</div>
+                  </div>
+                )}
               </div>
               <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
                 ≈ 266 menit audio ≈ 266 video
@@ -1146,11 +1397,20 @@ function App() {
             {/* Bisnis */}
             <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
               <h3 className="text-lg font-bold mb-2">Bisnis</h3>
-              <div className="text-2xl font-black mb-6">
-                Rp 249rb{" "}
-                <span className="text-xs font-medium text-gray-500">
-                  /bulan
-                </span>
+              <div className="mb-6">
+                {billingCycle === 'monthly' ? (
+                  <div className="text-2xl font-black">
+                    Rp 249rb <span className="text-xs font-medium text-gray-500">/bulan</span>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="text-xs text-gray-500 line-through">Rp 249rb</div>
+                    <div className="text-2xl font-black">
+                      Rp 182rb <span className="text-xs font-medium text-gray-500">/bulan</span>
+                    </div>
+                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 2.184rb ditagih tahunan</div>
+                  </div>
+                )}
               </div>
               <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
                 ≈ 1000 menit audio ≈ 1000 video
@@ -1176,15 +1436,68 @@ function App() {
           </div>
         </section>
 
+        {/* FAQ Section */}
+        <section id="faq" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-black mb-4">Pertanyaan Populer</h2>
+            <p className="text-text-muted">
+              Segala hal yang perlu Anda ketahui tentang Shinerva.id
+            </p>
+          </div>
+          <div className="space-y-4">
+            {FAQS.map((faq, index) => (
+              <div
+                key={index}
+                className="bg-surface border border-surface2 rounded-2xl p-6 hover:border-terracotta/50 transition-colors"
+              >
+                <h3 className="font-bold text-lg mb-2 flex items-center gap-3">
+                  <span className="text-terracotta">Q:</span> {faq.question}
+                </h3>
+                <p className="text-text-muted leading-relaxed">
+                  {faq.answer}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Contact Section */}
+        <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
+          <div className="bg-gradient-to-br from-surface to-dark border border-surface2 rounded-[3rem] p-12 text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-terracotta to-transparent opacity-20"></div>
+            <h2 className="text-4xl font-black mb-6">Butuh Bantuan Lebih?</h2>
+            <p className="text-xl text-text-muted mb-10 max-w-2xl mx-auto">
+              Tim support kami siap membantu Anda 24/7 untuk menjawab pertanyaan
+              Anda atau membantu integrasi custom.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <a
+                href="https://wa.me/628123456789"
+                target="_blank"
+                rel="noreferrer"
+                className="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-2xl font-black transition-all flex items-center gap-3"
+              >
+                Chat WhatsApp
+              </a>
+              <a
+                href="mailto:support@shinerva.id"
+                className="bg-surface2 hover:bg-gray-700 text-white px-10 py-4 rounded-2xl font-black transition-all border border-gray-700 flex items-center gap-3"
+              >
+                Email Support
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* Footer */}
         <footer className="border-t border-surface2 pt-20 pb-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
               <div className="col-span-1 md:col-span-2">
-                <div className="flex items-center gap-2 mb-6">
-                  <ShinervaLogo className="w-10 h-10 text-terracotta" />
-                  <span className="font-black text-2xl tracking-tight text-white">
-                    Shinerva Text To Speech
+                <div className="flex items-center gap-4 mb-6">
+                  <ShinervaLogo className="w-12 h-12" />
+                  <span className="font-black text-3xl tracking-tight text-text">
+                    Shinerva<span className="text-terracotta">.id</span>
                   </span>
                 </div>
                 <p className="text-gray-400 max-w-sm">
@@ -1220,6 +1533,22 @@ function App() {
                       Pricing
                     </a>
                   </li>
+                  <li>
+                    <a
+                      href="#faq"
+                      className="hover:text-terracotta transition-colors"
+                    >
+                      FAQ
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="#contact"
+                      className="hover:text-terracotta transition-colors"
+                    >
+                      Hubungi Kami
+                    </a>
+                  </li>
                 </ul>
               </div>
               <div>
@@ -1252,13 +1581,13 @@ function App() {
                 </ul>
               </div>
             </div>
-            <div className="flex flex-col md:flex-row justify-between items-center pt-10 border-t border-surface2 text-gray-500 text-xs">
+                    <div className="flex justify-between items-center pt-10 border-t border-surface2 text-text-muted text-xs">
               <p>© 2024 Shinerva Text To Speech. All rights reserved.</p>
               <div className="flex gap-6 mt-4 md:mt-0">
-                <a href="#" className="hover:text-white transition-colors">
+                <a href="#" className="hover:text-text transition-colors">
                   Privacy Policy
                 </a>
-                <a href="#" className="hover:text-white transition-colors">
+                <a href="#" className="hover:text-text transition-colors">
                   Terms of Service
                 </a>
               </div>
@@ -1623,6 +1952,244 @@ function App() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Usage History Modal */}
+      {isHistoryOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsHistoryOpen(false)}
+          ></div>
+          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-2xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
+            <button
+              onClick={() => setIsHistoryOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center mb-8">
+              <History className="w-16 h-16 text-terracotta mx-auto mb-4" />
+              <h2 className="text-2xl font-black text-white">Riwayat Penggunaan</h2>
+              <p className="text-gray-400 text-sm mt-2">
+                Daftar penggunaan kredit karakter untuk setiap suara yang dihasilkan.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {historyLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-terracotta animate-spin mb-4" />
+                  <p className="text-gray-500">Memuat data riwayat...</p>
+                </div>
+              ) : history.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-surface2 text-text-muted text-xs uppercase tracking-wider">
+                        <th className="py-3 font-bold">Tanggal</th>
+                        <th className="py-3 font-bold">Karakter</th>
+                        <th className="py-3 font-bold">Suara</th>
+                        <th className="py-3 font-bold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-surface2/50">
+                      {history.map((item) => (
+                        <tr key={item.id} className="text-sm">
+                          <td className="py-4">
+                            <div className="text-text font-medium">
+                              {new Date(item.date).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </div>
+                            <div className="text-text-muted text-[10px]">
+                              {new Date(item.date).toLocaleTimeString("id-ID", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </td>
+                          <td className="py-4">
+                            <span className="text-text font-bold">
+                              {item.credits_used.toLocaleString("id-ID")}
+                            </span>
+                          </td>
+                          <td className="py-4">
+                            <div className="text-text-muted text-xs">
+                              {item.voice.split("-").slice(-2).join("-")}
+                            </div>
+                            {item.is_teaser && (
+                              <span className="text-[10px] bg-terracotta/20 text-terracotta px-1.5 py-0.5 rounded">
+                                Preview
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 text-green-500 font-bold">
+                            Berhasil
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 italic">Belum ada riwayat penggunaan.</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 pt-6 border-t border-surface2 text-center">
+               <button 
+                onClick={() => setIsHistoryOpen(false)}
+                className="bg-surface2 hover:bg-gray-700 text-white px-8 py-2.5 rounded-xl font-bold cursor-pointer border-none"
+               >
+                 Tutup
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Voice Management Modal */}
+      {isVoiceMgmtOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsVoiceMgmtOpen(false)}
+          ></div>
+          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
+            <button
+              onClick={() => setIsVoiceMgmtOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center mb-8">
+              <Settings2 className="w-16 h-16 text-terracotta mx-auto mb-4" />
+              <h2 className="text-2xl font-black text-white">Voice Management</h2>
+              <p className="text-gray-400 text-sm mt-2">
+                Atur pengali biaya kredit (multiplier) untuk setiap tingkatan suara.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {voiceConfigLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-terracotta animate-spin mb-4" />
+                  <p className="text-gray-500">Memuat data...</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {Object.entries(voiceConfig.tiers).map(([tier, multiplier]) => (
+                    <div key={tier} className="bg-dark p-4 rounded-xl border border-surface2">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="font-bold text-white uppercase text-xs tracking-wider">
+                          Tier: {tier}
+                        </label>
+                        <span className="text-terracotta font-bold">{multiplier}x Multiplier</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="range"
+                          min="1"
+                          max="100"
+                          step="1"
+                          value={multiplier}
+                          onChange={(e) => {
+                            const newTiers = { ...voiceConfig.tiers, [tier]: parseInt(e.target.value) };
+                            setVoiceConfig({ ...voiceConfig, tiers: newTiers });
+                          }}
+                          className="flex-1 h-1.5 bg-surface2 rounded-lg appearance-none cursor-pointer accent-terracotta"
+                        />
+                        <input
+                          type="number"
+                          value={multiplier}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 1;
+                            const newTiers = { ...voiceConfig.tiers, [tier]: val };
+                            setVoiceConfig({ ...voiceConfig, tiers: newTiers });
+                          }}
+                          className="w-16 bg-dark text-white border border-surface2 rounded px-2 py-1 text-center font-bold text-xs"
+                        />
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-2">
+                        1 Karakter = {multiplier} Kredit
+                      </p>
+                    </div>
+                  ))}
+
+                  <div className="pt-6 border-t border-surface2">
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                       <Settings2 className="w-4 h-4 text-terracotta" /> Global Limits Configuration
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-dark p-4 rounded-xl border border-surface2">
+                        <label className="block text-[10px] text-gray-400 font-bold uppercase mb-2">Free Char Limit</label>
+                        <input
+                           type="number"
+                           value={voiceConfig.limits?.free_request_chars || 500}
+                           onChange={(e) => {
+                             setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, free_request_chars: parseInt(e.target.value) || 0 } });
+                           }}
+                           className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
+                        />
+                      </div>
+                      <div className="bg-dark p-4 rounded-xl border border-surface2">
+                        <label className="block text-[10px] text-gray-400 font-bold uppercase mb-2">Paid Char Limit</label>
+                        <input
+                           type="number"
+                           value={voiceConfig.limits?.paid_request_chars || 5000}
+                           onChange={(e) => {
+                             setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, paid_request_chars: parseInt(e.target.value) || 0 } });
+                           }}
+                           className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
+                        />
+                      </div>
+                      <div className="bg-dark p-4 rounded-xl border border-surface2">
+                        <label className="block text-[10px] text-gray-400 font-bold uppercase mb-2">Free Cooldown (sec)</label>
+                        <input
+                           type="number"
+                           value={voiceConfig.limits?.free_cooldown_sec || 15}
+                           onChange={(e) => {
+                             setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, free_cooldown_sec: parseInt(e.target.value) || 0 } });
+                           }}
+                           className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
+                        />
+                      </div>
+                      <div className="bg-dark p-4 rounded-xl border border-surface2">
+                        <label className="block text-[10px] text-gray-400 font-bold uppercase mb-2">Paid Cooldown (sec)</label>
+                        <input
+                           type="number"
+                           value={voiceConfig.limits?.paid_cooldown_sec || 2}
+                           onChange={(e) => {
+                             setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, paid_cooldown_sec: parseInt(e.target.value) || 0 } });
+                           }}
+                           className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 flex gap-4">
+               <button 
+                onClick={() => setIsVoiceMgmtOpen(false)}
+                className="flex-1 bg-surface2 hover:bg-gray-700 text-white py-3 rounded-xl font-bold cursor-pointer border-none"
+               >
+                 Batal
+               </button>
+               <button 
+                onClick={() => saveVoiceConfig(voiceConfig.tiers, voiceConfig.limits)}
+                className="flex-2 bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold cursor-pointer border-none"
+               >
+                 Simpan Perubahan
+               </button>
             </div>
           </div>
         </div>
