@@ -1,20 +1,71 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# RUNGU - AI Text-to-Speech Application
 
-# Run and deploy your AI Studio app
+This is the fully packaged source code for the RUNGU web application, ready to be self-hosted on a VPS (like Hostinger). It uses a Vite (React) frontend and a Node.js (Express) backend server.
 
-This contains everything you need to run your app locally.
+## Project Structure
 
-View your app in AI Studio: https://ai.studio/apps/305f7bca-107e-4ee8-bbb4-57fef0edffb6
+- `src/` & `index.html`: The Vite + React frontend code.
+- `server.js`: The backend Express server. This serves your backend REST API (`/api/tts`, `/api/auth/login`), automatically handles Vite dev-mode middleware, and serves built static files in production.
+- `package.json`: Contains all dependencies and scripts for both frontend and backend.
+- `vite.config.js`: Vite build configuration.
+- `.env.example`: A template for the environment variables the server can use.
 
-## Run Locally
+## Prerequisites
 
-**Prerequisites:**  Node.js
+- **Node.js** (v18 or newer recommended).
+- **NPM** (Node Package Manager).
+- **Hostinger VPS** running Ubuntu or another Linux distribution.
 
+## Deployment Instructions (Hostinger VPS)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 1. Transfer Files to Your Server
+Export this project as a ZIP file from AI Studio.
+Upload and extract the ZIP file onto your VPS (for example, into `/var/www/rungu-app`).
+
+### 2. Install Dependencies
+SSH into your VPS, navigate to the project folder, and run:
+```bash
+cd /var/www/rungu-app
+npm install
+```
+
+### 3. Build the Frontend
+To compile the Vite React app into static files:
+```bash
+npm run build
+```
+This generates a `dist/` directory, which `server.js` will automatically serve in production mode.
+
+### 4. Configure Environment Variables
+Copy the `.env.example` file to create a new `.env` file:
+```bash
+cp .env.example .env
+```
+Edit `.env` (using nano or vim) and set your variables.
+- `NODE_ENV=production` must be set in your environment or PM2 config to ensure `server.js` serves the built `dist/` directory.
+- `GOOGLE_API_KEY=YOUR_KEY` is required if you want the `/api/tts` endpoint to forward requests to Google Cloud TTS.
+
+### 5. Start the Application
+You can start the server manually for testing:
+```bash
+npm start
+```
+
+### 6. Keep It Running 24/7 (PM2)
+To keep the server running after you close SSH:
+```bash
+sudo npm install -g pm2
+pm2 start npm --name "rungu" -- start
+pm2 save
+pm2 startup
+```
+
+### 7. Set Up Nginx Reverse Proxy (Optional but Recommended)
+To expose this Node app to the public on port 80/443 (HTTP/HTTPS):
+- Install Nginx: `sudo apt install nginx`
+- Edit Nginx configuration (e.g. `sudo nano /etc/nginx/sites-available/default`) to proxy pass traffic to `http://localhost:3000`.
+- Reload Nginx: `sudo systemctl reload nginx`.
+
+## Customizing Auth/TTS
+- `server.js` implements a backend API at `/api/tts` which securely proxies the request to the Google Speech API without exposing your API Key on the client.
+- Auth endpoints `/api/auth/login` and `/api/auth/signup` are scaffolded awaiting DB hookup.

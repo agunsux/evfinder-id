@@ -1,88 +1,106 @@
-# Langgam Pricing Strategy Documentation v1.0
+# Strategi Penetapan Harga & Launching RUNGU
 
-## 1. Executive Summary
-Langgam adalah solusi *AI Voice Generator* tercanggih yang dikhususkan untuk Bahasa Indonesia, memberikan suara yang ekspresif, berwibawa, dan natural menggunakan mesin Google Cloud Text-to-Speech (WaveNet). Kami memposisikan diri di antara kompetitor global yang mahal (ElevenLabs) dan kompetitor lokal yang fiturnya terbatas. Dengan margin kotor target **75-85%**, Langgam menawarkan nilai ekonomi yang tak tertandingi bagi kreator konten long-form, pendidik, dan UMKM di Indonesia dengan harga mulai dari Rp 0 hingga Rp 249.000.
+Dokumen ini berisi keputusan final untuk strategi harga, penggunaan unit kredit, manajemen risiko, dan rencana peluncuran RUNGU. 
 
-**Diferensi Kunci:**
-* **Optimasi SSML Otomatis:** Pipeline Langgam secara cerdas menyesuaikan jeda dan nada untuk storytelling.
-* **Harga Lokal (IDR):** Tidak ada biaya konversi bank atau fluktuasi kartu kredit.
-* **Lisensi Komersial Transparan:** Hak penggunaan komersial disertakan langsung dalam paket berbayar.
+## A. Tabel Pricing Final
+Paket dirancang berdasarkan psikologi harga lokal. Konsep "Kredit" digunakan di mana **1 Kredit = 1 Karakter Standard/WaveNet**. Semua paket menggunakan estimasi "Video Pendek" (asumsi 1 menit = ~1.000 karakter) agar mudah dipahami user awam.
 
----
+| Nama Paket | Harga | Kuota Kredit | Estimasi Audio/Video | Voice Tier & Akses | Margin Kotor |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **FREE** | Rp 0 | 10.000 | 10 Video (10 menit) | Tier 1 (Standard/WaveNet) | N/A (Marketing) |
+| **STARTER** | Rp 19.000 (Sekali) | 50.000 | 50 Video (50 menit) | Tier 1 & 2 (Valid 30 hari) | 81.5% |
+| **KREATOR** | Rp 49.000 /bln | 150.000 | 150 Video (2.5 jam) | Tier 1, 2, 3 | 78.5% |
+| **PRODUKTIF** | Rp 99.000 /bln | 400.000 | 400 Video (6.6 jam) | Tier 1, 2, 3 | 71.7% |
+| **BISNIS** | Rp 249.000 /bln | 1.500.000 | 1.500 Video (25 jam) | Tier 1, 2, 3, 4 (Studio) | 57.8% |
+| **ENTERPRISE**| Custom | Custom | Unlimited Scale | All Tiers + Custom Cloning | >60% (Custom) |
 
-## 2. Pricing Model Rationale
-* **Character-Based Pricing:** Dipilih karena mencerminkan struktur biaya API Google (COGS langsung). Ini lebih adil bagi pengguna daripada durasi menit yang seringkali tidak akurat karena variasi kecepatan bicara (speaking rate).
-* **Freemium Strategy:** Di pasar Indonesia, "mencoba sebelum membeli" adalah kunci. Paket Free berfungsi sebagai akuisisi data dan edukasi pasar.
-* **Psychological Pricing:** Harga diatur tepat di bawah angka psikologis (e.g., Rp 99rb bukannya 100rb) untuk meningkatkan konversi di segmen kreator individu.
+> ⚠️ **PERINGATAN BAHAYA:** Jangan pernah memberikan akses Studio Voice (Tier 4) pada paket PRODUKTIF (Rp99k) ke bawah, karena biayanya 40x lipat lebih mahal. Satu kesalahan rilis token bisa menyebabkan kerugian total.
 
----
+## B. Sistem Multiplier & Voice Tiering
+Untuk menjaga margin tanpa memusingkan user dengan harga per-model, kita menggunakan sistem multiplier. Saldo user dipotong berdasarkan bobot suara.
 
-## 3. Tier Specifications Table
+- **Tier 1: Standard & WaveNet**
+  - Biaya API: Rp 0,07 / karakter
+  - Multiplier: **1x** (1 karakter = 1 Kredit)
+- **Tier 2: Neural2 (Kualitas sangat natural)**
+  - Biaya API: Rp 0,28 / karakter
+  - Multiplier: **4x** (1 karakter = 4 Kredit)
+  - *Catatan: Tidak boleh dimasukkan di Starter tanpa multiplier.*
+- **Tier 3: Chirp 3 HD (Kualitas siaran HD)**
+  - Biaya API: Rp 0,525 / karakter
+  - Multiplier: **8x** (1 karakter = 8 Kredit)
+- **Tier 4: Studio (Ultra-realistis untuk Iklan/TV)**
+  - Biaya API: Rp 2,8 / karakter
+  - Multiplier: **40x** (1 karakter = 40 Kredit)
 
-| Tier Name | Target User | Monthly Price (IDR) | Character Quota | ≈ Audio Minutes | Price per 1K chars | Key Features | License Type |
-|-----------|-------------|---------------------|-----------------|-----------------|--------------------|--------------|--------------|
-| **Free** | Pelajar / Uji Coba | Rp 0 | 5.000 | 5 - 8 menit | Rp 0 | Standard Voices saja | Personal Use Only |
-| **Pemula** | TikToker Pemula | Rp 49.000 | 100.000 | 100 menit | Rp 0,49 | Wavenet Access, SSML Tools | Commercial (Standard) |
-| **Kreator** ⭐ | YouTuber / Podcaster | Rp 99.000 | 300.000 | 300 menit | Rp 0,33 | Priority Support, All Pack Access | Commercial (Priority) |
-| **Bisnis** | Agency / Education | Rp 249.000 | 1.000.000 | 1.000 menit | Rp 0,24 | Custom Cloning (Beta), API Key | Full Commercial Rights |
+**Smart Routing Default:**
+Secara default, paket FREE menggunakan profil Standard/WaveNet. Pada paket berlangganan, UI merekomendasikan Tier 2 (Neural2) namun mencantumkan label "⚡ Memotong 4x Kredit".
 
-**Lifetime Packs (Top-up):**
-* Rp 150.000 untuk 500.000 karakter (Berlaku selamanya, max. 50k chars/hari untuk antisipasi abuse).
+## C. Bonus Onboarding & Sistem Top-Up
+**Bonus Onboarding:**
+Setiap user baru mendapatkan **10.000 Kredit Gratis (setara 10 menit Standard)**.
+Syarat:
+- Hanya dapat menggunakan Tier 1 (Standard/WaveNet).
+- Ada watermark halus (di akhir audio ada detik fade atau branding tipis, jika secara teknis memungkinkan, atau batasan tanpa opsi download file lossless).
+- Akses UI Voice Studio ditiadakan/di-lock.
 
----
+**Paket Top-Up (Sistem Isi Ulang):**
+Jika kuota bulanan habis, user bisa membeli top-up tanpa upgrade tier.
+1. **Paket Receh (Rp 25.000):** Dapat 60.000 Kredit. *(Bisa untuk 60 menit Standard atau 15 menit Neural2).*
+2. **Paket Aman (Rp 75.000):** Dapat 200.000 Kredit. *(Bisa untuk 200 menit Standard atau 50 menit Neural2).*
+3. **Paket Darurat Bisnis (Rp 150.000):** Dapat 500.000 Kredit. *(Setara 500 menit Standard atau 12,5 menit Studio).*
 
-## 4. Margin Analysis (WaveNet Basis)
-Biaya Google TTS WaveNet: $4 per 1M karakter ≈ **Rp 62 per 1.000 karakter** (Kurs $1 = Rp 15.500).
+## D. Rate Limiting Sederhana (Pencegahan Abuse)
+Sistem ini membatasi bot/spam, dan melindungi cash-flow:
+- **Paket FREE:** Maks 3 request per menit. Maks 1 request simultan. Panjang naskah per request maks 5.000 karakter.
+- **Paket STARTER & KREATOR:** Maks 10 request per menit. Maks 2 request simultan. Panjang naskah per request maks 10.000 karakter.
+- **Paket PRODUKTIF & BISNIS:** Maks 30 request per menit. Maks 5 request simultan. Antrean prioritas di server.
 
-*   **Tier: Pemula**
-    *   Revenue: Rp 49.000
-    *   COGS (100k chars): 100 × Rp 62 = Rp 6.200
-    *   **Gross Margin: 87,3%**
-*   **Tier: Kreator**
-    *   Revenue: Rp 99.000
-    *   COGS (300k chars): 300 × Rp 62 = Rp 18.600
-    *   **Gross Margin: 81,2%**
-*   **Tier: Bisnis**
-    *   Revenue: Rp 249.000
-    *   COGS (1.000k chars): 1.000 × Rp 62 = Rp 62.000
-    *   **Gross Margin: 75,1%**
+## E. Referral Program (Mekanisme Viralitas)
+Skema "Win-Win" CapCut-style:
+- **Pengundang (Referrer):** Mendapatkan **Bonus 10.000 Kredit** yang setara dengan ~10 video Standard saat teman mendaftar pakai kode dan generate suara pertama kalinya. Maksimal mengajak 20 teman/bulan.
+- **Bagi Teman (Referred):** Mendapatkan diskon 20% untuk pembelian paket STARTER atau KREATOR di bulan pertama (Rp19k jadi Rp15k; Rp49k jadi Rp39k) + Bonus 5.000 ekstra saat signup (Total 15.000 free kredit).
 
-**Break-even Analysis:** 
-Membutuhkan ~25 pengguna aktif Tier Kreator untuk menutup biaya operasional bulanan (Server, Domain, Midtrans fee) sebesar ~Rp 2.000.000 per bulan.
+## F. Template & Workflow (3 Preset Awal)
+Preset ini mempercepat user awam yang malas setting dari 0:
+1. **Narasi Fakta Unik (60 Detik):** Kecepatan 1.25x, Pitch sedikit tinggi, jeda waktu sangat pendek (cocok untuk YT Shorts/TikTok yang fast-paced). Voice default: Bambang (Tier 1).
+2. **Voice Over Produk Jualan (Tokopedia/Shopee):** Kecepatan 1.1x, aksen sangat ramah dan persuasif, ada jeda panjang di akhir kalimat promosi. Voice default: Ratna (Tier 1).
+3. **Intro YouTube Cinematic (15 Detik):** Kecepatan 0.8x, Pitch berat/dalam, ada emphasis pada kata-kata kunci. Voice default: Sambas (Tier 2 - Neural2). Membutuhkan persetujuan penggunaan kredit 4x lipat.
 
----
+## G. Strategi Customer Support
+Berdasarkan tingkatan harga:
+- **FREE & STARTER:** Dukungan tiket in-app / email standar (maks 2x24 jam), dihandle oleh FAQ / Chatbot.
+- **KREATOR & PRODUKTIF:** WhatsApp Business API, fast-response 24 jam / hari kerja, diprioritaskan.
+- **BISNIS & ENTERPRISE:** Grup WhatsApp Terbuka bersama Account Manager / Tim Teknis secara dedicated.
 
-## 5. Competitive Price Comparison
+## H. Perhitungan BEP & Estimasi Margin
+**Asumsi Bauran Pengguna (Sales Mix):**
+- 60% KREATOR (Rp 49.000)
+- 30% PRODUKTIF (Rp 99.000)
+- 10% BISNIS (Rp 249.000)
 
-| Platform | Price (IDR/mo) | Quota (Chars) | Price per 1K Chars | Commercial License |
-|----------|----------------|---------------|--------------------|--------------------|
-| **Langgam (Kreator)** | **Rp 99.000** | **300.000** | **Rp 0,33** | **Yes** |
-| ElevenLabs (Starter) | Rp 180.000* | 30.000 | Rp 6,00 | Yes |
-| Botika (Premium) | Rp 150.000 | 250.000 | Rp 0,60 | Yes |
-| Prosa (Standard) | Rp 199.000 | 400.000 | Rp 0,50 | Yes |
+**Rata-rata Pendapatan per User (ARPU):**
+= (60% x Rp 49k) + (30% x Rp 99k) + (10% x Rp 249k)
+= Rp 29.400 + Rp 29.700 + Rp 24.900 = **Rp 84.000 / user**
 
-*\*Estimasi setelah PPN dan biaya admin konversi bank.*
+**Rata-rata Biaya Server (HPP API) per User:**
+= (60% x Rp 10.500) + (30% x Rp 28.000) + (10% x Rp 105.000)
+= Rp 6.300 + Rp 8.400 + Rp 10.500 = **Rp 25.200 / user**
 
----
+**Kontribusi Margin Bersih per User:**
+= Rp 84.000 - Rp 25.200 = **Rp 58.800 (Margin 70%)**
 
-## 6. Implementation Guidelines
-*   **Quota Management:** Gunakan *Hard Cap* untuk paket Free (berhenti saat habis) dan *Soft Cap dengan Warning* untuk paket berbayar (tetap bisa generate hingga +5% kuota, lalu ditagih top-up).
-*   **Rate Limiting:** Terapkan limit 5 request per menit untuk paket Free untuk mencegah bot scraping.
-*   **Rollover Policy:** 50% kuota bulanan yang tidak terpakai pada paket Kreator & Bisnis dapat diakumulasi ke bulan berikutnya jika langganan diperpanjang.
-*   **Payment Integration:** Wajib menggunakan **Midtrans** atau **Xendit** untuk mendukung QRIS, GoPay, dan Transfer Bank Virtual Account lokal.
+**Analisis Titik Impas (BEP):**
+Dengan OPEX/CAPEX Rp 3.000.000/bulan:
+BEP User = Rp 3.000.000 / Rp 58.800 = **51,02 User (~52 Paying User).**
+Target BEP (60-120 user) **sangat mudah tercapai** dengan margin yang aman berkat sistem multiplier!
 
----
-
-## 7. Go-to-Market Pricing Tactics
-*   **Golden Batch Program:** Berikan diskon 50% selamanya (*early bird*) untuk 100 pendaftar pertama paket Kreator.
-*   **Referral Mechanics:** Setiap user yang mengajak teman (dan teman tersebut melakukan verifikasi email) mendapatkan bonus 10.000 karakter gratis.
-*   **Bundle Independence Day:** Paket 17Agustus (79.000 chars ekstra untuk merayakan kemerdekaan).
-
----
-
-## 8. Risk Mitigation
-*   **Currency Buffer:** Biaya API dalam USD namun harga jual dalam IDR. Rekomendasi: Gunakan penyangga harga 10% di atas target margin untuk mengkompensasi fluktuasi kurs IDR/USD.
-*   **Abuse Detection:** Tandai akun yang menghabiskan >100.000 karakter dalam <2 jam sebagai potensi "Reselling" tidak resmi.
-
----
-**Next Step:** Integrasikan dashboard kuota di tab "Account" pada aplikasi Langgam untuk transparansi penggunaan.
+## I. Action Plan Launching
+Tahapan wajib yang harus dikejar oleh tim sebelum peluncuran resmi:
+1. **Update Pricing Page:** Ganti istilah "Karakter" menjadi "Kredit" atau format dual display "150.000 Kredit (~150 Menit Audio)". Coret harga normal, tampilkan harga bulanan.
+2. **Update App Backend (Multiplier Logic):** Buat logic `deductCredits = length(text) * multiplier(voiceTier)` di dalam endpoint `/api/tts`.
+3. **Database Referral:** Siapkan kolom `referral_code` di user schema, dan API endpoint untuk apply promo code signup.
+4. **Rate Limiter:** Terapkan middleware seperti `express-rate-limit` pada endpoint `api/tts` berbasis Tiering user (JWT).
+5. **Midtrans Subscription/Payment:** Aktifkan endpoint pembayaran untuk top-up one-time (Starter/Receh) dan recurring (Kreator ke atas).
+6. **Pop-up Warning Tier:** Tambahkan alert di UI: _"Anda menggunakan Suara Studio. Operasi ini akan memotong 40x Kredit."_ untuk menghindari cancel culture akibat user kaget saldonya habis.
+7. **Uji Coba Internal:** Testing 1 cycle signup -> generate TTS 10 menit (gratisan habis) -> prompt top-up muncul -> bayar pakai Midtrans -> saldo keisi -> generate pakai Studio -> saldo dipotong 40x.
