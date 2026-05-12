@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const firebaseConfig = require('./firebase-applet-config.json');
@@ -17,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 admin.initializeApp();
 const firestoreDbId = firebaseConfig.firestoreDatabaseId || undefined;
-const db = admin.firestore(firestoreDbId);
+const db = getFirestore(firestoreDbId);
 
 console.log(`[FIREBASE] Admin initialized for project: ${firebaseConfig.projectId}${firestoreDbId ? " (db: " + firestoreDbId + ")" : ""}`);
 
@@ -205,7 +207,7 @@ async function createServer() {
     
     if (idToken) {
       try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const decodedToken = await getAuth().verifyIdToken(idToken);
         const userDoc = await usersCol.doc(decodedToken.uid).get();
         if (userDoc.exists) {
           req.user = { ...userDoc.data(), id: userDoc.id };
@@ -268,6 +270,18 @@ async function createServer() {
         return res.status(500).json({ error: "Failed to connect to database. " + dbError.message });
       }
 
+      // Check verification from Auth Token
+      let emailVerified = false;
+      try {
+        const idToken = req.headers.authorization?.split('Bearer ')[1];
+        if (idToken) {
+          const decodedToken = await getAuth().verifyIdToken(idToken);
+          emailVerified = decodedToken.email_verified || false;
+        }
+      } catch (authErr) {
+        console.warn("[AUTH_SYNC] Token verification for verification status failed", authErr.message);
+      }
+
       if (!userDoc.exists) {
         console.log(`[AUTH_SYNC] Creating New User record for ${email}`);
         let referredBy = null;
@@ -289,6 +303,8 @@ async function createServer() {
           email,
           whatsapp: whatsapp || '',
           whatsapp_opted_in: !!whatsapp,
+          email_verified: emailVerified,
+          wa_verified: false,
           email_subscribed: true,
           tier: 'FREE',
           signup_date: Date.now(),
@@ -296,7 +312,7 @@ async function createServer() {
           referral_code: generateRefCode(),
           referred_by: referredBy,
           valid_referrals: 0,
-          has_received_referral_bonus: false,
+          has_triggered_ref: false,
           social_bonus_status: 'none',
           social_url: '',
           bonus_credits: [
@@ -304,7 +320,8 @@ async function createServer() {
               amount: 5000,
               expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
               type: 'standard',
-              source: 'SIGNUP_BONUS'
+              source: 'SIGNUP_BONUS',
+              createdAt: Date.now()
             }
           ],
           monthly_chars: 0, 
@@ -333,7 +350,7 @@ async function createServer() {
       const userData = userDoc.data();
       if (!userData.ips_used || !userData.ips_used.includes(ip)) {
         await userRef.update({
-          ips_used: admin.firestore.FieldValue.arrayUnion(ip)
+          ips_used: FieldValue.arrayUnion(ip)
         });
       }
       res.json({ success: true, user: userData });
@@ -440,7 +457,7 @@ async function createServer() {
 
       await userRef.update({
         referred_by: referrerId,
-        bonus_credits: admin.firestore.FieldValue.arrayUnion(bonus)
+        bonus_credits: FieldValue.arrayUnion(bonus)
       });
 
       res.json({ success: true, message: "Referral code claimed successfully! 5,000 bonus characters added." });
@@ -652,7 +669,7 @@ async function createServer() {
       const userRef = usersCol.doc(sub.userId);
       await userRef.update({
         social_bonus_status: 'approved',
-        bonus_credits: admin.firestore.FieldValue.arrayUnion({
+        bonus_credits: FieldValue.arrayUnion({
           amount: 5000,
           expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
           type: 'standard',
@@ -742,7 +759,13 @@ async function createServer() {
     if (targetUser.social_bonus_status === 'pending') {
        await userRef.update({
          social_bonus_status: 'approved',
-         earned_chars: admin.firestore.FieldValue.increment(30000)
+         bonus_credits: FieldValue.arrayUnion({
+           amount: 5000,
+           expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+           type: 'standard',
+           source: 'SOCIAL_SHARE',
+           createdAt: Date.now()
+         })
        });
        res.json({ success: true });
     } else {
@@ -892,43 +915,6 @@ async function createServer() {
         return res.status(402).json({ error: errorMsg });
       }
 
-      // Handle Referral Bonus Trigger (Growth Program)
-      // Trigger: Referee generates >= 100 chars for the first time
-      if (user.referred_by && !user.has_triggered_ref && text.length >= 100) {
-        try {
-          const referrerRef = usersCol.doc(user.referred_by);
-          const referrerDoc = await referrerRef.get();
-          
-          if (referrerDoc.exists) {
-            const nowTime = Date.now();
-            const bonusAmount = 10000;
-            const expiryDays = 60;
-            
-            const referrerBonus = {
-              amount: bonusAmount,
-              expiresAt: nowTime + (expiryDays * 24 * 60 * 60 * 1000),
-              type: 'standard',
-              restriction: 'standard_only',
-              source: 'REFERRAL_REWARD',
-              from: user.id,
-              createdAt: nowTime
-            };
-            
-            // Atomically award bonus and increment valid referral count
-            await referrerRef.update({
-              bonus_credits: admin.firestore.FieldValue.arrayUnion(referrerBonus),
-              valid_referrals: admin.firestore.FieldValue.increment(1)
-            });
-            
-            // Mark referee as triggered to prevent duplicate bonuses
-            await userRef.update({ has_triggered_ref: true });
-            console.log(`[GROWTH] Referral bonus awarded to ${user.referred_by} from ${user.id}`);
-          }
-        } catch (refBonusErr) {
-          console.error("[GROWTH_ERR] Failed to award referral bonus", refBonusErr);
-        }
-      }
-
       // Referral IP check (anti-abuse)
       const ip = getClientIp(req);
       if (user.generation_count === 0 && user.referred_by) {
@@ -993,8 +979,8 @@ async function createServer() {
       }
 
       // Success generation logic
-      const usedCharsUpdate = admin.firestore.FieldValue.increment(totalCharCost);
-      const genCountUpdate = admin.firestore.FieldValue.increment(1);
+      const usedCharsUpdate = FieldValue.increment(totalCharCost);
+      const genCountUpdate = FieldValue.increment(1);
       
       const updates = {
         used_chars: usedCharsUpdate,
@@ -1004,37 +990,45 @@ async function createServer() {
 
       // Referral system hook (New rules)
       if (text.length >= 100 && user.referred_by && !user.has_triggered_ref && !user._referral_blocked) {
-        const referrerRef = usersCol.doc(user.referred_by);
-        const referrerDoc = await referrerRef.get();
+        // Enforce verification both referrer and referee (Spec: Verified required)
+        const canTrigger = user.email_verified || user.wa_verified;
         
-        if (referrerDoc.exists) {
-          const referrer = referrerDoc.data();
-          const lastRef = referrer.last_referral_date || 0;
-          const isNewMonth = new Date(lastRef).getMonth() !== new Date().getMonth();
-          const monthlyCount = isNewMonth ? 0 : (referrer.referrals_count_month || 0);
+        if (canTrigger) {
+          const referrerRef = usersCol.doc(user.referred_by);
+          const referrerDoc = await referrerRef.get();
+          
+          if (referrerDoc.exists) {
+            const referrer = referrerDoc.data();
+            const lastRef = referrer.last_referral_date || 0;
+            const isNewMonth = new Date(lastRef).getMonth() !== new Date().getMonth();
+            const monthlyCount = isNewMonth ? 0 : (referrer.referrals_count_month || 0);
 
-          if (monthlyCount < 20) {
-            updates.has_triggered_ref = true;
-            // Referee gets 5000 bonus
-            updates.bonus_credits = admin.firestore.FieldValue.arrayUnion({
-              amount: 5000,
-              expiresAt: now + 60 * 24 * 60 * 60 * 1000,
-              type: 'standard',
-              source: 'REFERRAL_REFEREE'
-            });
-
-            // Referrer gets 10000 bonus
-            await referrerRef.update({
-              referrals_count_month: monthlyCount + 1,
-              last_referral_date: now,
-              bonus_credits: admin.firestore.FieldValue.arrayUnion({
-                amount: 10000,
+            if (monthlyCount < 20) {
+              updates.has_triggered_ref = true;
+              // Referee gets 5000 bonus
+              updates.bonus_credits = FieldValue.arrayUnion({
+                amount: 5000,
                 expiresAt: now + 60 * 24 * 60 * 60 * 1000,
                 type: 'standard',
-                source: 'REFERRAL_REFERRER'
-              })
-            });
-            console.log(`[REFERRAL_TRIGGERED] Referrer: ${referrer.id} | Referee: ${user.id}`);
+                source: 'REFERRAL_REFEREE',
+                createdAt: now
+              });
+
+              // Referrer gets 10000 bonus
+              await referrerRef.update({
+                referrals_count_month: monthlyCount + 1,
+                last_referral_date: now,
+                bonus_credits: FieldValue.arrayUnion({
+                  amount: 10000,
+                  expiresAt: now + 60 * 24 * 60 * 60 * 1000,
+                  type: 'standard',
+                  source: 'REFERRAL_REFERRER',
+                  from: user.id,
+                  createdAt: now
+                })
+              });
+              console.log(`[REFERRAL_TRIGGERED] Referrer: ${referrer.id} | Referee: ${user.id}`);
+            }
           }
         }
       }
@@ -1077,7 +1071,7 @@ async function createServer() {
           if (user.referred_by) {
             const referrerRef = usersCol.doc(user.referred_by);
             await referrerRef.update({
-              bonus_credits: admin.firestore.FieldValue.arrayUnion({
+              bonus_credits: FieldValue.arrayUnion({
                 amount: 25000,
                 expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
                 type: 'all',
