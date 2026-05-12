@@ -125,9 +125,8 @@ const VOICES = {
 
 import ShinervaLogo from "./components/ShinervaLogo";
 
-const maxChars = 5000;
-
 const App = () => {
+  const maxChars = 5000;
   // ... rest of the component
 
   const [text, setText] = useState("");
@@ -879,17 +878,24 @@ const App = () => {
                     <label className="font-bold text-text-muted">
                       Editor Naskah
                     </label>
-                    <span
-                      className={`text-xs font-mono ${text.length > maxChars * 0.9 ? "text-terracotta" : "text-text-muted"}`}
-                    >
-                      {text.length} / {maxChars}
-                    </span>
+                    <div className="flex flex-col items-end">
+                      <span
+                        className={`text-xs font-mono ${text.length > maxChars * 0.9 ? "text-terracotta" : "text-text-muted"}`}
+                      >
+                        {text.length} / {maxChars}
+                      </span>
+                      {text.length > maxChars * 0.9 && (
+                        <span className="text-[10px] text-terracotta font-bold mt-1">
+                          {text.length >= maxChars ? "Batas Tercapai!" : "Hampir Mencapai Batas!"}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <textarea
                     ref={textAreaRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className="w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all"
+                    className={`w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${text.length > maxChars * 0.9 ? "border-terracotta ring-1 ring-terracotta" : ""}`}
                     placeholder="Ketik naskah Anda di sini..."
                   />
                 </div>

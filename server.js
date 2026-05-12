@@ -84,6 +84,7 @@ async function createServer() {
 
   // --- MOCK AUTH MIDDLEWARE ---
   const authenticate = (req, res, next) => {
+    console.log('[DEBUG] Auth middleware for:', req.url);
     // We expect the frontend to send user's email in 'Authorization' or a custom header 'x-user-email' to identify them safely in this mock environment.
     const email = req.headers['x-user-email'] || req.body.email; // For simplify
     let foundUser = null;
@@ -442,6 +443,7 @@ async function createServer() {
   };
 
   app.post('/api/tts', authenticate, ttsRateLimiter, async (req, res) => {
+    console.log('[DEBUG] Hit /api/tts');
     try {
       const { text, voice, speed, pitch, volume } = req.body;
       const apiKey = process.env.GOOGLE_API_KEY;
