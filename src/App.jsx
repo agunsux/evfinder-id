@@ -154,6 +154,7 @@ function App() {
   const [status, setStatus] = useState("idle"); // idle, loading, success
   const [isAudioVisible, setIsAudioVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [notification, setNotification] = useState(null); // Added notification state
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login"); // login, signup
@@ -378,6 +379,12 @@ function App() {
   }, [cooldown]);
 
   const handleGenerate = async () => {
+    if (!user) {
+      setNotification("anda belum sign up/log in");
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+
     if (!text.trim()) {
       alert("Silakan tulis naskah terlebih dahulu.");
       return;
@@ -718,6 +725,13 @@ function App() {
           </div>
         </div>
       </nav>
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className="fixed top-28 right-4 z-[60] bg-terracotta text-white px-6 py-3 rounded-xl shadow-lg border border-terracotta/50">
+          {notification}
+        </div>
+      )}
 
       <main className="flex-grow pt-32 pb-24">
         {/* Hero Section */}
