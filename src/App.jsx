@@ -22,6 +22,7 @@ Play,
   History,
   LogOut,
   Mail,
+  MessageCircle,
 } from "lucide-react";
 
 const PACKS = [
@@ -299,6 +300,35 @@ function App() {
       alert("Gagal mengirim email tes.");
     } finally {
       setTestEmailLoading(false);
+    }
+  };
+
+  const [testPhone, setTestPhone] = useState("");
+  const [testPhoneLoading, setTestPhoneLoading] = useState(false);
+
+  const sendTestWhatsApp = async () => {
+    if (!testPhone) return alert("Masukkan nomor WhatsApp tujuan (contoh: 628123456789).");
+    setTestPhoneLoading(true);
+    try {
+      const res = await fetch("/api/admin/test-whatsapp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": user.email,
+        },
+        body: JSON.stringify({ phone: testPhone }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+      } else {
+        alert("Gagal: " + data.message);
+      }
+    } catch (e) {
+      console.error("Error sending test whatsapp:", e);
+      alert("Gagal mengirim WhatsApp tes.");
+    } finally {
+      setTestPhoneLoading(false);
     }
   };
 
@@ -2244,6 +2274,33 @@ function App() {
                            }}
                            className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-surface2">
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                       <MessageCircle className="w-4 h-4 text-terracotta" /> Test WhatsApp API
+                    </h3>
+                    <div className="bg-dark p-4 rounded-xl border border-surface2">
+                      <p className="text-[10px] text-gray-500 mb-4">
+                        Gunakan fitur ini untuk memverifikasi pengaturan WhatsApp Anda. Pastikan WHATSAPP_API_TOKEN sudah diatur di server (Fonnte/similiar).
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                           type="text"
+                           placeholder="628123456789"
+                           value={testPhone}
+                           onChange={(e) => setTestPhone(e.target.value)}
+                           className="flex-1 bg-surface2 text-white border border-surface2 rounded px-3 py-2 text-sm"
+                        />
+                        <button
+                          onClick={sendTestWhatsApp}
+                          disabled={testPhoneLoading}
+                          className="bg-terracotta hover:bg-trdark text-white px-4 py-2 rounded-lg font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-none cursor-pointer"
+                        >
+                          {testPhoneLoading ? "Mengirim..." : "Kirim WhatsApp"}
+                        </button>
                       </div>
                     </div>
                   </div>

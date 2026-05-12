@@ -127,6 +127,42 @@ users.set('admin', {
   id: 'admin', name: 'Admin', email: 'admin@shinerva.id', password: 'admin', tier: 'ENTERPRISE', valid_referrals: 0, has_received_referral_bonus: false, signup_bonus_chars: 10000, monthly_chars: 1000000, earned_chars: 0, used_chars: 0, generation_count: 0, email_subscribed: true, whatsapp_opted_in: false
 });
 
+// --- WHATSAPP SETUP ---
+async function sendWhatsAppOTP(phone, otp) {
+  const token = process.env.WHATSAPP_API_TOKEN;
+  const apiUrl = process.env.WHATSAPP_API_URL || 'https://api.fonnte.com/send';
+
+  if (!token) {
+    console.log(`[WHATSAPP_SKIPPED] To: ${phone} | OTP: ${otp}. WHATSAPP_API_TOKEN not configured.`);
+    return { success: false, message: 'WhatsApp API Token not configured' };
+  }
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': token,
+      },
+      body: new URLSearchParams({
+        target: phone,
+        message: `*KODE OTP SHINERVA*\n\nKode: *${otp}*\n\nJangan bagikan kode ini kepada siapapun. Kode berlaku selama 5 menit.`,
+      })
+    });
+
+    const result = await response.json();
+    if (result.status) {
+      console.log(`[WHATSAPP_SENT] Success! Phone: ${phone}`);
+      return { success: true };
+    } else {
+      console.error(`[WHATSAPP_ERROR] API returned error for ${phone}:`, result.reason || result.message);
+      return { success: false, message: result.reason || result.message };
+    }
+  } catch (error) {
+    console.error(`[WHATSAPP_ERROR] Failed to send to ${phone}:`, error);
+    return { success: false, message: 'Failed to connect to WhatsApp API' };
+  }
+}
+
 async function createServer() {
   const app = express();
   app.use(cors());
@@ -223,20 +259,29 @@ async function createServer() {
     res.json({ success: true, message: 'Signup successful. Notification simulated in console.', user: newUser });
   });
 
-  app.post('/api/auth/otp/request', (req, res) => {
+  app.post('/api/auth/otp/request', async (req, res) => {
     const { whatsapp } = req.body;
     if (!whatsapp) return res.status(400).json({ error: 'Nomor WhatsApp diperlukan' });
     
-    // Generate a 4 digit OTP for mockup
+    // Generate a 4 digit OTP
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    console.log(`[OTP] WhatsApp: ${whatsapp} -> Kode OTP: ${otp}`);
     
-    otps.set(whatsapp, {
-      otp,
-      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
-    });
+    const sendResult = await sendWhatsAppOTP(whatsapp, otp);
     
-    res.json({ success: true, message: 'OTP telah dikirim ke WhatsApp Anda (mock: check console)' });
+    if (sendResult.success || !process.env.WHATSAPP_API_TOKEN) {
+      otps.set(whatsapp, {
+        otp,
+        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+      });
+      
+      const msg = sendResult.success 
+        ? 'OTP telah dikirim ke WhatsApp Anda.' 
+        : 'OTP telah dibuat (Mode Pengembangan: cek konsol server).';
+        
+      res.json({ success: true, message: msg });
+    } else {
+      res.status(500).json({ success: false, message: 'Gagal mengirim WhatsApp: ' + sendResult.message });
+    }
   });
 
   app.post('/api/auth/otp/verify', (req, res) => {
@@ -338,6 +383,19 @@ async function createServer() {
     
     await sendWelcomeEmail(email, 'Test User');
     res.json({ success: true, message: 'Test email sent. Check server logs for details.' });
+  });
+
+  app.post('/api/admin/test-whatsapp', authenticate, async (req, res) => {
+    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ error: 'Target phone number is required' });
+    
+    const result = await sendWhatsAppOTP(phone, '1234');
+    if (result.success) {
+      res.json({ success: true, message: 'Test WhatsApp message sent successfully!' });
+    } else {
+      res.status(500).json({ success: false, message: 'Failed to send WhatsApp: ' + result.message });
+    }
   });
 
   app.post('/api/user/pronunciations', authenticate, (req, res) => {
