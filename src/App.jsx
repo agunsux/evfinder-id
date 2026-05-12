@@ -175,20 +175,38 @@ function App() {
   const [firebaseUser, setFirebaseUser] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setFirebaseUser(u);
+    console.log("[AUTH] Setting up onAuthStateChanged listener");
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      setAuthLoading(false);
       if (!u) {
+        console.log("[AUTH] No Firebase user detected");
         setUser(null);
+        setFirebaseUser(null);
         localStorage.removeItem("shinerva_user");
       } else {
-        // If it's a social login, authData might be empty, which is fine
-        syncUser(u, authData);
+        console.log("[AUTH] Firebase user detected:", u.email);
+        setFirebaseUser(u);
+        
+        // Only sync if we don't have a user or ID mismatch AND not already syncing
+        if ((!user || user.id !== u.uid) && !isSyncing.current) {
+          console.log("[AUTH] Triggering background sync for", u.email);
+          try {
+            await syncUser(u);
+          } catch (e) {
+            console.error("[AUTH] Background sync failed:", e);
+          }
+        }
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const syncUser = async (u, signupDetails = {}) => {
+    if (!u) return;
+    if (isSyncing.current) return;
+    isSyncing.current = true;
+    
+    console.log("[SYNC] Starting sync for", u.email);
     try {
       const res = await fetch("/api/auth/sync", {
         method: "POST",
@@ -201,13 +219,29 @@ function App() {
           refCode: signupDetails.refCode || ""
         }),
       });
+      
       const data = await res.json();
+      console.log("[SYNC] Server response:", res.status, data);
+      
+      if (!res.ok) {
+        throw new Error(data.error || `Server error: ${res.status}`);
+      }
+
       if (data.user) {
-        setUser(data.user);
         localStorage.setItem("shinerva_user", JSON.stringify(data.user));
+        setUser(data.user);
+        return data.user;
+      } else {
+        throw new Error("Data pengguna tidak ditemukan di server");
       }
     } catch (e) {
-      console.error("Sync user error:", e);
+      console.error("[SYNC] Fatal Error:", e);
+      if (signupDetails.email || signupDetails.isManual) {
+        alert("Gagal sinkronisasi akun: " + e.message);
+      }
+      throw e;
+    } finally {
+      isSyncing.current = false;
     }
   };
 
@@ -237,6 +271,7 @@ function App() {
     refCode: "",
   });
   const [authLoading, setAuthLoading] = useState(false);
+  const isSyncing = useRef(false);
 
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [socialUrl, setSocialUrl] = useState("");
@@ -694,38 +729,45 @@ function App() {
 
   const submitAuth = async (e) => {
     e.preventDefault();
+    if (authLoading) return;
     setAuthLoading(true);
     try {
       if (authMode === "login") {
         const userCredential = await signInWithEmailAndPassword(auth, authData.email, authData.password);
-        await syncUser(userCredential.user);
+        await syncUser(userCredential.user, { isManual: true });
         alert("Login Berhasil!");
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
-        // Pass absolute values to syncUser to avoid state race conditions if needed
-        await syncUser(userCredential.user, authData);
+        await syncUser(userCredential.user, { ...authData, isManual: true });
         alert("Signup Berhasil! Selamat datang di Shinerva.");
       }
       setIsAuthOpen(false);
+      setAuthData({ name: "", email: "", password: "", whatsapp: "", refCode: "" });
     } catch (err) {
       console.error(err);
-      alert("Gagal autentikasi: " + (err.message || "Terjadi kesalahan."));
+      let msg = err.message || "Terjadi kesalahan.";
+      if (err.code === 'auth/user-not-found') msg = "Pengguna tidak ditemukan.";
+      else if (err.code === 'auth/wrong-password') msg = "Password salah.";
+      else if (err.code === 'auth/email-already-in-use') msg = "Email sudah digunakan.";
+      
+      alert("Gagal autentikasi: " + msg);
     } finally {
       setAuthLoading(false);
     }
   };
 
   const loginWithGoogle = async () => {
+    if (authLoading) return;
     setAuthLoading(true);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      await syncUser(result.user);
+      await syncUser(result.user, { isManual: true });
       setIsAuthOpen(false);
       alert("Login dengan Google Berhasil!");
     } catch (err) {
       console.error(err);
-      alert("Gagal login dengan Google.");
+      alert("Gagal login dengan Google: " + (err.message || ""));
     } finally {
       setAuthLoading(false);
     }
@@ -866,6 +908,11 @@ function App() {
                   >
                     <LogOut className="w-5 h-5" />
                   </button>
+                </div>
+              ) : firebaseUser || authLoading ? (
+                <div className="flex items-center gap-2 text-text-muted text-sm italic">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Menyiapkan Akun...</span>
                 </div>
               ) : (
                 <>

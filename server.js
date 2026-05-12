@@ -15,11 +15,11 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-admin.initializeApp({
-  projectId: firebaseConfig.projectId
-});
+admin.initializeApp();
+const firestoreDbId = firebaseConfig.firestoreDatabaseId || undefined;
+const db = admin.firestore(firestoreDbId);
 
-const db = admin.firestore(firebaseConfig.firestoreDatabaseId || undefined);
+console.log(`[FIREBASE] Admin initialized for project: ${firebaseConfig.projectId}${firestoreDbId ? " (db: " + firestoreDbId + ")" : ""}`);
 
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
@@ -28,6 +28,19 @@ const PORT = process.env.PORT || 3000;
 const usersCol = db.collection('users');
 const configCol = db.collection('config');
 const submissionsCol = db.collection('social_submissions');
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() });
+});
+
+app.get('/api/db-test', async (req, res) => {
+  try {
+    const snap = await configCol.limit(1).get();
+    res.json({ status: 'connected', collections: ['users', 'config', 'social_submissions'] });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: e.message });
+  }
+});
 
 const ipReferralHistory = new Map(); // ip -> [timestamps]
 
@@ -196,62 +209,92 @@ async function createServer() {
   // --- API ROUTES ---
   
   app.post('/api/auth/sync', async (req, res) => {
-    const { uid, email, name, whatsapp, refCode } = req.body;
-    if (!uid || !email) return res.status(400).json({ error: 'Missing uid or email' });
+    try {
+      const { uid, email, name, whatsapp, refCode } = req.body;
+      if (!uid || !email) {
+        console.error("[AUTH_SYNC_ERROR] Missing uid or email in request body:", req.body);
+        return res.status(400).json({ error: 'Auth data incomplete (UID/Email missing)' });
+      }
 
-    const userRef = usersCol.doc(uid);
-    const userDoc = await userRef.get();
+      console.log(`[AUTH_SYNC] Processing sync for ${email} (${uid})`);
 
-    if (!userDoc.exists) {
-      let referredBy = null;
-      if (refCode) {
-        const refSnapshot = await usersCol.where('referral_code', '==', refCode).limit(1).get();
-        if (!refSnapshot.empty) {
-          referredBy = refSnapshot.docs[0].id;
+      const userRef = usersCol.doc(uid);
+      let userDoc;
+      try {
+        userDoc = await userRef.get();
+        console.log(`[AUTH_SYNC] Firestore lookup success for ${uid}, exists: ${userDoc.exists}`);
+      } catch (dbError) {
+        console.error("[AUTH_SYNC_DB_ERROR]", dbError);
+        return res.status(500).json({ error: "Failed to connect to database. " + dbError.message });
+      }
+
+      if (!userDoc.exists) {
+        console.log(`[AUTH_SYNC] Creating New User record for ${email}`);
+        let referredBy = null;
+        if (refCode) {
+          try {
+            const refSnapshot = await usersCol.where('referral_code', '==', refCode).limit(1).get();
+            if (!refSnapshot.empty) {
+              referredBy = refSnapshot.docs[0].id;
+              console.log(`[AUTH_SYNC] Valid referral code from: ${referredBy}`);
+            }
+          } catch (refError) {
+            console.warn("[AUTH_SYNC_REF_WARN] Referral check failed", refError.message);
+          }
+        }
+
+        const newUser = {
+          id: uid,
+          name: name || email.split('@')[0],
+          email,
+          whatsapp: whatsapp || '',
+          whatsapp_opted_in: !!whatsapp,
+          email_subscribed: true,
+          tier: 'FREE',
+          signup_date: Date.now(),
+          last_generation_at: 0,
+          referral_code: generateRefCode(),
+          referred_by: referredBy,
+          valid_referrals: 0,
+          has_received_referral_bonus: false,
+          social_bonus_status: 'none',
+          social_url: '',
+          bonus_credits: [
+            {
+              amount: 5000,
+              expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+              type: 'standard',
+              source: 'SIGNUP_BONUS'
+            }
+          ],
+          monthly_chars: 0, 
+          earned_chars: 0,
+          used_chars: 0,
+          generation_count: 0,
+          referrals_count_month: 0,
+          last_referral_date: 0,
+          ips_used: [],
+          pronunciations: {},
+          history: [] 
+        };
+        
+        try {
+          await userRef.set(newUser);
+          console.log(`[AUTH_SYNC] User ${email} created successfully in Firestore`);
+          sendWelcomeEmail(email, newUser.name).catch(e => console.error("Welcome email failed", e));
+          return res.json({ success: true, user: newUser });
+        } catch (saveError) {
+          console.error("[AUTH_SYNC_SAVE_ERROR]", saveError);
+          return res.status(500).json({ error: "Failed to create user record: " + saveError.message });
         }
       }
 
-      const newUser = {
-        id: uid,
-        name: name || '',
-        email,
-        whatsapp: whatsapp || '',
-        whatsapp_opted_in: !!whatsapp,
-        email_subscribed: true,
-        tier: 'FREE',
-        signup_date: Date.now(),
-        last_generation_at: 0,
-        referral_code: generateRefCode(),
-        referred_by: referredBy,
-        valid_referrals: 0,
-        has_received_referral_bonus: false,
-        social_bonus_status: 'none',
-        social_url: '',
-        bonus_credits: [
-          {
-            amount: 5000,
-            expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
-            type: 'standard',
-            source: 'SIGNUP_BONUS'
-          }
-        ],
-        monthly_chars: 0, 
-        earned_chars: 0,
-        used_chars: 0,
-        generation_count: 0,
-        referrals_count_month: 0,
-        last_referral_date: 0,
-        ips_used: [],
-        pronunciations: {},
-        history: [] // Keep for now, but should move to subcollection
-      };
-      
-      await userRef.set(newUser);
-      sendWelcomeEmail(email, name || email);
-      return res.json({ success: true, user: newUser });
+      console.log(`[AUTH_SYNC] Existing user ${email} synced`);
+      res.json({ success: true, user: userDoc.data() });
+    } catch (error) {
+      console.error("[AUTH_SYNC_FATAL]", error);
+      res.status(500).json({ error: "Terjadi kesalahan internal sinkronisasi server: " + error.message });
     }
-
-    res.json({ success: true, user: userDoc.data() });
   });
 
   // Helper to count available credits with tier enforcement
