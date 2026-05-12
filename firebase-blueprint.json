@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and subscription data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "password": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "whatsapp_opted_in": { "type": "boolean" },
+        "email_subscribed": { "type": "boolean" },
+        "tier": { "type": "string" },
+        "signup_date": { "type": "number" },
+        "last_generation_at": { "type": "number" },
+        "referral_code": { "type": "string" },
+        "referred_by": { "type": "string" },
+        "valid_referrals": { "type": "number" },
+        "has_received_referral_bonus": { "type": "boolean" },
+        "social_bonus_status": { "type": "string", "enum": ["none", "pending", "approved"] },
+        "social_url": { "type": "string" },
+        "signup_bonus_chars": { "type": "number" },
+        "monthly_chars": { "type": "number" },
+        "earned_chars": { "type": "number" },
+        "used_chars": { "type": "number" },
+        "generation_count": { "type": "number" },
+        "pronunciations": { "type": "object" },
+        "has_triggered_ref": { "type": "boolean" }
+      },
+      "required": ["id", "email", "tier"]
+    },
+    "HistoryItem": {
+      "title": "HistoryItem",
+      "description": "A single TTS generation record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "number" },
+        "character_count": { "type": "number" },
+        "voice": { "type": "string" },
+        "tier": { "type": "string" },
+        "is_teaser": { "type": "boolean" },
+        "credits_used": { "type": "number" },
+        "multiplier": { "type": "number" }
+      }
+    },
+    "VoiceConfig": {
+      "title": "VoiceConfig",
+      "description": "Global settings for voices and tiers",
+      "type": "object",
+      "properties": {
+        "tiers": { "type": "object" },
+        "limits": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/users/{userId}/history/{historyId}": {
+      "schema": "HistoryItem",
+      "description": "User generation history"
+    },
+    "/config/voice": {
+      "schema": "VoiceConfig",
+      "description": "Global configuration"
+    }
+  }
+}

@@ -6,22 +6,35 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import admin from 'firebase-admin';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const firebaseConfig = require('./firebase-applet-config.json');
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+admin.initializeApp({
+  projectId: firebaseConfig.projectId
+});
+
+const db = admin.firestore();
+// Use the database ID if specified in config
+if (firebaseConfig.firestoreDatabaseId) {
+  // Note: Standard firebase-admin doesn't easily support databaseId in initializeApp 
+  // but we can request it via the firestore instance if needed.
+  // Actually, for AI Studio, the default instance usually works if project is correctly provisioned.
+}
+
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
-// --- FILE-BACKED DB ---
-const dataFolder = path.join(__dirname, 'data');
-if (!fs.existsSync(dataFolder)) {
-  fs.mkdirSync(dataFolder);
-}
-const usersFile = path.join(dataFolder, 'users.json');
-const voiceConfigFile = path.join(dataFolder, 'voice_config.json');
+// --- FIRESTORE COLLECTIONS ---
+const usersCol = db.collection('users');
+const configCol = db.collection('config');
 
-const otps = new Map(); // Store temporary OTPs { phone: { otp, expiresAt } }
+// Temporary in-memory OTPs removed as login is now email-only via Firebase Auth.
 
 let voiceConfig = {
   tiers: {
@@ -39,30 +52,16 @@ let voiceConfig = {
   }
 };
 
-if (fs.existsSync(voiceConfigFile)) {
-  try {
-    voiceConfig = JSON.parse(fs.readFileSync(voiceConfigFile, 'utf8'));
-  } catch(e) {
-    console.error("Error reading voice_config.json", e);
+async function loadVoiceConfig() {
+  const doc = await configCol.doc('voice').get();
+  if (doc.exists) {
+    voiceConfig = doc.data();
   }
 }
+loadVoiceConfig();
 
-function saveVoiceConfig() {
-  fs.writeFileSync(voiceConfigFile, JSON.stringify(voiceConfig, null, 2));
-}
-
-let users = new Map();
-if (fs.existsSync(usersFile)) {
-  try {
-    const data = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
-    users = new Map(data);
-  } catch(e) {
-    console.error("Error reading users.json", e);
-  }
-}
-
-function saveUsers() {
-  fs.writeFileSync(usersFile, JSON.stringify(Array.from(users.entries()), null, 2));
+async function saveVoiceConfig() {
+  await configCol.doc('voice').set(voiceConfig);
 }
 
 function generateId() {
@@ -123,9 +122,29 @@ async function sendWelcomeEmail(toEmail, userName) {
 }
 
 // Ensure an admin user exists for exports
-users.set('admin', {
-  id: 'admin', name: 'Admin', email: 'admin@shinerva.id', password: 'admin', tier: 'ENTERPRISE', valid_referrals: 0, has_received_referral_bonus: false, signup_bonus_chars: 10000, monthly_chars: 1000000, earned_chars: 0, used_chars: 0, generation_count: 0, email_subscribed: true, whatsapp_opted_in: false
-});
+async function bootstrapAdmin() {
+  const adminRef = usersCol.doc('admin');
+  const adminDoc = await adminRef.get();
+  if (!adminDoc.exists) {
+    await adminRef.set({
+      id: 'admin', 
+      name: 'Admin', 
+      email: 'admin@shinerva.id', 
+      tier: 'ENTERPRISE', 
+      valid_referrals: 0, 
+      has_received_referral_bonus: false, 
+      signup_bonus_chars: 10000, 
+      monthly_chars: 1000000, 
+      earned_chars: 0, 
+      used_chars: 0, 
+      generation_count: 0, 
+      email_subscribed: true, 
+      whatsapp_opted_in: false, 
+      history: []
+    });
+  }
+}
+bootstrapAdmin();
 
 // --- WHATSAPP SETUP ---
 async function sendWhatsAppOTP(phone, otp) {
@@ -169,196 +188,106 @@ async function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // --- MOCK AUTH MIDDLEWARE ---
-  const authenticate = (req, res, next) => {
-    // We expect the frontend to send user's email in 'Authorization' or a custom header 'x-user-email' to identify them safely in this mock environment.
-    const email = req.headers['x-user-email'] || req.body.email; // For simplify
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.email === email) {
-        foundUser = u;
-        break;
+  // --- AUTH MIDDLEWARE ---
+  const authenticate = async (req, res, next) => {
+    const idToken = req.headers.authorization?.split('Bearer ')[1];
+    const emailHeader = req.headers['x-user-email'];
+    
+    if (idToken) {
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const userDoc = await usersCol.doc(decodedToken.uid).get();
+        if (userDoc.exists) {
+          req.user = userDoc.data();
+          return next();
+        }
+      } catch (error) {
+        console.error("Auth token verification failed:", error);
+      }
+    } else if (emailHeader) {
+      // Legacy / Fallback for development if not using tokens yet
+      const snapshot = await usersCol.where('email', '==', emailHeader).limit(1).get();
+      if (!snapshot.empty) {
+        req.user = snapshot.docs[0].data();
+        return next();
       }
     }
-    if (foundUser) {
-      req.user = foundUser;
-    }
-    // We let it pass even if not found for public routes, or enforce later
+    
     next();
   };
 
   // --- API ROUTES ---
   
-  app.post('/api/auth/login', (req, res) => {
-    const { email, password } = req.body;
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.email === email && u.password === password) {
-        foundUser = u;
-        break;
-      }
-    }
-    if (foundUser) {
-      res.json({ success: true, message: 'Login successful', user: foundUser });
-    } else {
-      res.status(401).json({ success: false, message: 'Email atau password salah' });
-    }
-  });
+  app.post('/api/auth/sync', async (req, res) => {
+    const { uid, email, name, whatsapp, refCode } = req.body;
+    if (!uid || !email) return res.status(400).json({ error: 'Missing uid or email' });
 
-  app.post('/api/auth/signup', (req, res) => {
-    const { name, email, password, whatsapp, refCode } = req.body;
-    
-    // Check existing
-    for (const [id, u] of users.entries()) {
-      if (u.email === email) {
-        return res.status(400).json({ success: false, message: 'Email sudah terdaftar' });
-      }
-    }
+    const userRef = usersCol.doc(uid);
+    const userDoc = await userRef.get();
 
-    let referredBy = null;
-    if (refCode) {
-      for (const [id, u] of users.entries()) {
-        if (u.referral_code === refCode) {
-          referredBy = id;
-          break;
+    if (!userDoc.exists) {
+      let referredBy = null;
+      if (refCode) {
+        const refSnapshot = await usersCol.where('referral_code', '==', refCode).limit(1).get();
+        if (!refSnapshot.empty) {
+          referredBy = refSnapshot.docs[0].id;
         }
       }
-    }
 
-    const newUser = {
-      id: generateId(),
-      name,
-      email,
-      password,
-      whatsapp: whatsapp || '',
-      whatsapp_opted_in: !!whatsapp,
-      email_subscribed: true,
-      tier: 'FREE',
-      signup_date: Date.now(),
-      last_generation_at: 0,
-      referral_code: generateRefCode(),
-      referred_by: referredBy,
-      valid_referrals: 0,
-      has_received_referral_bonus: false,
-      social_bonus_status: 'none',
-      social_url: '',
-      signup_bonus_chars: 5000,
-      monthly_chars: 0, 
-      earned_chars: 0, // social + referral
-      used_chars: 0,
-      generation_count: 0,
-      pronunciations: {},
-      history: []
-    };
-
-    console.log(`[SIGNUP] User registered: ${email}`);
-    sendWelcomeEmail(email, name);
-
-    users.set(newUser.id, newUser);
-    saveUsers();
-    res.json({ success: true, message: 'Signup successful. Notification simulated in console.', user: newUser });
-  });
-
-  app.post('/api/auth/otp/request', async (req, res) => {
-    const { whatsapp } = req.body;
-    if (!whatsapp) return res.status(400).json({ error: 'Nomor WhatsApp diperlukan' });
-    
-    // Generate a 4 digit OTP
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    
-    const sendResult = await sendWhatsAppOTP(whatsapp, otp);
-    
-    if (sendResult.success || !process.env.WHATSAPP_API_TOKEN) {
-      otps.set(whatsapp, {
-        otp,
-        expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
-      });
-      
-      const msg = sendResult.success 
-        ? 'OTP telah dikirim ke WhatsApp Anda.' 
-        : 'OTP telah dibuat (Mode Pengembangan: cek konsol server).';
-        
-      res.json({ success: true, message: msg });
-    } else {
-      res.status(500).json({ success: false, message: 'Gagal mengirim WhatsApp: ' + sendResult.message });
-    }
-  });
-
-  app.post('/api/auth/otp/verify', (req, res) => {
-    const { whatsapp, otp } = req.body;
-    if (!whatsapp || !otp) return res.status(400).json({ error: 'WhatsApp dan OTP diperlukan' });
-    
-    const record = otps.get(whatsapp);
-    if (!record || record.otp !== otp || Date.now() > record.expiresAt) {
-      return res.status(400).json({ error: 'OTP tidak valid atau expired' });
-    }
-    
-    // Clear OTP
-    otps.delete(whatsapp);
-    
-    // Find exist or create
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.whatsapp === whatsapp) {
-        foundUser = u;
-        break;
-      }
-    }
-    
-    if (!foundUser) {
-      const id = generateId();
-      foundUser = {
-        id,
-        name: 'User ' + whatsapp.slice(-4),
-        email: whatsapp + '@shinerva.id', // temp email
-        password: generateId(),
-        whatsapp: whatsapp,
-        whatsapp_opted_in: true,
+      const newUser = {
+        id: uid,
+        name: name || '',
+        email,
+        whatsapp: whatsapp || '',
+        whatsapp_opted_in: !!whatsapp,
         email_subscribed: true,
         tier: 'FREE',
         signup_date: Date.now(),
+        last_generation_at: 0,
         referral_code: generateRefCode(),
-        referred_by: null,
+        referred_by: referredBy,
         valid_referrals: 0,
         has_received_referral_bonus: false,
         social_bonus_status: 'none',
         social_url: '',
-        signup_bonus_chars: 5000, // less bonus for OTP maybe? default is 5000 according to UI 
-        monthly_chars: 10000,
+        signup_bonus_chars: 5000,
+        monthly_chars: 0, 
         earned_chars: 0,
         used_chars: 0,
         generation_count: 0,
         pronunciations: {},
-        history: []
+        history: [] // Keep for now, but should move to subcollection
       };
-      users.set(id, foundUser);
+      
+      await userRef.set(newUser);
+      sendWelcomeEmail(email, name || email);
+      return res.json({ success: true, user: newUser });
     }
-    
-    saveUsers();
-    res.json({ success: true, message: 'Login successful', user: foundUser });
+
+    res.json({ success: true, user: userDoc.data() });
   });
 
-  app.get('/api/user/me', authenticate, (req, res) => {
+  app.get('/api/user/me', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ user: req.user });
   });
 
-  app.get('/api/user/pronunciations', authenticate, (req, res) => {
+  app.get('/api/user/pronunciations', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ pronunciations: req.user.pronunciations || {} });
   });
 
-  app.get('/api/user/history', authenticate, (req, res) => {
+  app.get('/api/user/history', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ history: req.user.history || [] });
   });
 
-  app.get('/api/admin/voice-config', authenticate, (req, res) => {
+  app.get('/api/admin/voice-config', authenticate, async (req, res) => {
     // Let all users see it, but only admin can change
     res.json(voiceConfig);
   });
 
-  app.post('/api/admin/voice-config', authenticate, (req, res) => {
+  app.post('/api/admin/voice-config', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     const { tiers, limits } = req.body;
     if (tiers) {
@@ -369,7 +298,7 @@ async function createServer() {
     }
     
     if (tiers || limits) {
-      saveVoiceConfig();
+      await saveVoiceConfig();
       res.json({ success: true, voiceConfig });
     } else {
       res.status(400).json({ error: 'Invalid config' });
@@ -398,7 +327,7 @@ async function createServer() {
     }
   });
 
-  app.post('/api/user/pronunciations', authenticate, (req, res) => {
+  app.post('/api/user/pronunciations', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { word, pronunciation } = req.body;
     if (!word) return res.status(400).json({ error: 'Word is required' });
@@ -411,11 +340,11 @@ async function createServer() {
       req.user.pronunciations[word] = pronunciation;
     }
     
-    saveUsers();
+    await usersCol.doc(req.user.id).update({ pronunciations: req.user.pronunciations });
     res.json({ success: true, pronunciations: req.user.pronunciations });
   });
 
-  app.post('/api/user/social-share', authenticate, (req, res) => {
+  app.post('/api/user/social-share', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { url } = req.body;
     if (req.user.social_bonus_status !== 'none') {
@@ -423,55 +352,67 @@ async function createServer() {
     }
     req.user.social_bonus_status = 'pending';
     req.user.social_url = url;
-    saveUsers();
+    await usersCol.doc(req.user.id).update({ 
+      social_bonus_status: 'pending',
+      social_url: url
+    });
     res.json({ success: true, message: 'Pengajuan berhasil. Menunggu verifikasi admin.', user: req.user });
   });
 
-  app.post('/api/user/settings', authenticate, (req, res) => {
+  app.post('/api/user/settings', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { whatsapp, whatsapp_opted_in, email_subscribed } = req.body;
-    if (whatsapp !== undefined) req.user.whatsapp = whatsapp;
-    if (whatsapp_opted_in !== undefined) req.user.whatsapp_opted_in = whatsapp_opted_in;
-    if (email_subscribed !== undefined) req.user.email_subscribed = email_subscribed;
-    saveUsers();
+    const updates = {};
+    if (whatsapp !== undefined) updates.whatsapp = req.user.whatsapp = whatsapp;
+    if (whatsapp_opted_in !== undefined) updates.whatsapp_opted_in = req.user.whatsapp_opted_in = whatsapp_opted_in;
+    if (email_subscribed !== undefined) updates.email_subscribed = req.user.email_subscribed = email_subscribed;
+    
+    await usersCol.doc(req.user.id).update(updates);
     res.json({ success: true, user: req.user });
   });
 
   // --- ADMIN EXPORTS ---
-  app.get('/api/admin/export/email', authenticate, (req, res) => {
+  app.get('/api/admin/export/email', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     let csv = "Name,Email,Tier,Signup Date,Total Characters Used\n";
-    for (const [id, u] of users.entries()) {
-      if (u.email_subscribed) {
-        csv += `"${u.name}","${u.email}","${u.tier}","${new Date(u.signup_date).toISOString()}","${u.used_chars}"\n`;
-      }
-    }
+    const snapshot = await usersCol.where('email_subscribed', '==', true).get();
+    snapshot.forEach(doc => {
+      const u = doc.data();
+      csv += `"${u.name}","${u.email}","${u.tier}","${new Date(u.signup_date).toISOString()}","${u.used_chars}"\n`;
+    });
     res.header('Content-Type', 'text/csv');
     res.attachment('email_list.csv');
     res.send(csv);
   });
 
-  app.get('/api/admin/export/whatsapp', authenticate, (req, res) => {
+  app.get('/api/admin/export/whatsapp', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     let csv = "Name,WhatsApp,Tier,Signup Date,Total Characters Used\n";
-    for (const [id, u] of users.entries()) {
-      if (u.whatsapp_opted_in && u.whatsapp) {
+    const snapshot = await usersCol.where('whatsapp_opted_in', '==', true).get();
+    snapshot.forEach(doc => {
+      const u = doc.data();
+      if (u.whatsapp) {
         csv += `"${u.name}","${u.whatsapp}","${u.tier}","${new Date(u.signup_date).toISOString()}","${u.used_chars}"\n`;
       }
-    }
+    });
     res.header('Content-Type', 'text/csv');
     res.attachment('whatsapp_list.csv');
     res.send(csv);
   });
   
-  app.post('/api/admin/social-approvals/:id/approve', authenticate, (req, res) => {
+  app.post('/api/admin/social-approvals/:id/approve', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     const targetId = req.params.id;
-    const targetUser = users.get(targetId);
-    if (!targetUser) return res.status(404).json({error: 'User not found'});
+    const userRef = usersCol.doc(targetId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) return res.status(404).json({error: 'User not found'});
+    const targetUser = userDoc.data();
+
     if (targetUser.social_bonus_status === 'pending') {
-       targetUser.social_bonus_status = 'approved';
-       targetUser.earned_chars += 30000;
+       await userRef.update({
+         social_bonus_status: 'approved',
+         earned_chars: admin.firestore.FieldValue.increment(30000)
+       });
        res.json({ success: true });
     } else {
        res.status(400).json({ error: 'Status is not pending' });
@@ -691,19 +632,25 @@ async function createServer() {
       // Referral system hook
       if (user.generation_count === 1 && user.referred_by && !user.has_triggered_ref) {
         user.has_triggered_ref = true;
-        const referrer = users.get(user.referred_by);
-        if (referrer && referrer.valid_referrals < 2) {
-          referrer.valid_referrals += 1;
-          user.earned_chars += 5000;
-          
-          if (referrer.valid_referrals >= 2 && !referrer.has_received_referral_bonus) {
-            referrer.has_received_referral_bonus = true;
-            referrer.earned_chars += 20000;
+        const referrerRef = usersCol.doc(user.referred_by);
+        const referrerDoc = await referrerRef.get();
+        
+        if (referrerDoc.exists) {
+          const referrer = referrerDoc.data();
+          if (referrer.valid_referrals < 2) {
+             const refUpdates = { valid_referrals: admin.firestore.FieldValue.increment(1) };
+             user.earned_chars += 5000;
+             
+             if (referrer.valid_referrals + 1 >= 2 && !referrer.has_received_referral_bonus) {
+               refUpdates.has_received_referral_bonus = true;
+               refUpdates.earned_chars = admin.firestore.FieldValue.increment(20000);
+             }
+             await referrerRef.update(refUpdates);
           }
         }
       }
 
-      saveUsers();
+      await usersCol.doc(user.id).set(user);
       res.json({ ...data, isTeaser: false });
     } catch (error) {
       console.error('TTS proxy error:', error);

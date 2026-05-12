@@ -1,4 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
+import { auth, db } from "./firebase";
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  signInWithPopup,
+  GoogleAuthProvider
+} from "firebase/auth";
 import {
   Waves,
   ChevronDown,
@@ -160,18 +169,63 @@ function App() {
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login"); // login, signup
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("shinerva_user");
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState(null);
+  const [firebaseUser, setFirebaseUser] = useState(null);
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem("shinerva_user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("shinerva_user");
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setFirebaseUser(u);
+      if (!u) {
+        setUser(null);
+        localStorage.removeItem("shinerva_user");
+      } else {
+        // If it's a social login, authData might be empty, which is fine
+        syncUser(u, authData);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const syncUser = async (u, signupDetails = {}) => {
+    try {
+      const res = await fetch("/api/auth/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          uid: u.uid, 
+          email: u.email, 
+          name: signupDetails.name || u.displayName || "", 
+          whatsapp: signupDetails.whatsapp || "",
+          refCode: signupDetails.refCode || ""
+        }),
+      });
+      const data = await res.json();
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem("shinerva_user", JSON.stringify(data.user));
+      }
+    } catch (e) {
+      console.error("Sync user error:", e);
     }
-  }, [user]);
+  };
+
+  const getAuthHeaders = async () => {
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken();
+      return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      };
+    }
+    // Fallback for mock if user exists in local storage but not in firebase (transition period)
+    if (user) {
+      return {
+        "Content-Type": "application/json",
+        "x-user-email": user.email
+      };
+    }
+    return { "Content-Type": "application/json" };
+  };
 
   const [authData, setAuthData] = useState({
     name: "",
@@ -181,8 +235,6 @@ function App() {
     refCode: "",
   });
   const [authLoading, setAuthLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
 
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [socialUrl, setSocialUrl] = useState("");
@@ -221,7 +273,7 @@ function App() {
     if (!user) return;
     try {
       const res = await fetch("/api/user/me", {
-        headers: { "x-user-email": user.email },
+        headers: await getAuthHeaders(),
       });
       const data = await res.json();
       if (data.user) setUser(data.user);
@@ -233,7 +285,7 @@ function App() {
     setHistoryLoading(true);
     try {
       const res = await fetch("/api/user/history", {
-        headers: { "x-user-email": user.email },
+        headers: await getAuthHeaders(),
       });
       const data = await res.json();
       if (data.history) setHistory(data.history);
@@ -248,7 +300,7 @@ function App() {
     setVoiceConfigLoading(true);
     try {
       const res = await fetch("/api/admin/voice-config", {
-        headers: { "x-user-email": user?.email || "" },
+        headers: await getAuthHeaders(),
       });
       const data = await res.json();
       if (data.tiers) setVoiceConfig(data);
@@ -264,10 +316,7 @@ function App() {
     try {
       const res = await fetch("/api/admin/voice-config", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": user.email,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ tiers: newTiers, limits: newLimits }),
       });
       const data = await res.json();
@@ -287,10 +336,7 @@ function App() {
     try {
       const res = await fetch("/api/admin/test-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": user.email,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ email: testEmail }),
       });
       const data = await res.json();
@@ -312,10 +358,7 @@ function App() {
     try {
       const res = await fetch("/api/admin/test-whatsapp", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": user.email,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ phone: testPhone }),
       });
       const data = await res.json();
@@ -356,10 +399,7 @@ function App() {
     try {
       const res = await fetch("/api/user/pronunciations", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": user.email,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ word, pronunciation }),
       });
       const data = await res.json();
@@ -460,10 +500,7 @@ function App() {
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": user ? user.email : "",
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ 
           text, 
           voice, 
@@ -605,7 +642,8 @@ function App() {
     // document.getElementById('studio').scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(auth);
     setUser(null);
     localStorage.removeItem("shinerva_user");
     alert("Berhasil keluar.");
@@ -615,60 +653,36 @@ function App() {
     e.preventDefault();
     setAuthLoading(true);
     try {
-      if (authMode === "whatsapp") {
-        if (!otpSent) {
-          // Request OTP
-          const res = await fetch("/api/auth/otp/request", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ whatsapp: authData.whatsapp }),
-          });
-          const data = await res.json();
-          if (data.success) {
-            setOtpSent(true);
-            alert(`OTP telah dikirim ke WhatsApp Anda (mock: check console)`);
-          } else {
-            alert(data.message || "Gagal mengirim OTP");
-          }
-        } else {
-          // Verify OTP
-          const res = await fetch("/api/auth/otp/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ whatsapp: authData.whatsapp, otp: otpCode }),
-          });
-          const data = await res.json();
-          if (data.success) {
-            setUser(data.user);
-            setIsAuthOpen(false);
-          } else {
-            alert(data.message || "Kode OTP salah atau kedaluwarsa");
-          }
-        }
+      if (authMode === "login") {
+        const userCredential = await signInWithEmailAndPassword(auth, authData.email, authData.password);
+        await syncUser(userCredential.user);
+        alert("Login Berhasil!");
       } else {
-        const endpoint =
-          authMode === "login" ? "/api/auth/login" : "/api/auth/signup";
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(authData),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setUser(data.user);
-          if (authMode === "signup") {
-            alert("Signup Berhasil! Selamat datang di Shinerva. Sesuai permintaan Anda, notifikasi akan dikirimkan ke email Anda (Fitur email sedang dalam pengembangan).");
-          } else {
-            alert("Login Berhasil!");
-          }
-          setIsAuthOpen(false);
-        } else {
-          alert("Gagal: " + (data.message || "Unknown error"));
-        }
+        const userCredential = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
+        // Pass absolute values to syncUser to avoid state race conditions if needed
+        await syncUser(userCredential.user, authData);
+        alert("Signup Berhasil! Selamat datang di Shinerva.");
       }
+      setIsAuthOpen(false);
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan koneksi server.");
+      alert("Gagal autentikasi: " + (err.message || "Terjadi kesalahan."));
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    setAuthLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      await syncUser(result.user);
+      setIsAuthOpen(false);
+      alert("Login dengan Google Berhasil!");
+    } catch (err) {
+      console.error(err);
+      alert("Gagal login dengan Google.");
     } finally {
       setAuthLoading(false);
     }
@@ -676,8 +690,6 @@ function App() {
 
   const switchAuthMode = (mode) => {
     setAuthMode(mode);
-    setOtpSent(false);
-    setOtpCode("");
     setAuthData({
       name: "",
       email: "",
@@ -693,10 +705,7 @@ function App() {
     try {
       const res = await fetch("/api/user/social-share", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": user.email,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ url: socialUrl }),
       });
       const data = await res.json();
@@ -1726,150 +1735,110 @@ function App() {
               </p>
             </div>
 
-            <form onSubmit={submitAuth} className="space-y-4">
-              {authMode === "whatsapp" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
-                      Nomor WhatsApp
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      disabled={otpSent}
-                      value={authData.whatsapp}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, whatsapp: e.target.value })
-                      }
-                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                      placeholder="08..."
-                    />
-                  </div>
-                  {otpSent && (
+              <form onSubmit={submitAuth} className="space-y-4">
+                {authMode === "signup" && (
+                  <>
                     <div>
                       <label className="block text-sm font-bold text-gray-400 mb-2">
-                        Kode OTP
+                        Nama Lengkap
                       </label>
                       <input
                         type="text"
                         required
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value)}
-                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta tracking-widest text-center text-xl"
-                        placeholder="••••"
-                        maxLength={4}
+                        value={authData.name}
+                        onChange={(e) =>
+                          setAuthData({ ...authData, name: e.target.value })
+                        }
+                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                        placeholder="John Doe"
                       />
                     </div>
-                  )}
-                </>
-              )}
-              {authMode !== "whatsapp" && (
-                <>
-                  {authMode === "signup" && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-400 mb-2">
-                          Nama Lengkap
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={authData.name}
-                          onChange={(e) =>
-                            setAuthData({ ...authData, name: e.target.value })
-                          }
-                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                          placeholder="John Doe"
-                        />
-                      </div>
-                    </>
-                  )}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={authData.email}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, email: e.target.value })
-                      }
-                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                      placeholder="anda@email.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={authData.password}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, password: e.target.value })
-                      }
-                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  {authMode === "signup" && (
-                    <>
-                      <div className="pt-2 border-t border-surface2 mt-4">
-                        <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
-                          Nomor WhatsApp{" "}
-                          <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
-                            Opsional
-                          </span>
-                        </label>
-                        <p className="text-xs text-gray-500 mb-2">
-                          Untuk tips konten & promo eksklusif. Kami tidak akan spam.
-                        </p>
-                        <input
-                          type="tel"
-                          value={authData.whatsapp}
-                          onChange={(e) =>
-                            setAuthData({ ...authData, whatsapp: e.target.value })
-                          }
-                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                          placeholder="08..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
-                          Kode Referral{" "}
-                          <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
-                            Opsional
-                          </span>
-                        </label>
-                        <p className="text-xs text-gray-500 mb-2">
-                          Punya kode undangan teman?
-                        </p>
-                        <input
-                          type="text"
-                          value={authData.refCode}
-                          onChange={(e) =>
-                            setAuthData({
-                              ...authData,
-                              refCode: e.target.value.toUpperCase(),
-                            })
-                          }
-                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta uppercase"
-                          placeholder="KODE"
-                        />
-                      </div>
-                      <div className="bg-terracotta/10 border border-terracotta/20 rounded-xl p-3 flex gap-3 mt-4">
-                        <Gift className="w-5 h-5 text-terracotta flex-shrink-0" />
-                        <p className="text-xs text-terracotta font-medium">
-                          Selamat datang! Kamu dapat 5.000 karakter gratis untuk
-                          memulai (~3 menit audio).
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
+                  </>
+                )}
+                <div>
+                  <label className="block text-sm font-bold text-gray-400 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={authData.email}
+                    onChange={(e) =>
+                      setAuthData({ ...authData, email: e.target.value })
+                    }
+                    className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                    placeholder="anda@email.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-400 mb-2">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={authData.password}
+                    onChange={(e) =>
+                      setAuthData({ ...authData, password: e.target.value })
+                    }
+                    className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                    placeholder="••••••••"
+                  />
+                </div>
+                {authMode === "signup" && (
+                  <>
+                    <div className="pt-2 border-t border-surface2 mt-4">
+                      <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
+                        Nomor WhatsApp{" "}
+                        <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
+                          Opsional
+                        </span>
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Untuk tips konten & support eksklusif. Kami tidak akan spam.
+                      </p>
+                      <input
+                        type="tel"
+                        value={authData.whatsapp}
+                        onChange={(e) =>
+                          setAuthData({ ...authData, whatsapp: e.target.value })
+                        }
+                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                        placeholder="08..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
+                        Kode Referral{" "}
+                        <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
+                          Opsional
+                        </span>
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Punya kode undangan teman?
+                      </p>
+                      <input
+                        type="text"
+                        value={authData.refCode}
+                        onChange={(e) =>
+                          setAuthData({
+                            ...authData,
+                            refCode: e.target.value.toUpperCase(),
+                          })
+                        }
+                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta uppercase"
+                        placeholder="KODE"
+                      />
+                    </div>
+                    <div className="bg-terracotta/10 border border-terracotta/20 rounded-xl p-3 flex gap-3 mt-4">
+                      <Gift className="w-5 h-5 text-terracotta flex-shrink-0" />
+                      <p className="text-xs text-terracotta font-medium">
+                        Selamat datang! Kamu dapat 5.000 karakter gratis untuk
+                        memulai (~3 menit audio).
+                      </p>
+                    </div>
+                  </>
+                )}
 
               <button
                 type="submit"
@@ -1880,28 +1849,26 @@ function App() {
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : authMode === "login" ? (
                   "Masuk"
-                ) : authMode === "whatsapp" ? (
-                  otpSent ? "Verifikasi OTP" : "Kirim OTP"
                 ) : (
                   "Daftar Gratis"
                 )}
               </button>
 
               <div className="flex flex-col gap-2 mt-4">
-                {authMode !== "whatsapp" && (
-                  <button
-                    type="button"
-                    onClick={() => switchAuthMode("whatsapp")}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 my-2 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center"
-                  >
-                    Masuk dengan WhatsApp OTP
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={loginWithGoogle}
+                  disabled={authLoading}
+                  className="w-full bg-white text-black py-3 rounded-xl font-bold transition-colors border border-surface2 cursor-pointer flex justify-center items-center gap-2"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                  Masuk dengan Google
+                </button>
               </div>
 
               <div className="text-center text-sm text-gray-400 mt-4">
                 <span>
-                  {authMode === "login" || authMode === "whatsapp"
+                  {authMode === "login"
                     ? "Belum punya akun? "
                     : "Sudah punya akun? "}
                 </span>
@@ -1911,7 +1878,7 @@ function App() {
                   }
                   className="text-terracotta hover:text-white font-bold cursor-pointer"
                 >
-                  {authMode === "login" || authMode === "whatsapp" ? "Daftar sekarang" : "Masuk dengan Email"}
+                  {authMode === "login" ? "Daftar sekarang" : "Masuk dengan Email"}
                 </span>
               </div>
             </form>
