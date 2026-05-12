@@ -24,12 +24,41 @@
         "signup_bonus_chars": { "type": "number" },
         "monthly_chars": { "type": "number" },
         "earned_chars": { "type": "number" },
+        "bonus_credits": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "amount": { "type": "number" },
+              "expiresAt": { "type": "number" },
+              "type": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          }
+        },
         "used_chars": { "type": "number" },
         "generation_count": { "type": "number" },
+        "referrals_count_month": { "type": "number" },
+        "last_referral_date": { "type": "number" },
+        "ips_used": { "type": "array", "items": { "type": "string" } },
         "pronunciations": { "type": "object" },
         "has_triggered_ref": { "type": "boolean" }
       },
       "required": ["id", "email", "tier"]
+    },
+    "SocialShareSubmission": {
+      "title": "SocialShareSubmission",
+      "description": "User submission for social share bonus",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "socialUrl": { "type": "string" },
+        "platform": { "type": "string" },
+        "submittedAt": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "screenshotUrl": { "type": "string" }
+      }
     },
     "HistoryItem": {
       "title": "HistoryItem",

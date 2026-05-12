@@ -6,7 +6,9 @@ import {
   createUserWithEmailAndPassword, 
   signOut,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  OAuthProvider
 } from "firebase/auth";
 import {
   Waves,
@@ -248,6 +250,9 @@ function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const [isVoiceMgmtOpen, setIsVoiceMgmtOpen] = useState(false);
+  const [isSubmissionsOpen, setIsSubmissionsOpen] = useState(false);
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [voiceConfig, setVoiceConfig] = useState({ tiers: {} });
   const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
   const [testEmail, setTestEmail] = useState("");
@@ -295,6 +300,44 @@ function App() {
       setHistoryLoading(false);
     }
   };
+
+  const fetchSubmissions = async () => {
+    if (!user || user.tier !== "ENTERPRISE") return;
+    setSubmissionsLoading(true);
+    try {
+      const res = await fetch("/api/admin/social-submissions", {
+        headers: await getAuthHeaders(),
+      });
+      const data = await res.json();
+      if (data.submissions) setSubmissions(data.submissions);
+    } catch (e) {
+      console.error("Error fetching submissions:", e);
+    } finally {
+      setSubmissionsLoading(false);
+    }
+  };
+
+  const handleReviewSubmission = async (id, status) => {
+    try {
+      const res = await fetch(`/api/admin/social-submissions/${id}/review`, {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        alert("Berhasil diperbarui!");
+        fetchSubmissions();
+      }
+    } catch (e) {
+      alert("Gagal memperbarui status.");
+    }
+  };
+
+  useEffect(() => {
+    if (isSubmissionsOpen) {
+      fetchSubmissions();
+    }
+  }, [isSubmissionsOpen]);
 
   const fetchVoiceConfig = async () => {
     setVoiceConfigLoading(true);
@@ -688,6 +731,38 @@ function App() {
     }
   };
 
+  const loginWithFacebook = async () => {
+    setAuthLoading(true);
+    try {
+      const provider = new FacebookAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      await syncUser(result.user);
+      setIsAuthOpen(false);
+      alert("Login dengan Facebook Berhasil!");
+    } catch (err) {
+      console.error(err);
+      alert("Gagal login dengan Facebook. " + (err.code === 'auth/account-exists-with-different-credential' ? 'Email ini sudah terdaftar dengan metode lain.' : ''));
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const loginWithApple = async () => {
+    setAuthLoading(true);
+    try {
+      const provider = new OAuthProvider('apple.com');
+      const result = await signInWithPopup(auth, provider);
+      await syncUser(result.user);
+      setIsAuthOpen(false);
+      alert("Login dengan Apple Berhasil!");
+    } catch (err) {
+      console.error(err);
+      alert("Gagal login dengan Apple.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const switchAuthMode = (mode) => {
     setAuthMode(mode);
     setAuthData({
@@ -709,15 +784,16 @@ function App() {
         body: JSON.stringify({ url: socialUrl }),
       });
       const data = await res.json();
-      if (data.success) {
-        alert("Tautan berhasil dikirim. Menunggu verifikasi admin!");
+      if (res.ok) {
+        alert(data.message || "Tautan berhasil dikirim. Menunggu verifikasi admin!");
         setShowSocialModal(false);
+        setSocialUrl("");
         refreshUser();
       } else {
-        alert(data.error);
+        alert(data.error || "Gagal mengirim pengajuan.");
       }
     } catch (err) {
-      alert("Error submitting social share");
+      alert("Terjadi kesalahan koneksi.");
     }
   };
 
@@ -846,116 +922,132 @@ function App() {
           className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
         >
           {user && (
-            <div className="bg-surface2 rounded-3xl p-6 mb-8 flex flex-col md:flex-row justify-between items-center border border-surface2 shadow-xl gap-4">
-              <div className="flex-1 w-full">
-                <div className="text-sm font-bold text-gray-400 mb-2">
-                  Sisa Kuota Total
-                </div>
-                <div className="flex items-end gap-2 mb-2">
-                  <span className="text-3xl font-black text-white">
-                    {Math.max(
-                      0,
-                      user.monthly_chars +
-                        user.signup_bonus_chars +
-                        user.earned_chars -
-                        user.used_chars,
-                    ).toLocaleString("id-ID")}
-                  </span>
-                  <span className="text-sm text-gray-500 mb-1">karakter</span>
-                </div>
-                <div className="w-full bg-dark h-2 rounded-full overflow-hidden mb-3">
-                  <div
-                    className="bg-terracotta h-full rounded-full"
-                    style={{
-                      width: `${Math.min(100, (user.used_chars / Math.max(1, user.monthly_chars + user.signup_bonus_chars + user.earned_chars)) * 100)}%`,
-                    }}
-                  ></div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-4">
-                  <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                    <div className="text-text-muted text-xs mb-1">Bulanan</div>
-                    <div className="font-bold text-text">{user.monthly_chars.toLocaleString("id-ID")}</div>
+            <div className="bg-surface2 rounded-3xl p-6 mb-8 border border-surface2 shadow-xl">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Credits Info */}
+                <div className="lg:col-span-2">
+                  <div className="text-sm font-bold text-gray-400 mb-2">
+                    Sisa Kuota Karakter
                   </div>
-                  <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                    <div className="text-text-muted text-xs mb-1">Bonus Signup</div>
-                    <div className="font-bold text-text">{user.signup_bonus_chars.toLocaleString("id-ID")}</div>
-                  </div>
-                  <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                    <div className="text-text-muted text-xs mb-1">Ekstra</div>
-                    <div className="font-bold text-text">{user.earned_chars.toLocaleString("id-ID")}</div>
-                  </div>
-                  <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                    <div className="text-text-muted text-xs mb-1">Digunakan</div>
-                    <div className="font-bold text-terracotta">{user.used_chars.toLocaleString("id-ID")}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 min-w-[250px]">
-                <button
-                  onClick={() => setIsHistoryOpen(true)}
-                  className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-terracotta" />{" "}
-                    <span className="text-sm font-bold">
-                      Riwayat Penggunaan
+                  <div className="flex items-end gap-2 mb-4">
+                    <span className="text-4xl font-black text-white">
+                      {(() => {
+                        const reg = (user.monthly_chars || 0) + (user.earned_chars || 0);
+                        const bonus = (user.bonus_credits || []).filter(b => b.expiresAt > Date.now()).reduce((s, b) => s + b.amount, 0);
+                        return Math.max(0, reg + bonus - user.used_chars).toLocaleString("id-ID");
+                      })()}
                     </span>
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
-                </button>
-                {user.tier === "ENTERPRISE" && (
-                  <button
-                    onClick={() => setIsVoiceMgmtOpen(true)}
-                    className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Settings2 className="w-4 h-4 text-terracotta" />{" "}
-                      <span className="text-sm font-bold">
-                        Voice Management
-                      </span>
+                    <span className="text-sm text-gray-500 mb-1 font-bold">karakter tersedia</span>
+                    <div className="group relative mb-2 ml-1">
+                      <HelpCircle className="w-4 h-4 text-gray-600 cursor-help" />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-dark border border-surface2 p-3 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[10px] text-gray-400 font-medium leading-relaxed">
+                        <p className="mb-2 text-white font-bold uppercase tracking-widest text-[9px]">Sistem Kredit Tier</p>
+                        <ul className="space-y-1">
+                          <li>• <span className="text-white">Standard:</span> Multiplier 1x (1:1)</li>
+                          <li>• <span className="text-white">Neural2/Wavenet:</span> Multiplier 3x</li>
+                          <li>• <span className="text-white">Studio/Chirp:</span> Multiplier 25x</li>
+                        </ul>
+                        <p className="mt-2 pt-2 border-t border-surface2 text-terracotta">
+                          *Kredit bonus hanya berlaku untuk suara tier Standard.
+                        </p>
+                      </div>
                     </div>
-                    <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
-                  </button>
-                )}
-                <div className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="w-4 h-4 text-terracotta" />{" "}
-                    <span className="text-sm font-bold">
-                      Referral ({user.valid_referrals}/2)
-                    </span>
                   </div>
-                  <span className="text-xs bg-surface2 px-2 py-1 rounded text-gray-300">
-                    {user.referral_code}
-                  </span>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2">
+                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Paket {user.tier}</div>
+                      <div className="font-bold text-text text-sm">{(user.monthly_chars || 0).toLocaleString("id-ID")}</div>
+                    </div>
+                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2">
+                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Bonus Aktif</div>
+                      <div className="font-bold text-green-500 text-sm">
+                        {(user.bonus_credits || []).filter(b => b.expiresAt > Date.now()).reduce((s, b) => s + b.amount, 0).toLocaleString("id-ID")}
+                      </div>
+                    </div>
+                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2">
+                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Total Didapat</div>
+                      <div className="font-bold text-text text-sm">{(user.earned_chars || 0).toLocaleString("id-ID")}</div>
+                    </div>
+                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2">
+                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Terpakai</div>
+                      <div className="font-bold text-terracotta text-sm">{(user.used_chars || 0).toLocaleString("id-ID")}</div>
+                    </div>
+                  </div>
+
+                  {user.bonus_credits && user.bonus_credits.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                       {user.bonus_credits.filter(b => b.expiresAt > Date.now()).map((b, i) => (
+                         <div key={i} className="text-[9px] bg-terracotta/10 text-terracotta px-2 py-1 rounded-full border border-terracotta/20 flex items-center gap-1">
+                           <Gift className="w-2.5 h-2.5" />
+                           <span className="font-bold">+{b.amount.toLocaleString()} ({b.source})</span>
+                           <span className="opacity-60 whitespace-nowrap">Exp: {new Date(b.expiresAt).toLocaleDateString('id-ID')}</span>
+                         </div>
+                       ))}
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() =>
-                    user.social_bonus_status === "none" &&
-                    setShowSocialModal(true)
-                  }
-                  disabled={user.social_bonus_status !== "none"}
-                  className={`p-3 rounded-xl border flex justify-between items-center transition-colors border-none text-left ${user.social_bonus_status === "none" ? "bg-dark hover:bg-surface2 border-surface2 cursor-pointer" : "bg-surface/50 border-surface2/50 cursor-not-allowed opacity-70"}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Share2
-                      className={`w-4 h-4 ${user.social_bonus_status === "none" ? "text-terracotta" : "text-text-muted"}`}
-                    />{" "}
-                    <span
-                      className={`text-sm font-bold ${user.social_bonus_status === "none" ? "text-text" : "text-text-muted"}`}
+
+                {/* Quick Actions */}
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setIsHistoryOpen(true)}
+                      className="bg-dark p-3 rounded-xl border border-surface2 hover:bg-surface2 transition-all cursor-pointer text-center group"
                     >
-                      Social Bonus
-                    </span>
+                      <History className="w-5 h-5 text-terracotta mx-auto mb-1 group-hover:scale-110 transition-transform" />
+                      <span className="text-[10px] font-black uppercase">History</span>
+                    </button>
+                    <button
+                      onClick={() => setShowSocialModal(true)}
+                      disabled={user.social_bonus_status !== "none"}
+                      className={`p-3 rounded-xl border transition-all text-center group ${user.social_bonus_status === "none" ? "bg-dark hover:bg-surface2 border-surface2 cursor-pointer" : "bg-surface/50 border-surface2/50 cursor-not-allowed opacity-70"}`}
+                    >
+                      <Share2 className={`w-5 h-5 mx-auto mb-1 group-hover:scale-110 transition-transform ${user.social_bonus_status === "approved" ? "text-green-500" : "text-terracotta"}`} />
+                      <span className="text-[10px] font-black uppercase">
+                        {user.social_bonus_status === "approved" ? "Approved" : user.social_bonus_status === "pending" ? "Pending" : "Social Bonus"}
+                      </span>
+                    </button>
                   </div>
-                  <span
-                    className={`text-xs font-bold ${user.social_bonus_status === "none" ? "text-terracotta animate-pulse" : user.social_bonus_status === "pending" ? "text-yellow-500" : "text-green-500"}`}
-                  >
-                    {user.social_bonus_status === "none"
-                      ? "Klaim 30rb!"
-                      : user.social_bonus_status === "pending"
-                        ? "Pending"
-                        : "Approved"}
-                  </span>
-                </button>
+                  
+                  <div className="bg-dark p-3 rounded-xl border border-surface2 flex flex-col justify-center items-center">
+                    <div className="flex items-center gap-2 mb-1">
+                      <UserPlus className="w-4 h-4 text-terracotta" />
+                      <span className="text-[10px] font-black uppercase">Referral ({user.referrals_count_month || 0}/20)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <span className="text-lg font-black text-white tracking-widest">{user.referral_code}</span>
+                       <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(user.referral_code);
+                          alert("Referral code copied!");
+                        }}
+                        className="p-1 hover:bg-surface2 rounded text-text-muted transition-colors border-none bg-transparent cursor-pointer"
+                       >
+                         <Download className="w-3 h-3 rotate-180" />
+                       </button>
+                    </div>
+                  </div>
+
+                  {user.tier === "ENTERPRISE" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setIsVoiceMgmtOpen(true)}
+                        className="bg-dark p-3 rounded-xl border border-surface2 hover:bg-surface2 transition-all cursor-pointer text-center group"
+                      >
+                        <Settings2 className="w-5 h-5 text-terracotta mx-auto mb-1 group-hover:rotate-45 transition-transform" />
+                        <span className="text-[10px] font-black uppercase">Admin Config</span>
+                      </button>
+                      <button
+                        onClick={() => setIsSubmissionsOpen(true)}
+                        className="bg-dark p-3 rounded-xl border border-surface2 hover:bg-surface2 transition-all cursor-pointer text-center group"
+                      >
+                        <MessageCircle className="w-5 h-5 text-terracotta mx-auto mb-1 group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-black uppercase">Review Share</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1656,7 +1748,9 @@ function App() {
                   </li>
                   <li>
                     <a
-                      href="#contact"
+                      href="https://wa.me/6281234567890"
+                      target="_blank"
+                      rel="noreferrer"
                       className="hover:text-terracotta transition-colors"
                     >
                       Hubungi Kami
@@ -1726,10 +1820,10 @@ function App() {
             <div className="text-center mb-8">
               <ShinervaLogo className="w-16 h-16 text-terracotta mx-auto mb-4" />
               <h2 className="text-2xl font-black">
-                {authMode === "login" ? "Masuk ke SHINERVA" : authMode === "whatsapp" ? "Masuk dengan WhatsApp" : "Daftar Akun Baru"}
+                {authMode === "login" ? "Masuk ke SHINERVA" : "Daftar Akun Baru"}
               </h2>
               <p className="text-gray-400 text-sm mt-2">
-                {authMode === "login" || authMode === "whatsapp"
+                {authMode === "login"
                   ? "Selamat datang kembali!"
                   : "Daftar sekarang dan dapatkan bonus 5.000 karakter gratis."}
               </p>
@@ -1863,6 +1957,24 @@ function App() {
                 >
                   <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                   Masuk dengan Google
+                </button>
+                <button
+                  type="button"
+                  onClick={loginWithFacebook}
+                  disabled={authLoading}
+                  className="w-full bg-[#1877F2] text-white py-3 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center gap-2"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/facebook.svg" alt="Facebook" className="w-5 h-5" />
+                  Masuk dengan Facebook
+                </button>
+                <button
+                  type="button"
+                  onClick={loginWithApple}
+                  disabled={authLoading}
+                  className="w-full bg-black text-white py-3 rounded-xl font-bold transition-colors border border-surface2 cursor-pointer flex justify-center items-center gap-2"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/apple.svg" alt="Apple" className="w-5 h-5" />
+                  Masuk dengan Apple
                 </button>
               </div>
 
@@ -2319,6 +2431,100 @@ function App() {
           </div>
         </div>
       )}
+      {/* Admin Submissions Review Modal */}
+      {isSubmissionsOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsSubmissionsOpen(false)}
+          ></div>
+          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-4xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
+            <button
+              onClick={() => setIsSubmissionsOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center mb-8">
+              <MessageCircle className="w-16 h-16 text-terracotta mx-auto mb-4" />
+              <h2 className="text-2xl font-black text-white">Review Social Submissions</h2>
+              <p className="text-gray-400 text-sm mt-2">
+                Verifikasi postingan sosial media untuk memberikan bonus kredit.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {submissionsLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-terracotta animate-spin mb-4" />
+                  <p className="text-gray-500">Memuat pengajuan...</p>
+                </div>
+              ) : submissions.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {submissions.map((sub) => (
+                    <div key={sub.id} className="bg-dark p-5 rounded-2xl border border-surface2 flex flex-col gap-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex flex-col">
+                           <span className="text-[10px] font-black text-terracotta uppercase mb-1">User ID: {sub.userId}</span>
+                           <span className="text-xs text-text-muted">{new Date(sub.submittedAt).toLocaleString('id-ID')}</span>
+                        </div>
+                        <span className="text-[10px] bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded-full font-black uppercase tracking-widest">
+                          {sub.status}
+                        </span>
+                      </div>
+                      <div className="bg-surface2/30 p-3 rounded-xl border border-surface2 break-all text-xs font-mono">
+                        <a href={sub.socialUrl} target="_blank" rel="noreferrer" className="text-terracotta hover:underline">
+                          {sub.socialUrl}
+                        </a>
+                      </div>
+                      <div className="flex gap-2 mt-auto pt-4 border-t border-surface2">
+                        <button
+                          onClick={() => handleReviewSubmission(sub.id, 'approved')}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-widest border-none cursor-pointer transition-colors"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleReviewSubmission(sub.id, 'rejected')}
+                          className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-500 font-black py-2.5 rounded-xl text-xs uppercase tracking-widest border border-red-600/30 cursor-pointer transition-colors"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 italic">Tidak ada pengajuan pending saat ini.</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 pt-6 border-t border-surface2 text-center">
+               <button 
+                onClick={() => setIsSubmissionsOpen(false)}
+                className="bg-surface2 hover:bg-gray-700 text-white px-8 py-2.5 rounded-xl font-bold cursor-pointer border-none"
+               >
+                 Selesai
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating WhatsApp Support Button */}
+      <a
+        href="https://wa.me/6281234567890"
+        target="_blank"
+        rel="noreferrer"
+        className="fixed bottom-6 right-6 z-[90] bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center group"
+        title="Hubungi Support via WhatsApp"
+      >
+        <MessageCircle className="w-6 h-6" />
+        <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-300 font-bold whitespace-nowrap">
+          Support WhatsApp
+        </span>
+      </a>
     </div>
   );
 }

@@ -19,13 +19,7 @@ admin.initializeApp({
   projectId: firebaseConfig.projectId
 });
 
-const db = admin.firestore();
-// Use the database ID if specified in config
-if (firebaseConfig.firestoreDatabaseId) {
-  // Note: Standard firebase-admin doesn't easily support databaseId in initializeApp 
-  // but we can request it via the firestore instance if needed.
-  // Actually, for AI Studio, the default instance usually works if project is correctly provisioned.
-}
+const db = admin.firestore(firebaseConfig.firestoreDatabaseId || undefined);
 
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
@@ -33,6 +27,9 @@ const PORT = process.env.PORT || 3000;
 // --- FIRESTORE COLLECTIONS ---
 const usersCol = db.collection('users');
 const configCol = db.collection('config');
+const submissionsCol = db.collection('social_submissions');
+
+const ipReferralHistory = new Map(); // ip -> [timestamps]
 
 // Temporary in-memory OTPs removed as login is now email-only via Firebase Auth.
 
@@ -53,12 +50,16 @@ let voiceConfig = {
 };
 
 async function loadVoiceConfig() {
-  const doc = await configCol.doc('voice').get();
-  if (doc.exists) {
-    voiceConfig = doc.data();
+  try {
+    const doc = await configCol.doc('voice').get();
+    if (doc.exists) {
+      voiceConfig = doc.data();
+      console.log("[CONFIG] Voice config loaded from Firestore.");
+    }
+  } catch (error) {
+    console.error("[CONFIG] Error loading voice config:", error);
   }
 }
-loadVoiceConfig();
 
 async function saveVoiceConfig() {
   await configCol.doc('voice').set(voiceConfig);
@@ -123,70 +124,46 @@ async function sendWelcomeEmail(toEmail, userName) {
 
 // Ensure an admin user exists for exports
 async function bootstrapAdmin() {
-  const adminRef = usersCol.doc('admin');
-  const adminDoc = await adminRef.get();
-  if (!adminDoc.exists) {
-    await adminRef.set({
-      id: 'admin', 
-      name: 'Admin', 
-      email: 'admin@shinerva.id', 
-      tier: 'ENTERPRISE', 
-      valid_referrals: 0, 
-      has_received_referral_bonus: false, 
-      signup_bonus_chars: 10000, 
-      monthly_chars: 1000000, 
-      earned_chars: 0, 
-      used_chars: 0, 
-      generation_count: 0, 
-      email_subscribed: true, 
-      whatsapp_opted_in: false, 
-      history: []
-    });
-  }
-}
-bootstrapAdmin();
-
-// --- WHATSAPP SETUP ---
-async function sendWhatsAppOTP(phone, otp) {
-  const token = process.env.WHATSAPP_API_TOKEN;
-  const apiUrl = process.env.WHATSAPP_API_URL || 'https://api.fonnte.com/send';
-
-  if (!token) {
-    console.log(`[WHATSAPP_SKIPPED] To: ${phone} | OTP: ${otp}. WHATSAPP_API_TOKEN not configured.`);
-    return { success: false, message: 'WhatsApp API Token not configured' };
-  }
-
   try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': token,
-      },
-      body: new URLSearchParams({
-        target: phone,
-        message: `*KODE OTP SHINERVA*\n\nKode: *${otp}*\n\nJangan bagikan kode ini kepada siapapun. Kode berlaku selama 5 menit.`,
-      })
-    });
-
-    const result = await response.json();
-    if (result.status) {
-      console.log(`[WHATSAPP_SENT] Success! Phone: ${phone}`);
-      return { success: true };
-    } else {
-      console.error(`[WHATSAPP_ERROR] API returned error for ${phone}:`, result.reason || result.message);
-      return { success: false, message: result.reason || result.message };
+    const adminRef = usersCol.doc('admin');
+    const adminDoc = await adminRef.get();
+    if (!adminDoc.exists) {
+      await adminRef.set({
+        id: 'admin', 
+        name: 'Admin', 
+        email: 'admin@shinerva.id', 
+        tier: 'ENTERPRISE', 
+        valid_referrals: 0, 
+        has_received_referral_bonus: false, 
+        signup_bonus_chars: 10000, 
+        monthly_chars: 1000000, 
+        earned_chars: 0, 
+        used_chars: 0, 
+        generation_count: 0, 
+        email_subscribed: true, 
+        whatsapp_opted_in: false, 
+        history: []
+      });
+      console.log("[ADMIN] Admin user bootstrapped.");
     }
   } catch (error) {
-    console.error(`[WHATSAPP_ERROR] Failed to send to ${phone}:`, error);
-    return { success: false, message: 'Failed to connect to WhatsApp API' };
+    console.error("[ADMIN] Error bootstrapping admin:", error);
   }
 }
+
+// --- WHATSAPP SETUP ---
+// WhatsApp OTP features removed. WhatsApp is now used for direct Customer Service links in the UI.
+
 
 async function createServer() {
   const app = express();
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // Bootstrap data
+  await loadVoiceConfig();
+  await bootstrapAdmin();
 
   // --- AUTH MIDDLEWARE ---
   const authenticate = async (req, res, next) => {
@@ -250,11 +227,21 @@ async function createServer() {
         has_received_referral_bonus: false,
         social_bonus_status: 'none',
         social_url: '',
-        signup_bonus_chars: 5000,
+        bonus_credits: [
+          {
+            amount: 5000,
+            expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+            type: 'standard',
+            source: 'SIGNUP_BONUS'
+          }
+        ],
         monthly_chars: 0, 
         earned_chars: 0,
         used_chars: 0,
         generation_count: 0,
+        referrals_count_month: 0,
+        last_referral_date: 0,
+        ips_used: [],
         pronunciations: {},
         history: [] // Keep for now, but should move to subcollection
       };
@@ -265,6 +252,45 @@ async function createServer() {
     }
 
     res.json({ success: true, user: userDoc.data() });
+  });
+
+  // Helper to count available credits with tier enforcement
+  function getAvailableCredits(user, requestedVoiceTierName) {
+    const now = Date.now();
+    
+    // Base credits (Monthly + Earned) - can be used for any voice tier
+    const regularBase = (user.monthly_chars || 0) + (user.earned_chars || 0);
+    
+    // Bonus credits - restricted to 'Standard' voice tier unless it is from AFFILIATE_BONUS
+    const bonusBucket = (user.bonus_credits || [])
+      .filter(b => b.expiresAt > now)
+      .filter(b => {
+        // If user wants Premium/Studio, bonus credits must be AFFILIATE_BONUS
+        if (requestedVoiceTierName !== 'Standard') {
+          return b.source === 'AFFILIATE_BONUS'; 
+        }
+        return true;
+      });
+
+    const bonusTotal = bonusBucket.reduce((sum, b) => sum + b.amount, 0);
+    
+    // used_chars is an aggregate counter
+    // Balance = (Regular + Eligible Bonus) - Used
+    return { 
+      regular: regularBase, 
+      bonus: bonusTotal, 
+      total: regularBase + bonusTotal - (user.used_chars || 0),
+      restricted: requestedVoiceTierName !== 'Standard'
+    };
+  }
+
+  app.get('/api/user/credits', authenticate, async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+    const credits = getAvailableCredits(req.user, 'Standard');
+    res.json({
+      credits,
+      bonus_details: (req.user.bonus_credits || []).filter(b => b.expiresAt > Date.now())
+    });
   });
 
   app.get('/api/user/me', authenticate, async (req, res) => {
@@ -346,17 +372,79 @@ async function createServer() {
 
   app.post('/api/user/social-share', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-    const { url } = req.body;
-    if (req.user.social_bonus_status !== 'none') {
-      return res.status(400).json({ error: 'Sudah pernah mengklaim bonus ini.' });
+    const { url, platform, screenshotUrl } = req.body;
+    
+    const now = Date.now();
+    const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
+    
+    // Check if claimed in last 30 days
+    const recentSnapshot = await submissionsCol
+      .where('userId', '==', req.user.id)
+      .where('submittedAt', '>', oneMonthAgo)
+      .where('status', 'in', ['pending', 'approved'])
+      .get();
+      
+    if (!recentSnapshot.empty) {
+      return res.status(400).json({ error: 'Batas klaim 1x per bulan. Harap coba lagi bulan depan.' });
     }
-    req.user.social_bonus_status = 'pending';
-    req.user.social_url = url;
+
+    const submissionId = generateId();
+    const submission = {
+      id: submissionId,
+      userId: req.user.id,
+      socialUrl: url,
+      platform: platform || 'tiktok',
+      screenshotUrl: screenshotUrl || '',
+      submittedAt: now,
+      status: 'pending'
+    };
+    
+    await submissionsCol.doc(submissionId).set(submission);
+    
     await usersCol.doc(req.user.id).update({ 
       social_bonus_status: 'pending',
       social_url: url
     });
-    res.json({ success: true, message: 'Pengajuan berhasil. Menunggu verifikasi admin.', user: req.user });
+    
+    res.json({ success: true, message: 'Pengajuan berhasil. Menunggu verifikasi admin.', submission });
+  });
+
+  app.get('/api/admin/social-submissions', authenticate, async (req, res) => {
+    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+    const snapshot = await submissionsCol.where('status', '==', 'pending').get();
+    const submissions = [];
+    snapshot.forEach(doc => submissions.push(doc.data()));
+    res.json({ submissions });
+  });
+
+  app.post('/api/admin/social-submissions/:id/review', authenticate, async (req, res) => {
+    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+    const { id } = req.params;
+    const { status } = req.body; // approved, rejected
+    
+    const subRef = submissionsCol.doc(id);
+    const subDoc = await subRef.get();
+    if (!subDoc.exists) return res.status(404).json({error: 'Submission not found'});
+    const sub = subDoc.data();
+    
+    await subRef.update({ status });
+    
+    if (status === 'approved') {
+      const userRef = usersCol.doc(sub.userId);
+      await userRef.update({
+        social_bonus_status: 'approved',
+        bonus_credits: admin.firestore.FieldValue.arrayUnion({
+          amount: 5000,
+          expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+          type: 'standard',
+          source: 'SOCIAL_SHARE'
+        })
+      });
+    } else {
+      await usersCol.doc(sub.userId).update({ social_bonus_status: 'none' });
+    }
+    
+    res.json({ success: true });
   });
 
   app.post('/api/user/settings', authenticate, async (req, res) => {
@@ -526,10 +614,6 @@ async function createServer() {
       }
 
       // Check Quota
-      const totalAvailable = user.monthly_chars + user.signup_bonus_chars + user.earned_chars;
-      let remaining = totalAvailable - user.used_chars;
-      
-      // Voice Authorization
       let actualVoice = voice || 'id-ID-Standard-A';
       
       const isPremiumVoice = actualVoice.includes('Neural2') || actualVoice.includes('Studio') || actualVoice.includes('Chirp');
@@ -545,7 +629,6 @@ async function createServer() {
         }
       }
 
-      // Multiplier logic
       let voiceTierName = 'Standard';
       if (actualVoice.includes('Wavenet')) voiceTierName = 'Wavenet';
       else if (actualVoice.includes('Neural2')) voiceTierName = 'Neural2';
@@ -555,8 +638,28 @@ async function createServer() {
       const multiplier = voiceConfig.tiers[voiceTierName] || 1;
       const totalCharCost = text.length * multiplier;
 
-      if (totalCharCost > remaining) {
-        return res.status(402).json({ error: `Kredit karakter tidak mencukupi (Membutuhkan ${totalCharCost} kredit). Anda memiliki ${remaining} kredit.` });
+      const now = Date.now();
+      const credits = getAvailableCredits(user, voiceTierName);
+      
+      if (totalCharCost > credits.total) {
+        let errorMsg = `Kredit karakter tidak mencukupi (Membutuhkan ${totalCharCost} kredit). `;
+        if (voiceTierName !== 'Standard' && (user.bonus_credits || []).length > 0) {
+          errorMsg += " Catatan: Sebagian kredit Anda adalah kredit bonus yang hanya berlaku untuk suara tier 'Standard'.";
+        }
+        return res.status(402).json({ error: errorMsg });
+      }
+
+      // Referral IP check (anti-abuse)
+      const ip = getClientIp(req);
+      if (user.generation_count === 0 && user.referred_by) {
+        const timestamps = ipReferralHistory.get(ip) || [];
+        const recentTimestamps = timestamps.filter(t => now - t < 24 * 60 * 60 * 1000);
+        if (recentTimestamps.length >= 1) {
+          console.warn(`[ABUSE_DETECTION] Multi-referral from same IP: ${ip} for user ${user.id}`);
+          user._referral_blocked = true;
+        }
+        recentTimestamps.push(now);
+        ipReferralHistory.set(ip, recentTimestamps);
       }
 
       // Apply custom pronunciations
@@ -609,53 +712,103 @@ async function createServer() {
       }
 
       // Success generation logic
-      user.used_chars += totalCharCost;
-      user.generation_count += 1;
-      user.last_generation_at = Date.now();
+      const usedCharsUpdate = admin.firestore.FieldValue.increment(totalCharCost);
+      const genCountUpdate = admin.firestore.FieldValue.increment(1);
+      
+      const updates = {
+        used_chars: usedCharsUpdate,
+        generation_count: genCountUpdate,
+        last_generation_at: now
+      };
 
-      if (!user.history) user.history = [];
-      user.history.unshift({
-        id: generateId(),
-        date: Date.now(),
-        character_count: text.length,
-        voice: actualVoice,
-        tier: tier,
-        is_teaser: false,
-        credits_used: totalCharCost,
-        multiplier: multiplier
-      });
-
-      if (user.history.length > 50) {
-        user.history = user.history.slice(0, 50);
-      }
-
-      // Referral system hook
-      if (user.generation_count === 1 && user.referred_by && !user.has_triggered_ref) {
-        user.has_triggered_ref = true;
+      // Referral system hook (New rules)
+      if (text.length >= 100 && user.referred_by && !user.has_triggered_ref && !user._referral_blocked) {
         const referrerRef = usersCol.doc(user.referred_by);
         const referrerDoc = await referrerRef.get();
         
         if (referrerDoc.exists) {
           const referrer = referrerDoc.data();
-          if (referrer.valid_referrals < 2) {
-             const refUpdates = { valid_referrals: admin.firestore.FieldValue.increment(1) };
-             user.earned_chars += 5000;
-             
-             if (referrer.valid_referrals + 1 >= 2 && !referrer.has_received_referral_bonus) {
-               refUpdates.has_received_referral_bonus = true;
-               refUpdates.earned_chars = admin.firestore.FieldValue.increment(20000);
-             }
-             await referrerRef.update(refUpdates);
+          const lastRef = referrer.last_referral_date || 0;
+          const isNewMonth = new Date(lastRef).getMonth() !== new Date().getMonth();
+          const monthlyCount = isNewMonth ? 0 : (referrer.referrals_count_month || 0);
+
+          if (monthlyCount < 20) {
+            updates.has_triggered_ref = true;
+            // Referee gets 5000 bonus
+            updates.bonus_credits = admin.firestore.FieldValue.arrayUnion({
+              amount: 5000,
+              expiresAt: now + 60 * 24 * 60 * 60 * 1000,
+              type: 'standard',
+              source: 'REFERRAL_REFEREE'
+            });
+
+            // Referrer gets 10000 bonus
+            await referrerRef.update({
+              referrals_count_month: monthlyCount + 1,
+              last_referral_date: now,
+              bonus_credits: admin.firestore.FieldValue.arrayUnion({
+                amount: 10000,
+                expiresAt: now + 60 * 24 * 60 * 60 * 1000,
+                type: 'standard',
+                source: 'REFERRAL_REFERRER'
+              })
+            });
+            console.log(`[REFERRAL_TRIGGERED] Referrer: ${referrer.id} | Referee: ${user.id}`);
           }
         }
       }
 
-      await usersCol.doc(user.id).set(user);
+      // Update history in subcollection
+      const historyId = generateId();
+      await usersCol.doc(user.id).collection('history').doc(historyId).set({
+        id: historyId,
+        date: now,
+        character_count: text.length,
+        voice: actualVoice,
+        tier: tier,
+        credits_used: totalCharCost,
+        multiplier: multiplier
+      });
+
+      await usersCol.doc(user.id).update(updates);
       res.json({ ...data, isTeaser: false });
     } catch (error) {
       console.error('TTS proxy error:', error);
       res.status(500).json({ error: 'Server error processing TTS' });
     }
+  });
+
+  // --- MIDTRANS WEBHOOK (AFFILIATE & PURCHASE) ---
+  app.post('/api/affiliate/webhook', async (req, res) => {
+    const notification = req.body;
+    
+    if (notification.transaction_status === 'settlement' || notification.transaction_status === 'capture') {
+      const orderId = notification.order_id;
+      // Format expected: ORD-USERID-TIMESTAMP
+      const parts = orderId.split('-');
+      if (parts.length >= 2) {
+        const userId = parts[1];
+        const userRef = usersCol.doc(userId);
+        const userDoc = await userRef.get();
+        
+        if (userDoc.exists) {
+          const user = userDoc.data();
+          if (user.referred_by) {
+            const referrerRef = usersCol.doc(user.referred_by);
+            await referrerRef.update({
+              bonus_credits: admin.firestore.FieldValue.arrayUnion({
+                amount: 25000,
+                expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+                type: 'all',
+                source: 'AFFILIATE_BONUS'
+              })
+            });
+            console.log(`[AFFILIATE] Bonus awarded to ${user.referred_by} for ${userId}`);
+          }
+        }
+      }
+    }
+    res.json({ status: 'ok' });
   });
 
   // --- VITE FRONTEND SERVING ---
