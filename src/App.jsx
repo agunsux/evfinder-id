@@ -3,7 +3,7 @@ import {
   Waves,
   ChevronDown,
   Settings2,
-  Play,
+Play,
   Pause,
   Download,
   Mic,
@@ -20,6 +20,8 @@ import {
   Sun,
   Moon,
   History,
+  LogOut,
+  Mail,
 } from "lucide-react";
 
 const PACKS = [
@@ -157,7 +159,18 @@ function App() {
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login"); // login, signup
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem("shinerva_user");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("shinerva_user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("shinerva_user");
+    }
+  }, [user]);
 
   const [authData, setAuthData] = useState({
     name: "",
@@ -184,6 +197,8 @@ function App() {
   const [isVoiceMgmtOpen, setIsVoiceMgmtOpen] = useState(false);
   const [voiceConfig, setVoiceConfig] = useState({ tiers: {} });
   const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
 
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
   const [billingCycle, setBillingCycle] = useState("monthly"); // monthly, yearly
@@ -262,6 +277,28 @@ function App() {
     } catch (e) {
       console.error("Error saving config:", e);
       alert("Gagal menyimpan konfigurasi.");
+    }
+  };
+
+  const sendTestEmail = async () => {
+    if (!testEmail) return alert("Masukkan email tujuan.");
+    setTestEmailLoading(true);
+    try {
+      const res = await fetch("/api/admin/test-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": user.email,
+        },
+        body: JSON.stringify({ email: testEmail }),
+      });
+      const data = await res.json();
+      alert(data.message);
+    } catch (e) {
+      console.error("Error sending test email:", e);
+      alert("Gagal mengirim email tes.");
+    } finally {
+      setTestEmailLoading(false);
     }
   };
 
@@ -538,6 +575,12 @@ function App() {
     // document.getElementById('studio').scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem("shinerva_user");
+    alert("Berhasil keluar.");
+  };
+
   const submitAuth = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -553,7 +596,7 @@ function App() {
           const data = await res.json();
           if (data.success) {
             setOtpSent(true);
-            alert(`OTP telah dikirim ke WhatsApp Anda (mock: ${data.mockOtp})`); // Highlight mock OTP for development
+            alert(`OTP telah dikirim ke WhatsApp Anda (mock: check console)`);
           } else {
             alert(data.message || "Gagal mengirim OTP");
           }
@@ -583,9 +626,14 @@ function App() {
         const data = await res.json();
         if (data.success) {
           setUser(data.user);
+          if (authMode === "signup") {
+            alert("Signup Berhasil! Selamat datang di Shinerva. Sesuai permintaan Anda, notifikasi akan dikirimkan ke email Anda (Fitur email sedang dalam pengembangan).");
+          } else {
+            alert("Login Berhasil!");
+          }
           setIsAuthOpen(false);
         } else {
-          alert("Auth error: " + (data.message || "Unknown error"));
+          alert("Gagal: " + (data.message || "Unknown error"));
         }
       }
     } catch (err) {
@@ -691,7 +739,19 @@ function App() {
                 )}
               </button>
               {user ? (
-                <span className="font-bold text-terracotta">{user.email}</span>
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-terracotta text-sm">{user.name || user.email}</span>
+                    <span className="text-[10px] bg-terracotta/20 text-terracotta px-1.5 py-0.5 rounded font-black uppercase">{user.tier}</span>
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className="p-2 rounded-lg hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text-muted hover:text-red-500"
+                    title="Keluar"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </button>
+                </div>
               ) : (
                 <>
                   <button
@@ -888,9 +948,23 @@ function App() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold text-text-muted mb-2">
-                      Suara Pilihan
-                    </label>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-bold text-text-muted">
+                        Suara Pilihan
+                      </label>
+                      {text.length > 0 && (
+                        <span className="text-[10px] font-bold text-terracotta bg-terracotta/5 px-2 py-0.5 rounded-full border border-terracotta/10">
+                          Estimasi: {(() => {
+                            const matched = Object.values(VOICES).flat().find(v => v.id === voice);
+                            const m = voiceConfig.tiers?.[matched?.type] || 1;
+                            return (text.length * m).toLocaleString('id-ID');
+                          })()} kredit ({(() => {
+                            const matched = Object.values(VOICES).flat().find(v => v.id === voice);
+                            return voiceConfig.tiers?.[matched?.type] || 1;
+                          })()}x multiplier untuk {text.length} karakter)
+                        </span>
+                      )}
+                    </div>
                     <div className="relative">
                       <select
                         value={voice}
@@ -1758,8 +1832,8 @@ function App() {
                       <div className="bg-terracotta/10 border border-terracotta/20 rounded-xl p-3 flex gap-3 mt-4">
                         <Gift className="w-5 h-5 text-terracotta flex-shrink-0" />
                         <p className="text-xs text-terracotta font-medium">
-                          Selamat datang! Kamu dapat 10.000 karakter gratis untuk
-                          memulai (~6 menit audio).
+                          Selamat datang! Kamu dapat 5.000 karakter gratis untuk
+                          memulai (~3 menit audio).
                         </p>
                       </div>
                     </>
@@ -2170,6 +2244,33 @@ function App() {
                            }}
                            className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-surface2">
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                       <Mail className="w-4 h-4 text-terracotta" /> Test Email Notifications
+                    </h3>
+                    <div className="bg-dark p-4 rounded-xl border border-surface2">
+                      <p className="text-[10px] text-gray-500 mb-4">
+                        Gunakan fitur ini untuk memverifikasi pengaturan SMTP Anda. Pastikan variabel lingkungan (SMTP_USER, SMTP_PASS, dll) sudah diatur di server.
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                           type="email"
+                           placeholder="email@tujuan.com"
+                           value={testEmail}
+                           onChange={(e) => setTestEmail(e.target.value)}
+                           className="flex-1 bg-surface2 text-white border border-surface2 rounded px-3 py-2 text-sm"
+                        />
+                        <button
+                          onClick={sendTestEmail}
+                          disabled={testEmailLoading}
+                          className="bg-terracotta hover:bg-trdark text-white px-4 py-2 rounded-lg font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-none cursor-pointer"
+                        >
+                          {testEmailLoading ? "Mengirim..." : "Kirim Tes"}
+                        </button>
                       </div>
                     </div>
                   </div>

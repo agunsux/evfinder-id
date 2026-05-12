@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 
@@ -69,6 +70,56 @@ function generateId() {
 }
 function generateRefCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+// --- EMAIL SETUP ---
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+async function sendWelcomeEmail(toEmail, userName) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log(`[EMAIL_SKIPPED] To: ${toEmail}. SMTP credentials not configured.`);
+    return;
+  }
+
+  const mailOptions = {
+    from: `"${process.env.SMTP_FROM_NAME || 'Shinerva AI'}" <${process.env.SMTP_USER}>`,
+    to: toEmail,
+    subject: 'Selamat Datang di Shinerva AI!',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; rounded: 10px;">
+        <h2 style="color: #E2725B;">Halo, ${userName}!</h2>
+        <p>Terima kasih telah bergabung dengan <strong>Shinerva AI</strong>, platform Text-to-Speech terbaik untuk konten kreator Indonesia.</p>
+        <p>Akun Anda telah berhasil dibuat. Sebagai hadiah sambutan, kami telah menambahkan <strong>5.000 karakter gratis</strong> ke akun Anda untuk mulai berkreasi.</p>
+        <div style="background: #fdf2f0; padding: 15px; border-left: 4px solid #E2725B; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Tips Memulai:</strong></p>
+          <ul style="margin: 10px 0 0 0;">
+            <li>Gunakan suara <strong>Neural2</strong> untuk hasil yang lebih alami.</li>
+            <li>Manfaatkan fitur <strong>Kamus Pengucapan</strong> untuk kata-kata serapan.</li>
+            <li>Coba suara <strong>Studio</strong> untuk kualitas iklan premium.</li>
+          </ul>
+        </div>
+        <a href="https://shinerva.id" style="display: inline-block; background: #E2725B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">Buka Dashboard</a>
+        <p style="margin-top: 30px; font-size: 12px; color: #777;">
+          Jika Anda tidak merasa mendaftar di Shinerva, silakan abaikan email ini.
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[EMAIL_SENT] Success! Message ID: ${info.messageId} to ${toEmail}`);
+  } catch (error) {
+    console.error(`[EMAIL_ERROR] Failed to send email to ${toEmail}:`, error);
+  }
 }
 
 // Ensure an admin user exists for exports
@@ -164,9 +215,12 @@ async function createServer() {
       history: []
     };
 
+    console.log(`[SIGNUP] User registered: ${email}`);
+    sendWelcomeEmail(email, name);
+
     users.set(newUser.id, newUser);
     saveUsers();
-    res.json({ success: true, message: 'Signup successful', user: newUser });
+    res.json({ success: true, message: 'Signup successful. Notification simulated in console.', user: newUser });
   });
 
   app.post('/api/auth/otp/request', (req, res) => {
@@ -275,6 +329,15 @@ async function createServer() {
     } else {
       res.status(400).json({ error: 'Invalid config' });
     }
+  });
+
+  app.post('/api/admin/test-email', authenticate, async (req, res) => {
+    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Target email is required' });
+    
+    await sendWelcomeEmail(email, 'Test User');
+    res.json({ success: true, message: 'Test email sent. Check server logs for details.' });
   });
 
   app.post('/api/user/pronunciations', authenticate, (req, res) => {
@@ -555,7 +618,7 @@ async function createServer() {
       user.history.unshift({
         id: generateId(),
         date: Date.now(),
-        text_length: text.length,
+        character_count: text.length,
         voice: actualVoice,
         tier: tier,
         is_teaser: false,
