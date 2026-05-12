@@ -125,6 +125,8 @@ const VOICES = {
 
 import ShinervaLogo from "./components/ShinervaLogo";
 
+const maxChars = 5000;
+
 const App = () => {
   // ... rest of the component
 
@@ -290,7 +292,6 @@ const App = () => {
     }
   };
 
-  const maxChars = 5000;
   const audioRef = useRef(null);
   const textAreaRef = useRef(null);
   const [audioUrl, setAudioUrl] = useState("");
