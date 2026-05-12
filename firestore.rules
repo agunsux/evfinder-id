@@ -46,6 +46,8 @@ service cloud.firestore {
              (!('name' in data) || (data.name is string && data.name.size() <= 128)) &&
              (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() <= 32)) &&
              (!('referral_code' in data) || (data.referral_code is string && data.referral_code.size() <= 32)) &&
+             (!('referred_by' in data) || (data.referred_by is string && data.referred_by.size() <= 128)) &&
+             (!('bonus_credits' in data) || (data.bonus_credits is list)) &&
              (!('used_chars' in data) || (data.used_chars is int && data.used_chars >= 0))
              ;
     }

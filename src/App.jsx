@@ -138,24 +138,13 @@ const VOICES = {
 };
 
 const ShinervaLogo = ({ className }) => (
-  <div className={`flex items-center justify-center ${className} bg-dark rounded-xl border border-surface2 shadow-inner overflow-hidden p-1.5`}>
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#E2725B"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-full h-full"
-    >
-      {/* Concentric waves */}
-      <path d="M2 12 A 10 10 0 0 1 22 12" className="opacity-40" />
-      <path d="M5 12 A 7 7 0 0 1 19 12" className="opacity-70" />
-      <path d="M8 12 A 4 4 0 0 1 16 12" />
-      {/* Abstract ear shape */}
-      <path d="M12 15c-1.5 0-2-1-2-2.5 0-1.5 1-2 1-3a2.5 2.5 0 0 1 5 0c0 1-1 1.5-1 3s.5 2.5-1 2.5" />
-      <path d="M12.5 12c-.5 0-1-.5-1-1s.5-1 .5-2a1 1 0 0 1 2 0c0 .5-.5 1-.5 1.5" strokeWidth="1.5" />
-    </svg>
+  <div className={`flex items-center justify-center overflow-hidden rounded-lg ${className}`}>
+    <img 
+      src="request_artifact_0.png" 
+      alt="Shinerva Logo" 
+      className="w-full h-full object-cover"
+      referrerPolicy="no-referrer"
+    />
   </div>
 );
 
@@ -220,7 +209,15 @@ function App() {
         }),
       });
       
-      const data = await res.json();
+      const textResponse = await res.text();
+      let data;
+      try {
+        data = JSON.parse(textResponse);
+      } catch (parseError) {
+        console.error("[SYNC] Parse Error. Raw response:", textResponse);
+        throw new Error("Server mengembalikan format non-JSON. Kemungkinan terjadi kesalahan di server.");
+      }
+      
       console.log("[SYNC] Server response:", res.status, data);
       
       if (!res.ok) {
@@ -845,8 +842,8 @@ function App() {
       <nav className="fixed top-0 w-full z-50 glass-panel border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-24 items-center">
-            <div className="flex items-center gap-4">
-              <ShinervaLogo className="w-12 h-12" />
+            <div className="flex items-center gap-3">
+              <ShinervaLogo className="w-10 h-10 shadow-lg" />
               <span className="font-black text-3xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer">
                 Shinerva<span className="text-terracotta">.id</span>
               </span>
@@ -1746,8 +1743,8 @@ function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
               <div className="col-span-1 md:col-span-2">
-                <div className="flex items-center gap-4 mb-6">
-                  <ShinervaLogo className="w-12 h-12" />
+                <div className="flex items-center gap-3 mb-6">
+                  <ShinervaLogo className="w-10 h-10 shadow-lg" />
                   <span className="font-black text-3xl tracking-tight text-text">
                     Shinerva<span className="text-terracotta">.id</span>
                   </span>
@@ -1865,7 +1862,7 @@ function App() {
               <X className="w-5 h-5" />
             </button>
             <div className="text-center mb-8">
-              <ShinervaLogo className="w-16 h-16 text-terracotta mx-auto mb-4" />
+              <ShinervaLogo className="w-14 h-14 shadow-xl mx-auto mb-4" />
               <h2 className="text-2xl font-black">
                 {authMode === "login" ? "Masuk ke SHINERVA" : "Daftar Akun Baru"}
               </h2>

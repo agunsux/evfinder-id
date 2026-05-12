@@ -28,31 +28,33 @@ const PORT = process.env.PORT || 3000;
 const usersCol = db.collection('users');
 const configCol = db.collection('config');
 const submissionsCol = db.collection('social_submissions');
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: Date.now() });
-});
-
-app.get('/api/db-test', async (req, res) => {
-  try {
-    const snap = await configCol.limit(1).get();
-    res.json({ status: 'connected', collections: ['users', 'config', 'social_submissions'] });
-  } catch (e) {
-    res.status(500).json({ status: 'error', message: e.message });
-  }
-});
+const abuseLogsCol = db.collection('abuse_logs');
+const suspiciousCol = db.collection('suspicious_activities');
 
 const ipReferralHistory = new Map(); // ip -> [timestamps]
+const ipCreationHistory = new Map(); // ip -> [timestamps]
+
+async function flagActivity(type, details, severity = 'LOW') {
+  const activity = {
+    type,
+    details,
+    severity,
+    timestamp: Date.now(),
+    reviewed: false
+  };
+  console.warn(`[ABUSE_DETECTION] [${severity}] ${type}:`, details);
+  await suspiciousCol.add(activity);
+}
 
 // Temporary in-memory OTPs removed as login is now email-only via Firebase Auth.
 
 let voiceConfig = {
   tiers: {
     'Standard': 1,
-    'Wavenet': 1,
-    'Neural2': 4,
-    'Studio': 40,
-    'Chirp': 8
+    'Wavenet': 3,
+    'Neural2': 3,
+    'Studio': 25,
+    'Chirp': 25
   },
   limits: {
     free_request_chars: 500,
@@ -83,6 +85,11 @@ function generateId() {
 }
 function generateRefCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress;
 }
 
 // --- EMAIL SETUP ---
@@ -174,6 +181,19 @@ async function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: Date.now() });
+  });
+
+  app.get('/api/db-test', async (req, res) => {
+    try {
+      const snap = await configCol.limit(1).get();
+      res.json({ status: 'connected', collections: ['users', 'config', 'social_submissions'] });
+    } catch (e) {
+      res.status(500).json({ status: 'error', message: e.message });
+    }
+  });
+
   // Bootstrap data
   await loadVoiceConfig();
   await bootstrapAdmin();
@@ -188,7 +208,7 @@ async function createServer() {
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         const userDoc = await usersCol.doc(decodedToken.uid).get();
         if (userDoc.exists) {
-          req.user = userDoc.data();
+          req.user = { ...userDoc.data(), id: userDoc.id };
           return next();
         }
       } catch (error) {
@@ -198,11 +218,19 @@ async function createServer() {
       // Legacy / Fallback for development if not using tokens yet
       const snapshot = await usersCol.where('email', '==', emailHeader).limit(1).get();
       if (!snapshot.empty) {
-        req.user = snapshot.docs[0].data();
+        const doc = snapshot.docs[0];
+        req.user = { ...doc.data(), id: doc.id };
         return next();
       }
     }
     
+    next();
+  };
+
+  const requireAuth = (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized: Authentication required' });
+    }
     next();
   };
 
@@ -215,6 +243,18 @@ async function createServer() {
         console.error("[AUTH_SYNC_ERROR] Missing uid or email in request body:", req.body);
         return res.status(400).json({ error: 'Auth data incomplete (UID/Email missing)' });
       }
+
+      const ip = getClientIp(req);
+      const now = Date.now();
+      
+      // Rapid account creation detection
+      const creationTimes = ipCreationHistory.get(ip) || [];
+      const recentCreations = creationTimes.filter(t => now - t < 60 * 60 * 1000); // 1 hour
+      if (recentCreations.length >= 3) {
+        await flagActivity('RAPID_ACCOUNT_CREATION', { ip, email, uid }, 'MEDIUM');
+      }
+      recentCreations.push(now);
+      ipCreationHistory.set(ip, recentCreations);
 
       console.log(`[AUTH_SYNC] Processing sync for ${email} (${uid})`);
 
@@ -273,7 +313,7 @@ async function createServer() {
           generation_count: 0,
           referrals_count_month: 0,
           last_referral_date: 0,
-          ips_used: [],
+          ips_used: [ip],
           pronunciations: {},
           history: [] 
         };
@@ -290,10 +330,123 @@ async function createServer() {
       }
 
       console.log(`[AUTH_SYNC] Existing user ${email} synced`);
-      res.json({ success: true, user: userDoc.data() });
+      const userData = userDoc.data();
+      if (!userData.ips_used || !userData.ips_used.includes(ip)) {
+        await userRef.update({
+          ips_used: admin.firestore.FieldValue.arrayUnion(ip)
+        });
+      }
+      res.json({ success: true, user: userData });
     } catch (error) {
       console.error("[AUTH_SYNC_FATAL]", error);
       res.status(500).json({ error: "Terjadi kesalahan internal sinkronisasi server: " + error.message });
+    }
+  });
+
+  app.post('/api/referral/generate-code', authenticate, requireAuth, async (req, res) => {
+    try {
+      const userRef = usersCol.doc(req.user.id || req.user.uid);
+      const userSnap = await userRef.get();
+      
+      if (!userSnap.exists) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const userData = userSnap.data();
+
+      if (userData.referral_code) {
+        return res.json({ success: true, referral_code: userData.referral_code });
+      }
+
+      // Generate unique code
+      let newCode;
+      let isUnique = false;
+      let attempts = 0;
+      
+      while (!isUnique && attempts < 5) {
+        newCode = generateRefCode();
+        const existing = await usersCol.where('referral_code', '==', newCode).limit(1).get();
+        if (existing.empty) {
+          isUnique = true;
+        }
+        attempts++;
+      }
+
+      if (!isUnique) {
+        throw new Error("Could not generate a unique referral code");
+      }
+
+      await userRef.update({ referral_code: newCode });
+
+      res.json({ success: true, referral_code: newCode });
+    } catch (error) {
+      console.error("[REF_GEN] Error:", error);
+      res.status(500).json({ error: "Gagal membuat kode referral: " + error.message });
+    }
+  });
+
+  app.post('/api/referral/claim', authenticate, requireAuth, async (req, res) => {
+    try {
+      const { code } = req.body;
+      if (!code) return res.status(400).json({ error: "Referral code is required" });
+
+      const userRef = usersCol.doc(req.user.id);
+      const userSnap = await userRef.get();
+      const userData = userSnap.data();
+
+      if (userData.referred_by) {
+        return res.status(400).json({ error: "You have already claimed a referral code" });
+      }
+
+      const cleanCode = code.trim().toUpperCase();
+
+      if (userData.referral_code === cleanCode) {
+        return res.status(400).json({ error: "You cannot claim your own referral code" });
+      }
+
+      const refSnapshot = await usersCol.where('referral_code', '==', cleanCode).limit(1).get();
+      if (refSnapshot.empty) {
+        return res.status(400).json({ error: "Invalid referral code" });
+      }
+
+      const referrerId = refSnapshot.docs[0].id;
+      const referrerData = refSnapshot.docs[0].data();
+
+      // Abuse detection: Self-referral (same name/whatsapp/ip if possible)
+      const ip = getClientIp(req);
+      if (referrerData.ips_used && referrerData.ips_used.includes(ip)) {
+        await flagActivity('POTENTIAL_SELF_REFERRAL_IP', { 
+          referee: req.user.id, 
+          referrer: referrerId, 
+          ip 
+        }, 'HIGH');
+      }
+
+      if (referrerData.whatsapp && userData.whatsapp && referrerData.whatsapp === userData.whatsapp) {
+        await flagActivity('POTENTIAL_SELF_REFERRAL_WHATSAPP', { 
+          referee: req.user.id, 
+          referrer: referrerId,
+          whatsapp: userData.whatsapp
+        }, 'HIGH');
+      }
+
+      // Update current user and award bonus
+      const bonus = {
+        amount: 5000,
+        expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+        type: 'standard',
+        source: 'REFERRAL_CLAIM'
+      };
+
+      await userRef.update({
+        referred_by: referrerId,
+        bonus_credits: admin.firestore.FieldValue.arrayUnion(bonus)
+      });
+
+      res.json({ success: true, message: "Referral code claimed successfully! 5,000 bonus characters added." });
+    } catch (error) {
+      console.error("[REF_CLAIM] Error:", error);
+      res.status(500).json({ error: "Failed to claim referral code" });
     }
   });
 
@@ -431,6 +584,29 @@ async function createServer() {
       return res.status(400).json({ error: 'Batas klaim 1x per bulan. Harap coba lagi bulan depan.' });
     }
 
+    // Abuse detection: Global duplicate check
+    if (url) {
+      const globalDupUrl = await submissionsCol
+        .where('socialUrl', '==', url)
+        .where('status', '==', 'approved')
+        .limit(1).get();
+      if (!globalDupUrl.empty) {
+        await flagActivity('DUPLICATE_SOCIAL_URL', { userId: req.user.id, url }, 'MEDIUM');
+        return res.status(400).json({ error: 'Link ini sudah pernah diklaim sebelumnya.' });
+      }
+    }
+
+    if (screenshotUrl) {
+      const globalDupScreenshot = await submissionsCol
+        .where('screenshotUrl', '==', screenshotUrl)
+        .where('status', '==', 'approved')
+        .limit(1).get();
+      if (!globalDupScreenshot.empty) {
+        await flagActivity('DUPLICATE_SCREENSHOT', { userId: req.user.id, screenshotUrl }, 'HIGH');
+        return res.status(400).json({ error: 'Screenshot ini sudah pernah digunakan oleh pengguna lain.' });
+      }
+    }
+
     const submissionId = generateId();
     const submission = {
       id: submissionId,
@@ -488,6 +664,30 @@ async function createServer() {
     }
     
     res.json({ success: true });
+  });
+
+  app.get('/api/user/growth-stats', authenticate, async (req, res) => {
+    try {
+      if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+      const userId = req.user.id || req.user.uid;
+      const referralsSnapshot = await usersCol.where('referred_by', '==', userId).get();
+      
+      let confirmed = 0;
+      referralsSnapshot.forEach(doc => {
+        if (doc.data().has_triggered_ref) confirmed++;
+      });
+
+      res.json({
+        referralCode: req.user.referral_code || null,
+        totalReferrals: referralsSnapshot.size,
+        confirmedReferrals: confirmed,
+        socialBonusStatus: req.user.social_bonus_status || 'none',
+        bonuses: (req.user.bonus_credits || []).filter(b => b.expiresAt > Date.now())
+      });
+    } catch (error) {
+      console.error("[GROWTH_STATS] Error:", error);
+      res.status(500).json({ error: "Gagal mengambil statistik program growth" });
+    }
   });
 
   app.post('/api/user/settings', authenticate, async (req, res) => {
@@ -697,9 +897,10 @@ async function createServer() {
       if (user.generation_count === 0 && user.referred_by) {
         const timestamps = ipReferralHistory.get(ip) || [];
         const recentTimestamps = timestamps.filter(t => now - t < 24 * 60 * 60 * 1000);
-        if (recentTimestamps.length >= 1) {
+        if (recentTimestamps.length >= 2) { // Allow 2 per IP to be safe for shared homes
           console.warn(`[ABUSE_DETECTION] Multi-referral from same IP: ${ip} for user ${user.id}`);
           user._referral_blocked = true;
+          await flagActivity('SUSPICIOUS_MULTI_REFERRAL_IP', { ip, userId: user.id, referredBy: user.referred_by }, 'MEDIUM');
         }
         recentTimestamps.push(now);
         ipReferralHistory.set(ip, recentTimestamps);
