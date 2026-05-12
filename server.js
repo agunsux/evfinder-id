@@ -892,6 +892,43 @@ async function createServer() {
         return res.status(402).json({ error: errorMsg });
       }
 
+      // Handle Referral Bonus Trigger (Growth Program)
+      // Trigger: Referee generates >= 100 chars for the first time
+      if (user.referred_by && !user.has_triggered_ref && text.length >= 100) {
+        try {
+          const referrerRef = usersCol.doc(user.referred_by);
+          const referrerDoc = await referrerRef.get();
+          
+          if (referrerDoc.exists) {
+            const nowTime = Date.now();
+            const bonusAmount = 10000;
+            const expiryDays = 60;
+            
+            const referrerBonus = {
+              amount: bonusAmount,
+              expiresAt: nowTime + (expiryDays * 24 * 60 * 60 * 1000),
+              type: 'standard',
+              restriction: 'standard_only',
+              source: 'REFERRAL_REWARD',
+              from: user.id,
+              createdAt: nowTime
+            };
+            
+            // Atomically award bonus and increment valid referral count
+            await referrerRef.update({
+              bonus_credits: admin.firestore.FieldValue.arrayUnion(referrerBonus),
+              valid_referrals: admin.firestore.FieldValue.increment(1)
+            });
+            
+            // Mark referee as triggered to prevent duplicate bonuses
+            await userRef.update({ has_triggered_ref: true });
+            console.log(`[GROWTH] Referral bonus awarded to ${user.referred_by} from ${user.id}`);
+          }
+        } catch (refBonusErr) {
+          console.error("[GROWTH_ERR] Failed to award referral bonus", refBonusErr);
+        }
+      }
+
       // Referral IP check (anti-abuse)
       const ip = getClientIp(req);
       if (user.generation_count === 0 && user.referred_by) {

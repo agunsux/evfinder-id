@@ -46,9 +46,12 @@ service cloud.firestore {
              (!('name' in data) || (data.name is string && data.name.size() <= 128)) &&
              (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() <= 32)) &&
              (!('referral_code' in data) || (data.referral_code is string && data.referral_code.size() <= 32)) &&
-             (!('referred_by' in data) || (data.referred_by is string && data.referred_by.size() <= 128)) &&
+             (!('referred_by' in data) || (data.referred_by is string || data.referred_by == null)) &&
              (!('bonus_credits' in data) || (data.bonus_credits is list)) &&
-             (!('used_chars' in data) || (data.used_chars is int && data.used_chars >= 0))
+             (!('used_chars' in data) || (data.used_chars is int && data.used_chars >= 0)) &&
+             (!('valid_referrals' in data) || (data.valid_referrals is int)) &&
+             (!('has_triggered_ref' in data) || (data.has_triggered_ref is bool)) &&
+             (!('ips_used' in data) || (data.ips_used is list))
              ;
     }
 

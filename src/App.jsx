@@ -2061,18 +2061,18 @@ function App() {
                 <Share2 className="w-6 h-6 text-terracotta" />
               </div>
               <h2 className="text-2xl font-black">
-                Klaim Extra 30.000 Kredit!
+                Klaim Extra 5.000 Karakter!
               </h2>
               <p className="text-gray-400 text-sm mt-2">
-                Dapatkan ~20 menit audio tambahan gratis! Bagikan audio buatanmu
-                di TikTok atau Instagram Reels, tag @shinerva.id, dan paste linknya
-                di bawah.
+                Dapatkan kuota tambahan gratis! Bagikan video buatanmu
+                di TikTok atau Instagram Reels, gunakan hashtag <span className="text-terracotta">#SuaraShinerva</span>, 
+                tag @shinerva.id, dan kirimkan link postinganmu.
               </p>
             </div>
             <form onSubmit={handleSocialSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-400 mb-2">
-                  Link Postingan
+                  Link Postingan (TikTok/Reels)
                 </label>
                 <input
                   type="url"
@@ -2083,11 +2083,19 @@ function App() {
                   placeholder="https://tiktok.com/@kamu/video/..."
                 />
               </div>
+              <div className="bg-terracotta/5 border border-terracotta/10 p-3 rounded-xl">
+                 <p className="text-[10px] text-terracotta/80 leading-relaxed font-medium">
+                  Persyaratan: <br/>
+                  1. Video berdurasi minimal 15 detik. <br/>
+                  2. Menggunakan suara hasil Shinerva. <br/>
+                  3. Menggunakan hashtag #SuaraShinerva.
+                 </p>
+              </div>
               <button
                 type="submit"
-                className="w-full bg-terracotta text-white py-3 my-2 rounded-xl font-bold cursor-pointer border-none flex justify-center items-center"
+                className="w-full bg-terracotta text-white py-3 my-2 rounded-xl font-bold cursor-pointer border-none flex justify-center items-center shadow-lg shadow-terracotta/20"
               >
-                Submit Link
+                Kirim Pengajuan
               </button>
             </form>
           </div>
