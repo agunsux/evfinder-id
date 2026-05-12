@@ -34,6 +34,9 @@ Play,
   LogOut,
   Mail,
   MessageCircle,
+  HelpCircle,
+  Info,
+  Copy,
 } from "lucide-react";
 
 const PACKS = [
@@ -227,6 +230,9 @@ function App() {
       if (data.user) {
         localStorage.setItem("shinerva_user", JSON.stringify(data.user));
         setUser(data.user);
+        if (signupDetails.isManual) {
+          showToast(`Selamat datang ${signupDetails.name || data.user.name || "di Shinerva"}!`);
+        }
         return data.user;
       } else {
         throw new Error("Data pengguna tidak ditemukan di server");
@@ -234,7 +240,7 @@ function App() {
     } catch (e) {
       console.error("[SYNC] Fatal Error:", e);
       if (signupDetails.email || signupDetails.isManual) {
-        alert("Gagal sinkronisasi akun: " + e.message);
+        showToast("Gagal sinkronisasi akun: " + e.message, "error");
       }
       throw e;
     } finally {
@@ -271,6 +277,7 @@ function App() {
   const isSyncing = useRef(false);
 
   const [showSocialModal, setShowSocialModal] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
   const [socialUrl, setSocialUrl] = useState("");
 
   const [isPronunciationOpen, setIsPronunciationOpen] = useState(false);
@@ -357,11 +364,11 @@ function App() {
         body: JSON.stringify({ status }),
       });
       if (res.ok) {
-        alert("Berhasil diperbarui!");
+        showToast("Berhasil diperbarui!");
         fetchSubmissions();
       }
     } catch (e) {
-      alert("Gagal memperbarui status.");
+      showToast("Gagal memperbarui status.", "error");
     }
   };
 
@@ -397,11 +404,11 @@ function App() {
       const data = await res.json();
       if (data.success) {
         setVoiceConfig(data.voiceConfig);
-        alert("Konfigurasi berhasil disimpan!");
+        showToast("Konfigurasi berhasil disimpan!");
       }
     } catch (e) {
       console.error("Error saving config:", e);
-      alert("Gagal menyimpan konfigurasi.");
+      showToast("Gagal menyimpan konfigurasi.", "error");
     }
   };
 
@@ -415,7 +422,7 @@ function App() {
         body: JSON.stringify({ email: testEmail }),
       });
       const data = await res.json();
-      alert(data.message);
+      showToast(data.message);
     } catch (e) {
       console.error("Error sending test email:", e);
       alert("Gagal mengirim email tes.");
@@ -438,9 +445,9 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert(data.message);
+        showToast(data.message);
       } else {
-        alert("Gagal: " + data.message);
+        showToast("Gagal: " + data.message, "error");
       }
     } catch (e) {
       console.error("Error sending test whatsapp:", e);
@@ -480,8 +487,9 @@ function App() {
       const data = await res.json();
       if (data.success) {
         setUser({ ...user, pronunciations: data.pronunciations });
+        showToast("Panduan pengucapan diperbarui!");
       } else {
-        alert(data.error);
+        showToast(data.error, "error");
       }
     } catch (err) {
       console.error(err);
@@ -494,6 +502,12 @@ function App() {
   const textAreaRef = useRef(null);
   const [audioUrl, setAudioUrl] = useState("");
   const [isTeaser, setIsTeaser] = useState(false);
+  const [toast, setToast] = useState(null); // { message, type }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const insertAtCursor = (insertion) => {
     const textarea = textAreaRef.current;
@@ -525,7 +539,7 @@ function App() {
     const end = textarea.selectionEnd;
 
     if (start === end) {
-      alert("Silakan blok kata yang ingin diberi penekanan terlebih dahulu.");
+      showToast("Silakan blok kata yang ingin diberi penekanan terlebih dahulu.", "error");
       return;
     }
 
@@ -561,12 +575,12 @@ function App() {
 
   const handleGenerate = async () => {
     if (!text.trim()) {
-      alert("Silakan tulis naskah terlebih dahulu.");
+      showToast("Silakan tulis naskah terlebih dahulu.", "error");
       return;
     }
 
     if (cooldown > 0) {
-      alert(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
+      showToast(`Harap tunggu ${cooldown} detik lagi.`, "error");
       return;
     }
 
@@ -732,11 +746,10 @@ function App() {
       if (authMode === "login") {
         const userCredential = await signInWithEmailAndPassword(auth, authData.email, authData.password);
         await syncUser(userCredential.user, { isManual: true });
-        alert("Login Berhasil!");
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
         await syncUser(userCredential.user, { ...authData, isManual: true });
-        alert("Signup Berhasil! Selamat datang di Shinerva.");
+        showToast("🎉 Selamat datang di Shinerva!");
       }
       setIsAuthOpen(false);
       setAuthData({ name: "", email: "", password: "", whatsapp: "", refCode: "" });
@@ -747,7 +760,7 @@ function App() {
       else if (err.code === 'auth/wrong-password') msg = "Password salah.";
       else if (err.code === 'auth/email-already-in-use') msg = "Email sudah digunakan.";
       
-      alert("Gagal autentikasi: " + msg);
+      showToast("Gagal: " + msg, "error");
     } finally {
       setAuthLoading(false);
     }
@@ -761,10 +774,10 @@ function App() {
       const result = await signInWithPopup(auth, provider);
       await syncUser(result.user, { isManual: true });
       setIsAuthOpen(false);
-      alert("Login dengan Google Berhasil!");
+      showToast("Login Google Berhasil!");
     } catch (err) {
       console.error(err);
-      alert("Gagal login dengan Google: " + (err.message || ""));
+      showToast("Gagal login dengan Google", "error");
     } finally {
       setAuthLoading(false);
     }
@@ -777,10 +790,10 @@ function App() {
       const result = await signInWithPopup(auth, provider);
       await syncUser(result.user);
       setIsAuthOpen(false);
-      alert("Login dengan Facebook Berhasil!");
+      showToast("Login Facebook Berhasil!");
     } catch (err) {
       console.error(err);
-      alert("Gagal login dengan Facebook. " + (err.code === 'auth/account-exists-with-different-credential' ? 'Email ini sudah terdaftar dengan metode lain.' : ''));
+      showToast("Gagal login dengan Facebook", "error");
     } finally {
       setAuthLoading(false);
     }
@@ -793,10 +806,10 @@ function App() {
       const result = await signInWithPopup(auth, provider);
       await syncUser(result.user);
       setIsAuthOpen(false);
-      alert("Login dengan Apple Berhasil!");
+      showToast("Login Apple Berhasil!");
     } catch (err) {
       console.error(err);
-      alert("Gagal login dengan Apple.");
+      showToast("Gagal login dengan Apple", "error");
     } finally {
       setAuthLoading(false);
     }
@@ -824,15 +837,15 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert(data.message || "Tautan berhasil dikirim. Menunggu verifikasi admin!");
+        showToast(data.message || "Tautan berhasil dikirim. Menunggu verifikasi admin!");
         setShowSocialModal(false);
         setSocialUrl("");
         refreshUser();
       } else {
-        alert(data.error || "Gagal mengirim pengajuan.");
+        showToast(data.error || "Gagal mengirim pengajuan.", "error");
       }
     } catch (err) {
-      alert("Terjadi kesalahan koneksi.");
+      showToast("Terjadi kesalahan koneksi.", "error");
     }
   };
 
@@ -968,10 +981,18 @@ function App() {
           {user && (
             <div className="bg-surface2 rounded-3xl p-6 mb-8 border border-surface2 shadow-xl">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Credits Info */}
+                  {/* Credits Info */}
                 <div className="lg:col-span-2">
-                  <div className="text-sm font-bold text-gray-400 mb-2">
-                    Sisa Kuota Karakter
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-bold text-gray-400">
+                      Sisa Kuota Karakter
+                    </div>
+                    {user.referral_code && (
+                      <div className="flex items-center gap-1.5 bg-terracotta/10 text-terracotta border border-terracotta/20 px-2 py-0.5 rounded-full text-[10px] font-black animate-pulse">
+                        <Gift className="w-2.5 h-2.5" />
+                        Ajak Teman & Dapat 10rb Kredit!
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-end gap-2 mb-4">
                     <span className="text-4xl font-black text-white">
@@ -984,50 +1005,72 @@ function App() {
                     <span className="text-sm text-gray-500 mb-1 font-bold">karakter tersedia</span>
                     <div className="group relative mb-2 ml-1">
                       <HelpCircle className="w-4 h-4 text-gray-600 cursor-help" />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-dark border border-surface2 p-3 rounded-xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[10px] text-gray-400 font-medium leading-relaxed">
-                        <p className="mb-2 text-white font-bold uppercase tracking-widest text-[9px]">Sistem Kredit Tier</p>
-                        <ul className="space-y-1">
-                          <li>• <span className="text-white">Standard:</span> Multiplier 1x (1:1)</li>
-                          <li>• <span className="text-white">Neural2/Wavenet:</span> Multiplier 3x</li>
-                          <li>• <span className="text-white">Studio/Chirp:</span> Multiplier 25x</li>
-                        </ul>
-                        <p className="mt-2 pt-2 border-t border-surface2 text-terracotta">
-                          *Kredit bonus hanya berlaku untuk suara tier Standard.
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-dark border border-surface2 p-4 rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[11px] text-gray-400 font-medium leading-relaxed">
+                        <p className="mb-3 text-white font-black uppercase tracking-widest text-[10px] flex items-center gap-2">
+                          <Info className="w-3 h-3 text-terracotta" /> Sistem Kredit Tier
+                        </p>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center bg-surface2/30 p-2 rounded-lg">
+                            <span className="text-white">Standard Only Voice</span>
+                            <span className="text-terracotta font-black">1.0x</span>
+                          </div>
+                          <div className="flex justify-between items-center bg-surface2/30 p-2 rounded-lg">
+                            <span className="text-white">Neural2 / Wavenet</span>
+                            <span className="text-terracotta font-black">3.0x</span>
+                          </div>
+                          <div className="flex justify-between items-center bg-surface2/30 p-2 rounded-lg">
+                            <span className="text-white">Studio / Chirp HD</span>
+                            <span className="text-terracotta font-black">25.0x</span>
+                          </div>
+                        </div>
+                        <p className="mt-3 pt-3 border-t border-surface2 text-terracotta italic text-[10px]">
+                          *Kredit bonus (referral/social) hanya berlaku untuk Tier 1 (Standard).
                         </p>
                       </div>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2">
+                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2 hover:bg-surface2 transition-colors">
                       <div className="text-text-muted text-[10px] uppercase font-black mb-1">Paket {user.tier}</div>
                       <div className="font-bold text-text text-sm">{(user.monthly_chars || 0).toLocaleString("id-ID")}</div>
                     </div>
-                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2">
+                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2 hover:bg-surface2 transition-colors">
                       <div className="text-text-muted text-[10px] uppercase font-black mb-1">Bonus Aktif</div>
                       <div className="font-bold text-green-500 text-sm">
                         {(user.bonus_credits || []).filter(b => b.expiresAt > Date.now()).reduce((s, b) => s + b.amount, 0).toLocaleString("id-ID")}
                       </div>
                     </div>
-                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2">
-                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Total Didapat</div>
+                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2 hover:bg-surface2 transition-colors">
+                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Total Earned</div>
                       <div className="font-bold text-text text-sm">{(user.earned_chars || 0).toLocaleString("id-ID")}</div>
                     </div>
-                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2">
-                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Terpakai</div>
+                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2 hover:bg-surface2 transition-colors">
+                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Used</div>
                       <div className="font-bold text-terracotta text-sm">{(user.used_chars || 0).toLocaleString("id-ID")}</div>
                     </div>
                   </div>
 
                   {user.bonus_credits && user.bonus_credits.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
-                       {user.bonus_credits.filter(b => b.expiresAt > Date.now()).map((b, i) => (
-                         <div key={i} className="text-[9px] bg-terracotta/10 text-terracotta px-2 py-1 rounded-full border border-terracotta/20 flex items-center gap-1">
-                           <Gift className="w-2.5 h-2.5" />
-                           <span className="font-bold">+{b.amount.toLocaleString()} ({b.source})</span>
-                           <span className="opacity-60 whitespace-nowrap">Exp: {new Date(b.expiresAt).toLocaleDateString('id-ID')}</span>
+                       {user.bonus_credits.filter(b => b.expiresAt > Date.now()).sort((a,b) => a.expiresAt - b.expiresAt).slice(0, 3).map((b, i) => {
+                         const daysLeft = Math.ceil((b.expiresAt - Date.now()) / (1000 * 60 * 60 * 24));
+                         return (
+                          <div key={i} className="text-[9px] bg-dark text-gray-400 px-2 py-1 rounded-full border border-surface flex items-center gap-1.5 group cursor-default">
+                            <Gift className="w-2.5 h-2.5 text-terracotta" />
+                            <span className="font-bold text-white">+{b.amount.toLocaleString()}</span>
+                            <span className="opacity-60">{b.source}</span>
+                            <span className={`font-black ${daysLeft < 3 ? 'text-red-500' : 'text-text-muted'}`}>
+                              {daysLeft}nd lagi
+                            </span>
+                          </div>
+                         );
+                       })}
+                       {user.bonus_credits.filter(b => b.expiresAt > Date.now()).length > 3 && (
+                         <div className="text-[9px] text-text-muted font-bold px-2 py-1 flex items-center">
+                           +{user.bonus_credits.filter(b => b.expiresAt > Date.now()).length - 3} lainnya
                          </div>
-                       ))}
+                       )}
                     </div>
                   )}
                 </div>
@@ -1044,7 +1087,7 @@ function App() {
                     </button>
                     <button
                       onClick={() => setShowSocialModal(true)}
-                      disabled={user.social_bonus_status !== "none"}
+                      disabled={user.social_bonus_status === "approved" || user.social_bonus_status === "pending"}
                       className={`p-3 rounded-xl border transition-all text-center group ${user.social_bonus_status === "none" ? "bg-dark hover:bg-surface2 border-surface2 cursor-pointer" : "bg-surface/50 border-surface2/50 cursor-not-allowed opacity-70"}`}
                     >
                       <Share2 className={`w-5 h-5 mx-auto mb-1 group-hover:scale-110 transition-transform ${user.social_bonus_status === "approved" ? "text-green-500" : "text-terracotta"}`} />
@@ -1054,24 +1097,21 @@ function App() {
                     </button>
                   </div>
                   
-                  <div className="bg-dark p-3 rounded-xl border border-surface2 flex flex-col justify-center items-center">
-                    <div className="flex items-center gap-2 mb-1">
-                      <UserPlus className="w-4 h-4 text-terracotta" />
-                      <span className="text-[10px] font-black uppercase">Referral ({user.referrals_count_month || 0}/20)</span>
+                  <button
+                    onClick={() => setShowReferralModal(true)}
+                    className="bg-dark p-3 rounded-xl border border-surface2 hover:bg-surface border-terracotta/20 transition-all cursor-pointer text-center group"
+                  >
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <UserPlus className="w-4 h-4 text-terracotta group-hover:scale-110 transition-transform" />
+                      <span className="text-[10px] font-black uppercase tracking-tight">Referral Program</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                       <span className="text-lg font-black text-white tracking-widest">{user.referral_code}</span>
-                       <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(user.referral_code);
-                          alert("Referral code copied!");
-                        }}
-                        className="p-1 hover:bg-surface2 rounded text-text-muted transition-colors border-none bg-transparent cursor-pointer"
-                       >
-                         <Download className="w-3 h-3 rotate-180" />
-                       </button>
+                    <div className="flex items-center justify-center gap-3">
+                       <span className="text-base font-black text-white tracking-widest">{user.referral_code}</span>
+                       <div className="h-4 w-[1px] bg-surface2"></div>
+                       <span className="text-[10px] font-bold text-terracotta">{user.referrals_count_month || 0}/20 Bulan ini</span>
                     </div>
-                  </div>
+                  </button>
+                </div>
 
                   {user.tier === "ENTERPRISE" && (
                     <div className="grid grid-cols-2 gap-3">
@@ -1093,8 +1133,7 @@ function App() {
                   )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
           <div className="bg-surface rounded-3xl p-6 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
 
@@ -2042,6 +2081,118 @@ function App() {
         </div>
       )}
 
+      {/* Referral Dashboard Modal */}
+      {showReferralModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowReferralModal(false)}
+          ></div>
+          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-lg relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col overflow-y-auto custom-scrollbar">
+            <button
+              onClick={() => setShowReferralModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="text-center mb-10">
+              <div className="w-16 h-16 rounded-2xl bg-terracotta/20 flex items-center justify-center mx-auto mb-4 animate-bounce">
+                <Gift className="w-8 h-8 text-terracotta" />
+              </div>
+              <h2 className="text-3xl font-black tracking-tight">Referral Program</h2>
+              <p className="text-gray-400 text-sm mt-2 max-w-xs mx-auto">
+                Ajak temanmu menggunakan Shinerva dan dapatkan keuntungan berdua!
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Rewards Summary */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-dark p-4 rounded-2xl border border-surface2">
+                  <div className="text-[10px] font-black text-terracotta uppercase mb-1">Anda Dapat</div>
+                  <div className="text-xl font-black text-white">10.000</div>
+                  <div className="text-[10px] text-gray-500 font-bold uppercase">Kredit per referral</div>
+                </div>
+                <div className="bg-dark p-4 rounded-2xl border border-surface2">
+                  <div className="text-[10px] font-black text-green-500 uppercase mb-1">Teman Dapat</div>
+                  <div className="text-xl font-black text-white">5.000</div>
+                  <div className="text-[10px] text-gray-500 font-bold uppercase">Kredit pendaftaran</div>
+                </div>
+              </div>
+
+              {/* Progress Tracker */}
+              <div className="bg-dark p-5 rounded-2xl border border-surface2">
+                <div className="flex justify-between items-center mb-3">
+                   <h3 className="text-xs font-black uppercase tracking-wider text-gray-400">Progress Bulan Ini</h3>
+                   <span className="text-xs font-black text-terracotta">{user.referrals_count_month || 0} / 20</span>
+                </div>
+                <div className="h-3 bg-surface2 rounded-full overflow-hidden mb-2">
+                   <div 
+                    className="h-full bg-terracotta rounded-full transition-all duration-1000"
+                    style={{ width: `${Math.min(100, ((user.referrals_count_month || 0) / 20) * 100)}%` }}
+                   ></div>
+                </div>
+                <p className="text-[10px] text-gray-500 font-medium">
+                  {20 - (user.referrals_count_month || 0)} kuota tersisa untuk bulan {new Date().toLocaleString('id-ID', { month: 'long' })}.
+                </p>
+              </div>
+
+              {/* Code Section */}
+              <div className="bg-surface2 p-6 rounded-2xl border border-terracotta/20 text-center">
+                 <p className="text-xs text-gray-400 mb-3 font-bold">KODE REFERRAL ANDA</p>
+                 <div className="flex items-center justify-center gap-4 mb-6">
+                    <span className="text-4xl font-black text-white tracking-[0.2em]">{user.referral_code}</span>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(user.referral_code);
+                        alert("Kode referral disalin!");
+                      }}
+                      className="p-2.5 bg-dark hover:bg-black rounded-xl text-terracotta transition-colors border border-surface2 cursor-pointer"
+                    >
+                      <Copy className="w-5 h-5" />
+                    </button>
+                 </div>
+                 <div className="flex flex-col gap-3">
+                    <button 
+                      onClick={() => {
+                        const text = `Woi, coba deh platform AI Voice Indonesia paling natural: Shinerva.id! Daftar pake kode referral gw [${user.referral_code}] biar dapet bonus 5.000 karakter gratis! #SuaraShinerva`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                      }}
+                      className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-3 rounded-xl font-black text-sm border-none cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <MessageCircle className="w-4 h-4" /> Share ke WhatsApp
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const link = `${window.location.origin}?ref=${user.referral_code}`;
+                        navigator.clipboard.writeText(link);
+                        alert("Link pendaftaran disalin!");
+                      }}
+                      className="w-full bg-surface hover:bg-dark text-white py-3 rounded-xl font-black text-sm border border-surface2 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Share2 className="w-4 h-4" /> Salin Link Undangan
+                    </button>
+                 </div>
+              </div>
+
+              {/* Info section */}
+              <div className="bg-terracotta/5 p-4 rounded-xl border border-terracotta/10">
+                 <h4 className="text-[10px] font-black uppercase text-terracotta mb-2 flex items-center gap-2">
+                   <Info className="w-3 h-3" /> Syarat & Ketentuan
+                 </h4>
+                 <ul className="text-[10px] text-gray-400 space-y-1.5 list-disc pl-4 font-medium">
+                    <li>Bonus 10.000 kredit diberikan setelah teman yang diundang generate <span className="text-white">minimal 100 karakter</span>.</li>
+                    <li>Akun pengundang dan teman harus terverifikasi (Email/WA).</li>
+                    <li>Maksimal 20 referral per bulan per akun.</li>
+                    <li>Kredit bonus berlaku selama 60 hari dan hanya untuk suara <span className="text-white">Tier Standard</span>.</li>
+                 </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Social Bonus Modal */}
       {showSocialModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -2561,6 +2712,27 @@ function App() {
                </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-full px-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+           <div className={`flex items-center gap-3 p-4 rounded-2xl shadow-2xl border ${
+             toast.type === 'error' 
+              ? 'bg-red-500/10 border-red-500/20 text-red-500' 
+              : 'bg-surface border-surface2 text-text'
+           }`}>
+             {toast.type === 'error' ? (
+                <X className="w-5 h-5 flex-shrink-0" />
+             ) : (
+                <CheckCircle className="w-5 h-5 text-terracotta flex-shrink-0" />
+             )}
+             <p className="text-sm font-bold flex-1">{toast.message}</p>
+             <button onClick={() => setToast(null)} className="p-1 hover:bg-white/10 rounded cursor-pointer border-none bg-transparent text-gray-500">
+                <X className="w-4 h-4" />
+             </button>
+           </div>
         </div>
       )}
 
