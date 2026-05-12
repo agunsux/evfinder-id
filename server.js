@@ -6,7 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { createRequire } from 'module';
@@ -17,9 +17,10 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-admin.initializeApp();
+const firebaseApp = initializeApp();
 const firestoreDbId = firebaseConfig.firestoreDatabaseId || undefined;
 const db = getFirestore(firestoreDbId);
+const authAdmin = getAuth();
 
 console.log(`[FIREBASE] Admin initialized for project: ${firebaseConfig.projectId}${firestoreDbId ? " (db: " + firestoreDbId + ")" : ""}`);
 
@@ -207,7 +208,7 @@ async function createServer() {
     
     if (idToken) {
       try {
-        const decodedToken = await getAuth().verifyIdToken(idToken);
+        const decodedToken = await authAdmin.verifyIdToken(idToken);
         const userDoc = await usersCol.doc(decodedToken.uid).get();
         if (userDoc.exists) {
           req.user = { ...userDoc.data(), id: userDoc.id };
@@ -275,7 +276,7 @@ async function createServer() {
       try {
         const idToken = req.headers.authorization?.split('Bearer ')[1];
         if (idToken) {
-          const decodedToken = await getAuth().verifyIdToken(idToken);
+          const decodedToken = await authAdmin.verifyIdToken(idToken);
           emailVerified = decodedToken.email_verified || false;
         }
       } catch (authErr) {

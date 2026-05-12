@@ -97,6 +97,10 @@
     "/config/voice": {
       "schema": "VoiceConfig",
       "description": "Global configuration"
+    },
+    "/social_submissions/{submissionId}": {
+      "schema": "SocialShareSubmission",
+      "description": "Submissions for social share bonuses"
     }
   }
 }

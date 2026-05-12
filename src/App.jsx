@@ -153,7 +153,7 @@ const ShinervaLogo = ({ className }) => (
 
 function App() {
   const [text, setText] = useState("");
-  const [voice, setVoice] = useState("id-ID-Wavenet-A");
+  const [voice, setVoice] = useState("id-ID-Standard-A");
   const [speed, setSpeed] = useState(1);
   const [pitch, setPitch] = useState(0);
   const [volume, setVolume] = useState(0);
@@ -165,107 +165,6 @@ function App() {
   const [authMode, setAuthMode] = useState("login"); // login, signup
   const [user, setUser] = useState(null);
   const [firebaseUser, setFirebaseUser] = useState(null);
-
-  useEffect(() => {
-    console.log("[AUTH] Setting up onAuthStateChanged listener");
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setAuthLoading(false);
-      if (!u) {
-        console.log("[AUTH] No Firebase user detected");
-        setUser(null);
-        setFirebaseUser(null);
-        localStorage.removeItem("shinerva_user");
-      } else {
-        console.log("[AUTH] Firebase user detected:", u.email);
-        setFirebaseUser(u);
-        
-        // Only sync if we don't have a user or ID mismatch AND not already syncing
-        if ((!user || user.id !== u.uid) && !isSyncing.current) {
-          console.log("[AUTH] Triggering background sync for", u.email);
-          try {
-            await syncUser(u);
-          } catch (e) {
-            console.error("[AUTH] Background sync failed:", e);
-          }
-        }
-      }
-    });
-    return () => unsubscribe();
-  }, [user]);
-
-  const syncUser = async (u, signupDetails = {}) => {
-    if (!u) return;
-    if (isSyncing.current) return;
-    isSyncing.current = true;
-    
-    console.log("[SYNC] Starting sync for", u.email);
-    try {
-      const res = await fetch("/api/auth/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          uid: u.uid, 
-          email: u.email, 
-          name: signupDetails.name || u.displayName || "", 
-          whatsapp: signupDetails.whatsapp || "",
-          refCode: signupDetails.refCode || ""
-        }),
-      });
-      
-      const textResponse = await res.text();
-      let data;
-      try {
-        data = JSON.parse(textResponse);
-      } catch (parseError) {
-        console.error("[SYNC] Parse Error. Raw response:", textResponse);
-        throw new Error("Server mengembalikan format non-JSON. Kemungkinan terjadi kesalahan di server.");
-      }
-      
-      console.log("[SYNC] Server response:", res.status, data);
-      
-      if (!res.ok) {
-        throw new Error(data.error || `Server error: ${res.status}`);
-      }
-
-      if (data.user) {
-        localStorage.setItem("shinerva_user", JSON.stringify(data.user));
-        setUser(data.user);
-        if (signupDetails.isManual) {
-          showToast(`Selamat datang ${signupDetails.name || data.user.name || "di Shinerva"}!`);
-        }
-        return data.user;
-      } else {
-        throw new Error("Data pengguna tidak ditemukan di server");
-      }
-    } catch (e) {
-      console.error("[SYNC] Fatal Error:", e);
-      if (signupDetails.email || signupDetails.isManual) {
-        showToast("Gagal sinkronisasi akun: " + e.message, "error");
-      }
-      throw e;
-    } finally {
-      isSyncing.current = false;
-    }
-  };
-
-  const getAuthHeaders = async () => {
-    if (auth.currentUser) {
-      const token = await auth.currentUser.getIdToken();
-      return {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      };
-    }
-    // Fallback for mock if user exists in local storage but not in firebase (transition period)
-    if (user) {
-      return {
-        "Content-Type": "application/json",
-        "x-user-email": user.email
-      };
-    }
-    return { "Content-Type": "application/json" };
-  };
-
   const [authData, setAuthData] = useState({
     name: "",
     email: "",
@@ -275,6 +174,8 @@ function App() {
   });
   const [authLoading, setAuthLoading] = useState(false);
   const isSyncing = useRef(false);
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownTimerRef = useRef(null);
 
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
@@ -296,475 +197,99 @@ function App() {
   const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [testPhoneLoading, setTestPhoneLoading] = useState(false);
 
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
   const [billingCycle, setBillingCycle] = useState("monthly"); // monthly, yearly
 
-  useEffect(() => {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
+  const audioRef = useRef(null);
+  const textAreaRef = useRef(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [isTeaser, setIsTeaser] = useState(false);
+
+  const [toasts, setToasts] = useState([]);
+  const showToast = (message, type = "success") => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
+  const getAuthHeaders = async () => {
+    if (auth.currentUser) {
+      const token = await auth.currentUser.getIdToken();
+      return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      };
     }
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    return { "Content-Type": "application/json" };
   };
 
-  const refreshUser = async () => {
-    if (!user) return;
+  const syncUser = async (u, signupDetails = {}) => {
+    if (!u) return;
+    if (isSyncing.current) return;
+    isSyncing.current = true;
+    
     try {
-      const res = await fetch("/api/user/me", {
-        headers: await getAuthHeaders(),
-      });
-      const data = await res.json();
-      if (data.user) setUser(data.user);
-    } catch (e) {}
-  };
-
-  const fetchHistory = async () => {
-    if (!user) return;
-    setHistoryLoading(true);
-    try {
-      const res = await fetch("/api/user/history", {
-        headers: await getAuthHeaders(),
-      });
-      const data = await res.json();
-      if (data.history) setHistory(data.history);
-    } catch (e) {
-      console.error("Error fetching history:", e);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  const fetchSubmissions = async () => {
-    if (!user || user.tier !== "ENTERPRISE") return;
-    setSubmissionsLoading(true);
-    try {
-      const res = await fetch("/api/admin/social-submissions", {
-        headers: await getAuthHeaders(),
-      });
-      const data = await res.json();
-      if (data.submissions) setSubmissions(data.submissions);
-    } catch (e) {
-      console.error("Error fetching submissions:", e);
-    } finally {
-      setSubmissionsLoading(false);
-    }
-  };
-
-  const handleReviewSubmission = async (id, status) => {
-    try {
-      const res = await fetch(`/api/admin/social-submissions/${id}/review`, {
+      const headers = await getAuthHeaders();
+      const res = await fetch("/api/auth/sync", {
         method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ status }),
+        headers,
+        body: JSON.stringify({ 
+          uid: u.uid, 
+          email: u.email, 
+          name: signupDetails.name || u.displayName || "", 
+          whatsapp: signupDetails.whatsapp || "",
+          refCode: signupDetails.refCode || ""
+        }),
       });
-      if (res.ok) {
-        showToast("Berhasil diperbarui!");
-        fetchSubmissions();
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Server error: ${res.status}`);
+
+      if (data.user) {
+        localStorage.setItem("shinerva_user", JSON.stringify(data.user));
+        setUser(data.user);
+        if (signupDetails.isManual) {
+          showToast(`Selamat datang ${signupDetails.name || data.user.name || "di Shinerva"}!`);
+        }
+        return data.user;
       }
     } catch (e) {
-      showToast("Gagal memperbarui status.", "error");
+      console.error("[SYNC] Error:", e);
+      if (signupDetails.isManual) showToast("Gagal sinkronisasi akun.", "error");
+    } finally {
+      isSyncing.current = false;
     }
   };
 
   useEffect(() => {
-    if (isSubmissionsOpen) {
-      fetchSubmissions();
-    }
-  }, [isSubmissionsOpen]);
-
-  const fetchVoiceConfig = async () => {
-    setVoiceConfigLoading(true);
-    try {
-      const res = await fetch("/api/admin/voice-config", {
-        headers: await getAuthHeaders(),
-      });
-      const data = await res.json();
-      if (data.tiers) setVoiceConfig(data);
-    } catch (e) {
-      console.error("Error fetching voice config:", e);
-    } finally {
-      setVoiceConfigLoading(false);
-    }
-  };
-
-  const saveVoiceConfig = async (newTiers, newLimits) => {
-    if (!user || user.tier !== "ENTERPRISE") return;
-    try {
-      const res = await fetch("/api/admin/voice-config", {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ tiers: newTiers, limits: newLimits }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setVoiceConfig(data.voiceConfig);
-        showToast("Konfigurasi berhasil disimpan!");
-      }
-    } catch (e) {
-      console.error("Error saving config:", e);
-      showToast("Gagal menyimpan konfigurasi.", "error");
-    }
-  };
-
-  const sendTestEmail = async () => {
-    if (!testEmail) return alert("Masukkan email tujuan.");
-    setTestEmailLoading(true);
-    try {
-      const res = await fetch("/api/admin/test-email", {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ email: testEmail }),
-      });
-      const data = await res.json();
-      showToast(data.message);
-    } catch (e) {
-      console.error("Error sending test email:", e);
-      alert("Gagal mengirim email tes.");
-    } finally {
-      setTestEmailLoading(false);
-    }
-  };
-
-  const [testPhone, setTestPhone] = useState("");
-  const [testPhoneLoading, setTestPhoneLoading] = useState(false);
-
-  const sendTestWhatsApp = async () => {
-    if (!testPhone) return alert("Masukkan nomor WhatsApp tujuan (contoh: 628123456789).");
-    setTestPhoneLoading(true);
-    try {
-      const res = await fetch("/api/admin/test-whatsapp", {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ phone: testPhone }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message);
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      setAuthLoading(false);
+      if (!u) {
+        setUser(null);
+        setFirebaseUser(null);
+        localStorage.removeItem("shinerva_user");
       } else {
-        showToast("Gagal: " + data.message, "error");
+        setFirebaseUser(u);
+        if (!user || user.id !== u.uid) {
+          await syncUser(u);
+        }
       }
-    } catch (e) {
-      console.error("Error sending test whatsapp:", e);
-      alert("Gagal mengirim WhatsApp tes.");
-    } finally {
-      setTestPhoneLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchVoiceConfig();
+    });
+    return () => unsubscribe();
   }, [user]);
 
   useEffect(() => {
-    if (isVoiceMgmtOpen) {
-      fetchVoiceConfig();
-    }
-  }, [isVoiceMgmtOpen]);
+    if (theme === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
-  useEffect(() => {
-    if (isHistoryOpen) {
-      fetchHistory();
-    }
-  }, [isHistoryOpen]);
-
-  const handleUpdatePronunciation = async (word, pronunciation) => {
-    if (!user) {
-      alert("Harap login terlebih dahulu untuk menggunakan fitur ini.");
-      return;
-    }
-    try {
-      const res = await fetch("/api/user/pronunciations", {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ word, pronunciation }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUser({ ...user, pronunciations: data.pronunciations });
-        showToast("Panduan pengucapan diperbarui!");
-      } else {
-        showToast(data.error, "error");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Gagal memperbarui panduan pengucapan.");
-    }
-  };
-
-  const maxChars = 5000;
-  const audioRef = useRef(null);
-  const textAreaRef = useRef(null);
-  const [audioUrl, setAudioUrl] = useState("");
-  const [isTeaser, setIsTeaser] = useState(false);
-  const [toast, setToast] = useState(null); // { message, type }
-
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
-
-  const insertAtCursor = (insertion) => {
-    const textarea = textAreaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentText = text;
-
-    const newText =
-      currentText.substring(0, start) + insertion + currentText.substring(end);
-    setText(newText);
-
-    // Reset cursor position after state update
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + insertion.length,
-        start + insertion.length,
-      );
-    }, 0);
-  };
-
-  const applyEmphasis = () => {
-    const textarea = textAreaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-
-    if (start === end) {
-      showToast("Silakan blok kata yang ingin diberi penekanan terlebih dahulu.", "error");
-      return;
-    }
-
-    const selectedText = text.substring(start, end);
-    const emphasisText = `[EMPHASIS_START]${selectedText}[EMPHASIS_END]`;
-
-    const newText =
-      text.substring(0, start) + emphasisText + text.substring(end);
-    setText(newText);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + emphasisText.length,
-        start + emphasisText.length,
-      );
-    }, 0);
-  };
-
-  const [cooldown, setCooldown] = useState(0);
-  const cooldownTimerRef = useRef(null);
-
-  useEffect(() => {
-    if (cooldown > 0) {
-      cooldownTimerRef.current = setInterval(() => {
-        setCooldown((prev) => Math.max(0, prev - 1));
-      }, 1000);
-    } else {
-      clearInterval(cooldownTimerRef.current);
-    }
-    return () => clearInterval(cooldownTimerRef.current);
-  }, [cooldown]);
-
-  const handleGenerate = async () => {
-    if (!text.trim()) {
-      showToast("Silakan tulis naskah terlebih dahulu.", "error");
-      return;
-    }
-
-    if (cooldown > 0) {
-      showToast(`Harap tunggu ${cooldown} detik lagi.`, "error");
-      return;
-    }
-
-    setStatus("loading");
-
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ 
-          text, 
-          voice, 
-          speed: parseFloat(speed), 
-          pitch: parseFloat(pitch), 
-          volume: parseFloat(volume) 
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 429 && data.cooldownRemaining) {
-          setCooldown(data.cooldownRemaining);
-        }
-        throw new Error(data.error || "Failed to synthesize speech");
-      }
-
-      if (data.audioContent) {
-        const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
-        setAudioUrl(audioSrc);
-        setIsTeaser(data.isTeaser || false);
-        setStatus("success");
-        setIsAudioVisible(true);
-        
-        // Success: Trigger cooldown on client side too
-        const cdTime = (!user || user.tier === 'FREE') ? 15 : 2;
-        setCooldown(cdTime);
-
-        setTimeout(() => setStatus("idle"), 3000);
-        refreshUser();
-      } else {
-        throw new Error("No audio content returned");
-      }
-    } catch (err) {
-      console.error("TTS Generation Error:", err);
-      setStatus("idle");
-      alert(err.message || "Gagal menghasilkan suara.");
-    }
-  };
-
-  const fallbackTTS = () => {
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = parseFloat(speed);
-    // map pitch -20 to 20 into 0 to 2
-    utterance.pitch = 1 + (parseFloat(pitch) / 20);
-    // map volume -10 to 10 into 0 to 1
-    utterance.volume = 0.5 + (parseFloat(volume) / 20);
-
-    const voices = synth.getVoices();
-    const idVoices = voices.filter((v) => v.lang.includes("id"));
-    if (idVoices.length > 0) utterance.voice = idVoices[0];
-
-    utterance.onend = () => setIsPlaying(false);
-
-    setStatus("success");
-    setIsAudioVisible(true);
-    setTimeout(() => setStatus("idle"), 3000);
-
-    // We can't generate a real audio tag from this easily, so we just auto play
-    synth.speak(utterance);
-    setIsPlaying(true);
-  };
-
-  const togglePlay = () => {
-    if (audioUrl) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    } else {
-      // Manage fallback synth state
-      if (window.speechSynthesis.speaking) {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-          setIsPlaying(true);
-        } else {
-          window.speechSynthesis.pause();
-          setIsPlaying(false);
-        }
-      }
-    }
-  };
-
-  const handleShare = async () => {
-    if (!audioUrl) return;
-
-    if (navigator.share) {
-      try {
-        const response = await fetch(audioUrl);
-        const blob = await response.blob();
-        const file = new File([blob], "shinerva-audio.mp3", {
-          type: "audio/mpeg",
-        });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: "Audio dari Shinerva Text To Speech",
-            text: "Cek audio dari Shinerva Text To Speech - Generator Suara AI Indonesia",
-          });
-        } else {
-          await navigator.share({
-            title: "Shinerva Text To Speech",
-            text: "Saya baru saja membuat audio keren di Shinerva Text To Speech!",
-            url: window.location.href,
-          });
-        }
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          console.error("Error sharing:", err);
-        }
-      }
-    } else {
-      const shareText = `Saya baru saja membuat audio keren di Shinerva Text To Speech! Coba sekarang: ${window.location.href}`;
-      try {
-        await navigator.clipboard.writeText(shareText);
-        alert(
-          "Pesan dan tautan Shinerva Text To Speech berhasil disalin ke clipboard! Bagikan sekarang ke temanmu.",
-        );
-      } catch (err) {
-        window.open(
-          `https://wa.me/?text=${encodeURIComponent(shareText)}`,
-          "_blank",
-        );
-      }
-    }
-  };
-
-  const handleApplyPack = (content) => {
-    // Feature disabled: Coming Soon
-    alert("Fitur Content Packs akan segera hadir!");
-    return;
-    // setText(content);
-    // document.getElementById('studio').scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    setUser(null);
-    localStorage.removeItem("shinerva_user");
-    alert("Berhasil keluar.");
-  };
-
-  const submitAuth = async (e) => {
-    e.preventDefault();
-    if (authLoading) return;
-    setAuthLoading(true);
-    try {
-      if (authMode === "login") {
-        const userCredential = await signInWithEmailAndPassword(auth, authData.email, authData.password);
-        await syncUser(userCredential.user, { isManual: true });
-      } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
-        await syncUser(userCredential.user, { ...authData, isManual: true });
-        showToast("🎉 Selamat datang di Shinerva!");
-      }
-      setIsAuthOpen(false);
-      setAuthData({ name: "", email: "", password: "", whatsapp: "", refCode: "" });
-    } catch (err) {
-      console.error(err);
-      let msg = err.message || "Terjadi kesalahan.";
-      if (err.code === 'auth/user-not-found') msg = "Pengguna tidak ditemukan.";
-      else if (err.code === 'auth/wrong-password') msg = "Password salah.";
-      else if (err.code === 'auth/email-already-in-use') msg = "Email sudah digunakan.";
-      
-      showToast("Gagal: " + msg, "error");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
   const loginWithGoogle = async () => {
     if (authLoading) return;
@@ -775,41 +300,40 @@ function App() {
       await syncUser(result.user, { isManual: true });
       setIsAuthOpen(false);
       showToast("Login Google Berhasil!");
-    } catch (err) {
-      console.error(err);
-      showToast("Gagal login dengan Google", "error");
+    } catch (e) {
+      showToast("Gagal masuk dengan Google.", "error");
     } finally {
       setAuthLoading(false);
     }
   };
 
   const loginWithFacebook = async () => {
+    if (authLoading) return;
     setAuthLoading(true);
     try {
       const provider = new FacebookAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      await syncUser(result.user);
+      await syncUser(result.user, { isManual: true });
       setIsAuthOpen(false);
       showToast("Login Facebook Berhasil!");
-    } catch (err) {
-      console.error(err);
-      showToast("Gagal login dengan Facebook", "error");
+    } catch (e) {
+      showToast("Gagal masuk dengan Facebook.", "error");
     } finally {
       setAuthLoading(false);
     }
   };
 
   const loginWithApple = async () => {
+    if (authLoading) return;
     setAuthLoading(true);
     try {
-      const provider = new OAuthProvider('apple.com');
+      const provider = new OAuthProvider("apple.com");
       const result = await signInWithPopup(auth, provider);
-      await syncUser(result.user);
+      await syncUser(result.user, { isManual: true });
       setIsAuthOpen(false);
       showToast("Login Apple Berhasil!");
-    } catch (err) {
-      console.error(err);
-      showToast("Gagal login dengan Apple", "error");
+    } catch (e) {
+      showToast("Gagal masuk dengan Apple.", "error");
     } finally {
       setAuthLoading(false);
     }
@@ -817,14 +341,126 @@ function App() {
 
   const switchAuthMode = (mode) => {
     setAuthMode(mode);
-    setAuthData({
-      name: "",
-      email: "",
-      password: "",
-      whatsapp: "",
-      refCode: "",
-    });
+    setAuthData({ name: "", email: "", password: "", whatsapp: "", refCode: "" });
   };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    showToast("Berhasil keluar.");
+  };
+
+  const refreshUser = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch("/api/user/me", { headers: await getAuthHeaders() });
+      const data = await res.json();
+      if (data.user) setUser(data.user);
+    } catch (e) {}
+  };
+
+  const fetchHistory = async () => {
+    if (!user) return;
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/user/history", { headers: await getAuthHeaders() });
+      const data = await res.json();
+      if (data.history) setHistory(data.history);
+    } catch (e) {} finally { setHistoryLoading(false); }
+  };
+
+  const handleGenerate = async () => {
+    if (!text.trim()) return showToast("Silakan tulis naskah.", "error");
+    if (cooldown > 0) return showToast(`Tunggu ${cooldown}s.`, "error");
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ text, voice, speed: parseFloat(speed), pitch: parseFloat(pitch), volume: parseFloat(volume) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 429) setCooldown(data.cooldownRemaining || 15);
+        throw new Error(data.error || "Gagal melayani permintaan.");
+      }
+      if (data.audioContent) {
+        setAudioUrl(`data:audio/mp3;base64,${data.audioContent}`);
+        setIsTeaser(data.isTeaser);
+        setStatus("success");
+        setIsAudioVisible(true);
+        setCooldown((!user || user.tier === "FREE") ? 15 : 2);
+        refreshUser();
+      }
+    } catch (e) {
+      showToast(e.message, "error");
+      setStatus("idle");
+    }
+  };
+
+  const submitAuth = async (e) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    try {
+      if (authMode === "login") {
+        const uCr = await signInWithEmailAndPassword(auth, authData.email, authData.password);
+        await syncUser(uCr.user, { isManual: true });
+      } else {
+        const uCr = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
+        await syncUser(uCr.user, { ...authData, isManual: true });
+      }
+      setIsAuthOpen(false);
+    } catch (e) {
+      showToast("Gagal: " + e.message, "error");
+    } finally { setAuthLoading(false); }
+  };
+
+  const insertAtCursor = (val) => {
+    const el = textAreaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const nextText = text.substring(0, start) + val + text.substring(end);
+    setText(nextText);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + val.length, start + val.length);
+    }, 0);
+  };
+
+  const applyEmphasis = () => {
+    const el = textAreaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    if (start === end) return showToast("Blok kata dulu.", "error");
+    const val = `[EMPHASIS_START]${text.substring(start, end)}[EMPHASIS_END]`;
+    setText(text.substring(0, start) + val + text.substring(end));
+  };
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) audioRef.current.pause();
+    else audioRef.current.play();
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleShare = async () => {
+    if (!audioUrl) return;
+    if (navigator.share) {
+      try {
+        const b = await (await fetch(audioUrl)).blob();
+        const f = new File([b], "shinerva.mp3", { type: "audio/mpeg" });
+        await navigator.share({ files: [f], title: "Shinerva AI" });
+      } catch (e) {}
+    } else showToast("Share tidak didukung browser ini.", "error");
+  };
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      cooldownTimerRef.current = setInterval(() => setCooldown(c => Math.max(0, c - 1)), 1000);
+    } else clearInterval(cooldownTimerRef.current);
+    return () => clearInterval(cooldownTimerRef.current);
+  }, [cooldown]);
 
   const handleSocialSubmit = async (e) => {
     e.preventDefault();
@@ -837,17 +473,103 @@ function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(data.message || "Tautan berhasil dikirim. Menunggu verifikasi admin!");
+        showToast("Tautan dikirim!");
         setShowSocialModal(false);
         setSocialUrl("");
         refreshUser();
-      } else {
-        showToast(data.error || "Gagal mengirim pengajuan.", "error");
-      }
-    } catch (err) {
-      showToast("Terjadi kesalahan koneksi.", "error");
-    }
+      } else showToast(data.error, "error");
+    } catch (e) { showToast("Gagal.", "error"); }
   };
+
+  const fetchVoiceConfig = async () => {
+    try {
+      const res = await fetch("/api/admin/voice-config", { headers: await getAuthHeaders() });
+      const data = await res.json();
+      if (data.tiers) setVoiceConfig(data);
+    } catch (e) {}
+  };
+
+  const handleReviewSubmission = async (id, status) => {
+    try {
+      const res = await fetch(`/api/admin/social-submissions/${id}/review`, {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) { showToast("Status diupdate!"); fetchSubmissions(); }
+    } catch (e) {}
+  };
+
+  const fetchSubmissions = async () => {
+    setSubmissionsLoading(true);
+    try {
+      const res = await fetch("/api/admin/social-submissions", { headers: await getAuthHeaders() });
+      const data = await res.json();
+      if (data.submissions) setSubmissions(data.submissions);
+    } catch (e) {} finally { setSubmissionsLoading(false); }
+  };
+
+  useEffect(() => { if (isSubmissionsOpen) fetchSubmissions(); }, [isSubmissionsOpen]);
+  useEffect(() => { if (isHistoryOpen) fetchHistory(); }, [isHistoryOpen]);
+  useEffect(() => { fetchVoiceConfig(); }, [user]);
+
+  const saveVoiceConfig = async (tiers, limits) => {
+    try {
+      const res = await fetch("/api/admin/voice-config", {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ tiers, limits }),
+      });
+      const data = await res.json();
+      if (data.success) { setVoiceConfig(data.voiceConfig); showToast("Disimpan!"); }
+    } catch (e) { showToast("Gagal.", "error"); }
+  };
+
+  const sendTestEmail = async () => {
+    if (!testEmail) return showToast("Masukkan email.", "error");
+    setTestEmailLoading(true);
+    try {
+      const res = await fetch("/api/admin/test-email", { method: "POST", headers: await getAuthHeaders(), body: JSON.stringify({ email: testEmail }) });
+      const data = await res.json();
+      showToast(data.message);
+    } catch (e) { showToast("Gagal.", "error"); } finally { setTestEmailLoading(false); }
+  };
+
+  const sendTestWhatsApp = async () => {
+    if (!testPhone) return showToast("Masukkan nomor WA.", "error");
+    setTestPhoneLoading(true);
+    try {
+      const res = await fetch("/api/admin/test-whatsapp", { method: "POST", headers: await getAuthHeaders(), body: JSON.stringify({ phone: testPhone }) });
+      const data = await res.json();
+      showToast(data.message, res.ok ? "success" : "error");
+    } catch (e) { showToast("Gagal.", "error"); } finally { setTestPhoneLoading(false); }
+  };
+
+  const handleUpdatePronunciation = async (word, pronunciation) => {
+    try {
+      const res = await fetch("/api/user/pronunciations", { method: "POST", headers: await getAuthHeaders(), body: JSON.stringify({ word, pronunciation }) });
+      const data = await res.json();
+      if (data.success) { setUser({ ...user, pronunciations: data.pronunciations }); showToast("Diperbarui!"); }
+    } catch (e) { showToast("Gagal.", "error"); }
+  };
+
+  const fallbackTTS = () => {
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const ut = new SpeechSynthesisUtterance(text);
+    ut.rate = speed;
+    ut.pitch = 1 + (pitch / 20);
+    ut.volume = 0.5 + (volume / 20);
+    const voices = synth.getVoices().filter(v => v.lang.includes("id"));
+    if (voices.length > 0) ut.voice = voices[0];
+    ut.onend = () => setIsPlaying(false);
+    setStatus("success");
+    setIsAudioVisible(true);
+    synth.speak(ut);
+    setIsPlaying(true);
+  };
+
+  const handleApplyPack = (content) => showToast("Fitur Content Packs akan segera hadir!", "error");
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -2716,25 +2438,25 @@ function App() {
       )}
 
       {/* Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-full px-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-           <div className={`flex items-center gap-3 p-4 rounded-2xl shadow-2xl border ${
-             toast.type === 'error' 
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-full px-4 flex flex-col gap-2">
+        {toasts.map((t) => (
+           <div key={t.id} className={`flex items-center gap-3 p-4 rounded-2xl shadow-2xl border animate-in fade-in slide-in-from-bottom-4 duration-300 ${
+             t.type === 'error' 
               ? 'bg-red-500/10 border-red-500/20 text-red-500' 
               : 'bg-surface border-surface2 text-text'
            }`}>
-             {toast.type === 'error' ? (
+             {t.type === 'error' ? (
                 <X className="w-5 h-5 flex-shrink-0" />
              ) : (
                 <CheckCircle className="w-5 h-5 text-terracotta flex-shrink-0" />
              )}
-             <p className="text-sm font-bold flex-1">{toast.message}</p>
-             <button onClick={() => setToast(null)} className="p-1 hover:bg-white/10 rounded cursor-pointer border-none bg-transparent text-gray-500">
+             <p className="text-sm font-bold flex-1">{t.message}</p>
+             <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} className="p-1 hover:bg-white/10 rounded cursor-pointer border-none bg-transparent text-gray-500">
                 <X className="w-4 h-4" />
              </button>
            </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {/* Floating WhatsApp Support Button */}
       <a

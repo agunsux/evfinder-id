@@ -91,6 +91,13 @@ service cloud.firestore {
       }
     }
 
+    match /social_submissions/{submissionId} {
+      allow get: if isOwner(existing().userId) || isAdmin();
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().status == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
     match /config/voice {
       allow read: if isSignedIn();
       allow write: if isAdmin();
