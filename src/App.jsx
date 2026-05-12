@@ -1,20 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
-import { auth, db } from "./firebase";
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut,
-  signInWithPopup,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-  OAuthProvider
-} from "firebase/auth";
 import {
   Waves,
   ChevronDown,
   Settings2,
-Play,
+  Play,
   Pause,
   Download,
   Mic,
@@ -31,12 +20,6 @@ Play,
   Sun,
   Moon,
   History,
-  LogOut,
-  Mail,
-  MessageCircle,
-  HelpCircle,
-  Info,
-  Copy,
 } from "lucide-react";
 
 const PACKS = [
@@ -141,19 +124,30 @@ const VOICES = {
 };
 
 const ShinervaLogo = ({ className }) => (
-  <div className={`flex items-center justify-center overflow-hidden rounded-lg ${className}`}>
-    <img 
-      src="request_artifact_0.png" 
-      alt="Shinerva Logo" 
-      className="w-full h-full object-cover"
-      referrerPolicy="no-referrer"
-    />
+  <div className={`flex items-center justify-center ${className} bg-dark rounded-xl border border-surface2 shadow-inner overflow-hidden p-1.5`}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#E2725B"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-full h-full"
+    >
+      {/* Concentric waves */}
+      <path d="M2 12 A 10 10 0 0 1 22 12" className="opacity-40" />
+      <path d="M5 12 A 7 7 0 0 1 19 12" className="opacity-70" />
+      <path d="M8 12 A 4 4 0 0 1 16 12" />
+      {/* Abstract ear shape */}
+      <path d="M12 15c-1.5 0-2-1-2-2.5 0-1.5 1-2 1-3a2.5 2.5 0 0 1 5 0c0 1-1 1.5-1 3s.5 2.5-1 2.5" />
+      <path d="M12.5 12c-.5 0-1-.5-1-1s.5-1 .5-2a1 1 0 0 1 2 0c0 .5-.5 1-.5 1.5" strokeWidth="1.5" />
+    </svg>
   </div>
 );
 
 function App() {
   const [text, setText] = useState("");
-  const [voice, setVoice] = useState("id-ID-Standard-A");
+  const [voice, setVoice] = useState("id-ID-Wavenet-A");
   const [speed, setSpeed] = useState(1);
   const [pitch, setPitch] = useState(0);
   const [volume, setVolume] = useState(0);
@@ -164,7 +158,7 @@ function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login"); // login, signup
   const [user, setUser] = useState(null);
-  const [firebaseUser, setFirebaseUser] = useState(null);
+
   const [authData, setAuthData] = useState({
     name: "",
     email: "",
@@ -173,12 +167,10 @@ function App() {
     refCode: "",
   });
   const [authLoading, setAuthLoading] = useState(false);
-  const isSyncing = useRef(false);
-  const [cooldown, setCooldown] = useState(0);
-  const cooldownTimerRef = useRef(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
 
   const [showSocialModal, setShowSocialModal] = useState(false);
-  const [showReferralModal, setShowReferralModal] = useState(false);
   const [socialUrl, setSocialUrl] = useState("");
 
   const [isPronunciationOpen, setIsPronunciationOpen] = useState(false);
@@ -190,169 +182,31 @@ function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const [isVoiceMgmtOpen, setIsVoiceMgmtOpen] = useState(false);
-  const [isSubmissionsOpen, setIsSubmissionsOpen] = useState(false);
-  const [submissions, setSubmissions] = useState([]);
-  const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [voiceConfig, setVoiceConfig] = useState({ tiers: {} });
   const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
-  const [testEmail, setTestEmail] = useState("");
-  const [testEmailLoading, setTestEmailLoading] = useState(false);
-  const [testPhone, setTestPhone] = useState("");
-  const [testPhoneLoading, setTestPhoneLoading] = useState(false);
 
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
   const [billingCycle, setBillingCycle] = useState("monthly"); // monthly, yearly
 
-  const audioRef = useRef(null);
-  const textAreaRef = useRef(null);
-  const [audioUrl, setAudioUrl] = useState(null);
-  const [isTeaser, setIsTeaser] = useState(false);
-
-  const [toasts, setToasts] = useState([]);
-  const showToast = (message, type = "success") => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
-  };
-
-  const getAuthHeaders = async () => {
-    if (auth.currentUser) {
-      const token = await auth.currentUser.getIdToken();
-      return {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      };
-    }
-    return { "Content-Type": "application/json" };
-  };
-
-  const syncUser = async (u, signupDetails = {}) => {
-    if (!u) return;
-    if (isSyncing.current) return;
-    isSyncing.current = true;
-    
-    try {
-      const headers = await getAuthHeaders();
-      const res = await fetch("/api/auth/sync", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ 
-          uid: u.uid, 
-          email: u.email, 
-          name: signupDetails.name || u.displayName || "", 
-          whatsapp: signupDetails.whatsapp || "",
-          refCode: signupDetails.refCode || ""
-        }),
-      });
-      
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Server error: ${res.status}`);
-
-      if (data.user) {
-        localStorage.setItem("shinerva_user", JSON.stringify(data.user));
-        setUser(data.user);
-        if (signupDetails.isManual) {
-          showToast(`Selamat datang ${signupDetails.name || data.user.name || "di Shinerva"}!`);
-        }
-        return data.user;
-      }
-    } catch (e) {
-      console.error("[SYNC] Error:", e);
-      if (signupDetails.isManual) showToast("Gagal sinkronisasi akun.", "error");
-    } finally {
-      isSyncing.current = false;
-    }
-  };
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setAuthLoading(false);
-      if (!u) {
-        setUser(null);
-        setFirebaseUser(null);
-        localStorage.removeItem("shinerva_user");
-      } else {
-        setFirebaseUser(u);
-        if (!user || user.id !== u.uid) {
-          await syncUser(u);
-        }
-      }
-    });
-    return () => unsubscribe();
-  }, [user]);
-
-  useEffect(() => {
-    if (theme === "dark") document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
-
-  const loginWithGoogle = async () => {
-    if (authLoading) return;
-    setAuthLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      await syncUser(result.user, { isManual: true });
-      setIsAuthOpen(false);
-      showToast("Login Google Berhasil!");
-    } catch (e) {
-      showToast("Gagal masuk dengan Google.", "error");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const loginWithFacebook = async () => {
-    if (authLoading) return;
-    setAuthLoading(true);
-    try {
-      const provider = new FacebookAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      await syncUser(result.user, { isManual: true });
-      setIsAuthOpen(false);
-      showToast("Login Facebook Berhasil!");
-    } catch (e) {
-      showToast("Gagal masuk dengan Facebook.", "error");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const loginWithApple = async () => {
-    if (authLoading) return;
-    setAuthLoading(true);
-    try {
-      const provider = new OAuthProvider("apple.com");
-      const result = await signInWithPopup(auth, provider);
-      await syncUser(result.user, { isManual: true });
-      setIsAuthOpen(false);
-      showToast("Login Apple Berhasil!");
-    } catch (e) {
-      showToast("Gagal masuk dengan Apple.", "error");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const switchAuthMode = (mode) => {
-    setAuthMode(mode);
-    setAuthData({ name: "", email: "", password: "", whatsapp: "", refCode: "" });
-  };
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    showToast("Berhasil keluar.");
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   const refreshUser = async () => {
     if (!user) return;
     try {
-      const res = await fetch("/api/user/me", { headers: await getAuthHeaders() });
+      const res = await fetch("/api/user/me", {
+        headers: { "x-user-email": user.email },
+      });
       const data = await res.json();
       if (data.user) setUser(data.user);
     } catch (e) {}
@@ -362,105 +216,398 @@ function App() {
     if (!user) return;
     setHistoryLoading(true);
     try {
-      const res = await fetch("/api/user/history", { headers: await getAuthHeaders() });
+      const res = await fetch("/api/user/history", {
+        headers: { "x-user-email": user.email },
+      });
       const data = await res.json();
       if (data.history) setHistory(data.history);
-    } catch (e) {} finally { setHistoryLoading(false); }
+    } catch (e) {
+      console.error("Error fetching history:", e);
+    } finally {
+      setHistoryLoading(false);
+    }
   };
 
+  const fetchVoiceConfig = async () => {
+    setVoiceConfigLoading(true);
+    try {
+      const res = await fetch("/api/admin/voice-config", {
+        headers: { "x-user-email": user?.email || "" },
+      });
+      const data = await res.json();
+      if (data.tiers) setVoiceConfig(data);
+    } catch (e) {
+      console.error("Error fetching voice config:", e);
+    } finally {
+      setVoiceConfigLoading(false);
+    }
+  };
+
+  const saveVoiceConfig = async (newTiers, newLimits) => {
+    if (!user || user.tier !== "ENTERPRISE") return;
+    try {
+      const res = await fetch("/api/admin/voice-config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": user.email,
+        },
+        body: JSON.stringify({ tiers: newTiers, limits: newLimits }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVoiceConfig(data.voiceConfig);
+        alert("Konfigurasi berhasil disimpan!");
+      }
+    } catch (e) {
+      console.error("Error saving config:", e);
+      alert("Gagal menyimpan konfigurasi.");
+    }
+  };
+
+  useEffect(() => {
+    fetchVoiceConfig();
+  }, [user]);
+
+  useEffect(() => {
+    if (isVoiceMgmtOpen) {
+      fetchVoiceConfig();
+    }
+  }, [isVoiceMgmtOpen]);
+
+  useEffect(() => {
+    if (isHistoryOpen) {
+      fetchHistory();
+    }
+  }, [isHistoryOpen]);
+
+  const handleUpdatePronunciation = async (word, pronunciation) => {
+    if (!user) {
+      alert("Harap login terlebih dahulu untuk menggunakan fitur ini.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/user/pronunciations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": user.email,
+        },
+        body: JSON.stringify({ word, pronunciation }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUser({ ...user, pronunciations: data.pronunciations });
+      } else {
+        alert(data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memperbarui panduan pengucapan.");
+    }
+  };
+
+  const maxChars = 5000;
+  const audioRef = useRef(null);
+  const textAreaRef = useRef(null);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [isTeaser, setIsTeaser] = useState(false);
+
+  const insertAtCursor = (insertion) => {
+    const textarea = textAreaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = text;
+
+    const newText =
+      currentText.substring(0, start) + insertion + currentText.substring(end);
+    setText(newText);
+
+    // Reset cursor position after state update
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(
+        start + insertion.length,
+        start + insertion.length,
+      );
+    }, 0);
+  };
+
+  const applyEmphasis = () => {
+    const textarea = textAreaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    if (start === end) {
+      alert("Silakan blok kata yang ingin diberi penekanan terlebih dahulu.");
+      return;
+    }
+
+    const selectedText = text.substring(start, end);
+    const emphasisText = `[EMPHASIS_START]${selectedText}[EMPHASIS_END]`;
+
+    const newText =
+      text.substring(0, start) + emphasisText + text.substring(end);
+    setText(newText);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(
+        start + emphasisText.length,
+        start + emphasisText.length,
+      );
+    }, 0);
+  };
+
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      cooldownTimerRef.current = setInterval(() => {
+        setCooldown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    } else {
+      clearInterval(cooldownTimerRef.current);
+    }
+    return () => clearInterval(cooldownTimerRef.current);
+  }, [cooldown]);
+
   const handleGenerate = async () => {
-    if (!text.trim()) return showToast("Silakan tulis naskah.", "error");
-    if (cooldown > 0) return showToast(`Tunggu ${cooldown}s.`, "error");
+    if (!text.trim()) {
+      alert("Silakan tulis naskah terlebih dahulu.");
+      return;
+    }
+
+    if (cooldown > 0) {
+      alert(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
+      return;
+    }
+
     setStatus("loading");
+
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ text, voice, speed: parseFloat(speed), pitch: parseFloat(pitch), volume: parseFloat(volume) }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": user ? user.email : "",
+        },
+        body: JSON.stringify({ 
+          text, 
+          voice, 
+          speed: parseFloat(speed), 
+          pitch: parseFloat(pitch), 
+          volume: parseFloat(volume) 
+        }),
       });
+
       const data = await res.json();
+
       if (!res.ok) {
-        if (res.status === 429) setCooldown(data.cooldownRemaining || 15);
-        throw new Error(data.error || "Gagal melayani permintaan.");
+        if (res.status === 429 && data.cooldownRemaining) {
+          setCooldown(data.cooldownRemaining);
+        }
+        throw new Error(data.error || "Failed to synthesize speech");
       }
+
       if (data.audioContent) {
-        setAudioUrl(`data:audio/mp3;base64,${data.audioContent}`);
-        setIsTeaser(data.isTeaser);
+        const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
+        setAudioUrl(audioSrc);
+        setIsTeaser(data.isTeaser || false);
         setStatus("success");
         setIsAudioVisible(true);
-        setCooldown((!user || user.tier === "FREE") ? 15 : 2);
+        
+        // Success: Trigger cooldown on client side too
+        const cdTime = (!user || user.tier === 'FREE') ? 15 : 2;
+        setCooldown(cdTime);
+
+        setTimeout(() => setStatus("idle"), 3000);
         refreshUser();
+      } else {
+        throw new Error("No audio content returned");
       }
-    } catch (e) {
-      showToast(e.message, "error");
+    } catch (err) {
+      console.error("TTS Generation Error:", err);
       setStatus("idle");
+      alert(err.message || "Gagal menghasilkan suara.");
     }
+  };
+
+  const fallbackTTS = () => {
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = parseFloat(speed);
+    // map pitch -20 to 20 into 0 to 2
+    utterance.pitch = 1 + (parseFloat(pitch) / 20);
+    // map volume -10 to 10 into 0 to 1
+    utterance.volume = 0.5 + (parseFloat(volume) / 20);
+
+    const voices = synth.getVoices();
+    const idVoices = voices.filter((v) => v.lang.includes("id"));
+    if (idVoices.length > 0) utterance.voice = idVoices[0];
+
+    utterance.onend = () => setIsPlaying(false);
+
+    setStatus("success");
+    setIsAudioVisible(true);
+    setTimeout(() => setStatus("idle"), 3000);
+
+    // We can't generate a real audio tag from this easily, so we just auto play
+    synth.speak(utterance);
+    setIsPlaying(true);
+  };
+
+  const togglePlay = () => {
+    if (audioUrl) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    } else {
+      // Manage fallback synth state
+      if (window.speechSynthesis.speaking) {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+          setIsPlaying(true);
+        } else {
+          window.speechSynthesis.pause();
+          setIsPlaying(false);
+        }
+      }
+    }
+  };
+
+  const handleShare = async () => {
+    if (!audioUrl) return;
+
+    if (navigator.share) {
+      try {
+        const response = await fetch(audioUrl);
+        const blob = await response.blob();
+        const file = new File([blob], "shinerva-audio.mp3", {
+          type: "audio/mpeg",
+        });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: "Audio dari Shinerva Text To Speech",
+            text: "Cek audio dari Shinerva Text To Speech - Generator Suara AI Indonesia",
+          });
+        } else {
+          await navigator.share({
+            title: "Shinerva Text To Speech",
+            text: "Saya baru saja membuat audio keren di Shinerva Text To Speech!",
+            url: window.location.href,
+          });
+        }
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Error sharing:", err);
+        }
+      }
+    } else {
+      const shareText = `Saya baru saja membuat audio keren di Shinerva Text To Speech! Coba sekarang: ${window.location.href}`;
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert(
+          "Pesan dan tautan Shinerva Text To Speech berhasil disalin ke clipboard! Bagikan sekarang ke temanmu.",
+        );
+      } catch (err) {
+        window.open(
+          `https://wa.me/?text=${encodeURIComponent(shareText)}`,
+          "_blank",
+        );
+      }
+    }
+  };
+
+  const handleApplyPack = (content) => {
+    // Feature disabled: Coming Soon
+    alert("Fitur Content Packs akan segera hadir!");
+    return;
+    // setText(content);
+    // document.getElementById('studio').scrollIntoView({ behavior: 'smooth' });
   };
 
   const submitAuth = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
     try {
-      if (authMode === "login") {
-        const uCr = await signInWithEmailAndPassword(auth, authData.email, authData.password);
-        await syncUser(uCr.user, { isManual: true });
+      if (authMode === "whatsapp") {
+        if (!otpSent) {
+          // Request OTP
+          const res = await fetch("/api/auth/otp/request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ whatsapp: authData.whatsapp }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setOtpSent(true);
+            alert(`OTP telah dikirim ke WhatsApp Anda (mock: ${data.mockOtp})`); // Highlight mock OTP for development
+          } else {
+            alert(data.message || "Gagal mengirim OTP");
+          }
+        } else {
+          // Verify OTP
+          const res = await fetch("/api/auth/otp/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ whatsapp: authData.whatsapp, otp: otpCode }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setUser(data.user);
+            setIsAuthOpen(false);
+          } else {
+            alert(data.message || "Kode OTP salah atau kedaluwarsa");
+          }
+        }
       } else {
-        const uCr = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
-        await syncUser(uCr.user, { ...authData, isManual: true });
+        const endpoint =
+          authMode === "login" ? "/api/auth/login" : "/api/auth/signup";
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(authData),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setUser(data.user);
+          setIsAuthOpen(false);
+        } else {
+          alert("Auth error: " + (data.message || "Unknown error"));
+        }
       }
-      setIsAuthOpen(false);
-    } catch (e) {
-      showToast("Gagal: " + e.message, "error");
-    } finally { setAuthLoading(false); }
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan koneksi server.");
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
-  const insertAtCursor = (val) => {
-    const el = textAreaRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const nextText = text.substring(0, start) + val + text.substring(end);
-    setText(nextText);
-    setTimeout(() => {
-      el.focus();
-      el.setSelectionRange(start + val.length, start + val.length);
-    }, 0);
+  const switchAuthMode = (mode) => {
+    setAuthMode(mode);
+    setOtpSent(false);
+    setOtpCode("");
+    setAuthData({
+      name: "",
+      email: "",
+      password: "",
+      whatsapp: "",
+      refCode: "",
+    });
   };
-
-  const applyEmphasis = () => {
-    const el = textAreaRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    if (start === end) return showToast("Blok kata dulu.", "error");
-    const val = `[EMPHASIS_START]${text.substring(start, end)}[EMPHASIS_END]`;
-    setText(text.substring(0, start) + val + text.substring(end));
-  };
-
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) audioRef.current.pause();
-    else audioRef.current.play();
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleShare = async () => {
-    if (!audioUrl) return;
-    if (navigator.share) {
-      try {
-        const b = await (await fetch(audioUrl)).blob();
-        const f = new File([b], "shinerva.mp3", { type: "audio/mpeg" });
-        await navigator.share({ files: [f], title: "Shinerva AI" });
-      } catch (e) {}
-    } else showToast("Share tidak didukung browser ini.", "error");
-  };
-
-  useEffect(() => {
-    if (cooldown > 0) {
-      cooldownTimerRef.current = setInterval(() => setCooldown(c => Math.max(0, c - 1)), 1000);
-    } else clearInterval(cooldownTimerRef.current);
-    return () => clearInterval(cooldownTimerRef.current);
-  }, [cooldown]);
 
   const handleSocialSubmit = async (e) => {
     e.preventDefault();
@@ -468,108 +615,24 @@ function App() {
     try {
       const res = await fetch("/api/user/social-share", {
         method: "POST",
-        headers: await getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-email": user.email,
+        },
         body: JSON.stringify({ url: socialUrl }),
       });
       const data = await res.json();
-      if (res.ok) {
-        showToast("Tautan dikirim!");
+      if (data.success) {
+        alert("Tautan berhasil dikirim. Menunggu verifikasi admin!");
         setShowSocialModal(false);
-        setSocialUrl("");
         refreshUser();
-      } else showToast(data.error, "error");
-    } catch (e) { showToast("Gagal.", "error"); }
+      } else {
+        alert(data.error);
+      }
+    } catch (err) {
+      alert("Error submitting social share");
+    }
   };
-
-  const fetchVoiceConfig = async () => {
-    try {
-      const res = await fetch("/api/admin/voice-config", { headers: await getAuthHeaders() });
-      const data = await res.json();
-      if (data.tiers) setVoiceConfig(data);
-    } catch (e) {}
-  };
-
-  const handleReviewSubmission = async (id, status) => {
-    try {
-      const res = await fetch(`/api/admin/social-submissions/${id}/review`, {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) { showToast("Status diupdate!"); fetchSubmissions(); }
-    } catch (e) {}
-  };
-
-  const fetchSubmissions = async () => {
-    setSubmissionsLoading(true);
-    try {
-      const res = await fetch("/api/admin/social-submissions", { headers: await getAuthHeaders() });
-      const data = await res.json();
-      if (data.submissions) setSubmissions(data.submissions);
-    } catch (e) {} finally { setSubmissionsLoading(false); }
-  };
-
-  useEffect(() => { if (isSubmissionsOpen) fetchSubmissions(); }, [isSubmissionsOpen]);
-  useEffect(() => { if (isHistoryOpen) fetchHistory(); }, [isHistoryOpen]);
-  useEffect(() => { fetchVoiceConfig(); }, [user]);
-
-  const saveVoiceConfig = async (tiers, limits) => {
-    try {
-      const res = await fetch("/api/admin/voice-config", {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: JSON.stringify({ tiers, limits }),
-      });
-      const data = await res.json();
-      if (data.success) { setVoiceConfig(data.voiceConfig); showToast("Disimpan!"); }
-    } catch (e) { showToast("Gagal.", "error"); }
-  };
-
-  const sendTestEmail = async () => {
-    if (!testEmail) return showToast("Masukkan email.", "error");
-    setTestEmailLoading(true);
-    try {
-      const res = await fetch("/api/admin/test-email", { method: "POST", headers: await getAuthHeaders(), body: JSON.stringify({ email: testEmail }) });
-      const data = await res.json();
-      showToast(data.message);
-    } catch (e) { showToast("Gagal.", "error"); } finally { setTestEmailLoading(false); }
-  };
-
-  const sendTestWhatsApp = async () => {
-    if (!testPhone) return showToast("Masukkan nomor WA.", "error");
-    setTestPhoneLoading(true);
-    try {
-      const res = await fetch("/api/admin/test-whatsapp", { method: "POST", headers: await getAuthHeaders(), body: JSON.stringify({ phone: testPhone }) });
-      const data = await res.json();
-      showToast(data.message, res.ok ? "success" : "error");
-    } catch (e) { showToast("Gagal.", "error"); } finally { setTestPhoneLoading(false); }
-  };
-
-  const handleUpdatePronunciation = async (word, pronunciation) => {
-    try {
-      const res = await fetch("/api/user/pronunciations", { method: "POST", headers: await getAuthHeaders(), body: JSON.stringify({ word, pronunciation }) });
-      const data = await res.json();
-      if (data.success) { setUser({ ...user, pronunciations: data.pronunciations }); showToast("Diperbarui!"); }
-    } catch (e) { showToast("Gagal.", "error"); }
-  };
-
-  const fallbackTTS = () => {
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const ut = new SpeechSynthesisUtterance(text);
-    ut.rate = speed;
-    ut.pitch = 1 + (pitch / 20);
-    ut.volume = 0.5 + (volume / 20);
-    const voices = synth.getVoices().filter(v => v.lang.includes("id"));
-    if (voices.length > 0) ut.voice = voices[0];
-    ut.onend = () => setIsPlaying(false);
-    setStatus("success");
-    setIsAudioVisible(true);
-    synth.speak(ut);
-    setIsPlaying(true);
-  };
-
-  const handleApplyPack = (content) => showToast("Fitur Content Packs akan segera hadir!", "error");
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -577,8 +640,8 @@ function App() {
       <nav className="fixed top-0 w-full z-50 glass-panel border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-24 items-center">
-            <div className="flex items-center gap-3">
-              <ShinervaLogo className="w-10 h-10 shadow-lg" />
+            <div className="flex items-center gap-4">
+              <ShinervaLogo className="w-12 h-12" />
               <span className="font-black text-3xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer">
                 Shinerva<span className="text-terracotta">.id</span>
               </span>
@@ -628,24 +691,7 @@ function App() {
                 )}
               </button>
               {user ? (
-                <div className="flex items-center gap-4">
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-terracotta text-sm">{user.name || user.email}</span>
-                    <span className="text-[10px] bg-terracotta/20 text-terracotta px-1.5 py-0.5 rounded font-black uppercase">{user.tier}</span>
-                  </div>
-                  <button 
-                    onClick={handleLogout}
-                    className="p-2 rounded-lg hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text-muted hover:text-red-500"
-                    title="Keluar"
-                  >
-                    <LogOut className="w-5 h-5" />
-                  </button>
-                </div>
-              ) : firebaseUser || authLoading ? (
-                <div className="flex items-center gap-2 text-text-muted text-sm italic">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Menyiapkan Akun...</span>
-                </div>
+                <span className="font-bold text-terracotta">{user.email}</span>
               ) : (
                 <>
                   <button
@@ -701,161 +747,119 @@ function App() {
           className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
         >
           {user && (
-            <div className="bg-surface2 rounded-3xl p-6 mb-8 border border-surface2 shadow-xl">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {/* Credits Info */}
-                <div className="lg:col-span-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-bold text-gray-400">
-                      Sisa Kuota Karakter
-                    </div>
-                    {user.referral_code && (
-                      <div className="flex items-center gap-1.5 bg-terracotta/10 text-terracotta border border-terracotta/20 px-2 py-0.5 rounded-full text-[10px] font-black animate-pulse">
-                        <Gift className="w-2.5 h-2.5" />
-                        Ajak Teman & Dapat 10rb Kredit!
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-end gap-2 mb-4">
-                    <span className="text-4xl font-black text-white">
-                      {(() => {
-                        const reg = (user.monthly_chars || 0) + (user.earned_chars || 0);
-                        const bonus = (user.bonus_credits || []).filter(b => b.expiresAt > Date.now()).reduce((s, b) => s + b.amount, 0);
-                        return Math.max(0, reg + bonus - user.used_chars).toLocaleString("id-ID");
-                      })()}
-                    </span>
-                    <span className="text-sm text-gray-500 mb-1 font-bold">karakter tersedia</span>
-                    <div className="group relative mb-2 ml-1">
-                      <HelpCircle className="w-4 h-4 text-gray-600 cursor-help" />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-dark border border-surface2 p-4 rounded-2xl shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-[11px] text-gray-400 font-medium leading-relaxed">
-                        <p className="mb-3 text-white font-black uppercase tracking-widest text-[10px] flex items-center gap-2">
-                          <Info className="w-3 h-3 text-terracotta" /> Sistem Kredit Tier
-                        </p>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center bg-surface2/30 p-2 rounded-lg">
-                            <span className="text-white">Standard Only Voice</span>
-                            <span className="text-terracotta font-black">1.0x</span>
-                          </div>
-                          <div className="flex justify-between items-center bg-surface2/30 p-2 rounded-lg">
-                            <span className="text-white">Neural2 / Wavenet</span>
-                            <span className="text-terracotta font-black">3.0x</span>
-                          </div>
-                          <div className="flex justify-between items-center bg-surface2/30 p-2 rounded-lg">
-                            <span className="text-white">Studio / Chirp HD</span>
-                            <span className="text-terracotta font-black">25.0x</span>
-                          </div>
-                        </div>
-                        <p className="mt-3 pt-3 border-t border-surface2 text-terracotta italic text-[10px]">
-                          *Kredit bonus (referral/social) hanya berlaku untuk Tier 1 (Standard).
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2 hover:bg-surface2 transition-colors">
-                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Paket {user.tier}</div>
-                      <div className="font-bold text-text text-sm">{(user.monthly_chars || 0).toLocaleString("id-ID")}</div>
-                    </div>
-                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2 hover:bg-surface2 transition-colors">
-                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Bonus Aktif</div>
-                      <div className="font-bold text-green-500 text-sm">
-                        {(user.bonus_credits || []).filter(b => b.expiresAt > Date.now()).reduce((s, b) => s + b.amount, 0).toLocaleString("id-ID")}
-                      </div>
-                    </div>
-                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2 hover:bg-surface2 transition-colors">
-                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Total Earned</div>
-                      <div className="font-bold text-text text-sm">{(user.earned_chars || 0).toLocaleString("id-ID")}</div>
-                    </div>
-                    <div className="bg-dark/50 rounded-xl p-3 border border-surface2 hover:bg-surface2 transition-colors">
-                      <div className="text-text-muted text-[10px] uppercase font-black mb-1">Used</div>
-                      <div className="font-bold text-terracotta text-sm">{(user.used_chars || 0).toLocaleString("id-ID")}</div>
-                    </div>
-                  </div>
-
-                  {user.bonus_credits && user.bonus_credits.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                       {user.bonus_credits.filter(b => b.expiresAt > Date.now()).sort((a,b) => a.expiresAt - b.expiresAt).slice(0, 3).map((b, i) => {
-                         const daysLeft = Math.ceil((b.expiresAt - Date.now()) / (1000 * 60 * 60 * 24));
-                         return (
-                          <div key={i} className="text-[9px] bg-dark text-gray-400 px-2 py-1 rounded-full border border-surface flex items-center gap-1.5 group cursor-default">
-                            <Gift className="w-2.5 h-2.5 text-terracotta" />
-                            <span className="font-bold text-white">+{b.amount.toLocaleString()}</span>
-                            <span className="opacity-60">{b.source}</span>
-                            <span className={`font-black ${daysLeft < 3 ? 'text-red-500' : 'text-text-muted'}`}>
-                              {daysLeft}nd lagi
-                            </span>
-                          </div>
-                         );
-                       })}
-                       {user.bonus_credits.filter(b => b.expiresAt > Date.now()).length > 3 && (
-                         <div className="text-[9px] text-text-muted font-bold px-2 py-1 flex items-center">
-                           +{user.bonus_credits.filter(b => b.expiresAt > Date.now()).length - 3} lainnya
-                         </div>
-                       )}
-                    </div>
-                  )}
+            <div className="bg-surface2 rounded-3xl p-6 mb-8 flex flex-col md:flex-row justify-between items-center border border-surface2 shadow-xl gap-4">
+              <div className="flex-1 w-full">
+                <div className="text-sm font-bold text-gray-400 mb-2">
+                  Sisa Kuota Total
                 </div>
-
-                {/* Quick Actions */}
-                <div className="flex flex-col gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setIsHistoryOpen(true)}
-                      className="bg-dark p-3 rounded-xl border border-surface2 hover:bg-surface2 transition-all cursor-pointer text-center group"
-                    >
-                      <History className="w-5 h-5 text-terracotta mx-auto mb-1 group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] font-black uppercase">History</span>
-                    </button>
-                    <button
-                      onClick={() => setShowSocialModal(true)}
-                      disabled={user.social_bonus_status === "approved" || user.social_bonus_status === "pending"}
-                      className={`p-3 rounded-xl border transition-all text-center group ${user.social_bonus_status === "none" ? "bg-dark hover:bg-surface2 border-surface2 cursor-pointer" : "bg-surface/50 border-surface2/50 cursor-not-allowed opacity-70"}`}
-                    >
-                      <Share2 className={`w-5 h-5 mx-auto mb-1 group-hover:scale-110 transition-transform ${user.social_bonus_status === "approved" ? "text-green-500" : "text-terracotta"}`} />
-                      <span className="text-[10px] font-black uppercase">
-                        {user.social_bonus_status === "approved" ? "Approved" : user.social_bonus_status === "pending" ? "Pending" : "Social Bonus"}
-                      </span>
-                    </button>
-                  </div>
-                  
-                  <button
-                    onClick={() => setShowReferralModal(true)}
-                    className="bg-dark p-3 rounded-xl border border-surface2 hover:bg-surface border-terracotta/20 transition-all cursor-pointer text-center group"
-                  >
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <UserPlus className="w-4 h-4 text-terracotta group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] font-black uppercase tracking-tight">Referral Program</span>
-                    </div>
-                    <div className="flex items-center justify-center gap-3">
-                       <span className="text-base font-black text-white tracking-widest">{user.referral_code}</span>
-                       <div className="h-4 w-[1px] bg-surface2"></div>
-                       <span className="text-[10px] font-bold text-terracotta">{user.referrals_count_month || 0}/20 Bulan ini</span>
-                    </div>
-                  </button>
+                <div className="flex items-end gap-2 mb-2">
+                  <span className="text-3xl font-black text-white">
+                    {Math.max(
+                      0,
+                      user.monthly_chars +
+                        user.signup_bonus_chars +
+                        user.earned_chars -
+                        user.used_chars,
+                    ).toLocaleString("id-ID")}
+                  </span>
+                  <span className="text-sm text-gray-500 mb-1">karakter</span>
                 </div>
-
-                  {user.tier === "ENTERPRISE" && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => setIsVoiceMgmtOpen(true)}
-                        className="bg-dark p-3 rounded-xl border border-surface2 hover:bg-surface2 transition-all cursor-pointer text-center group"
-                      >
-                        <Settings2 className="w-5 h-5 text-terracotta mx-auto mb-1 group-hover:rotate-45 transition-transform" />
-                        <span className="text-[10px] font-black uppercase">Admin Config</span>
-                      </button>
-                      <button
-                        onClick={() => setIsSubmissionsOpen(true)}
-                        className="bg-dark p-3 rounded-xl border border-surface2 hover:bg-surface2 transition-all cursor-pointer text-center group"
-                      >
-                        <MessageCircle className="w-5 h-5 text-terracotta mx-auto mb-1 group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] font-black uppercase">Review Share</span>
-                      </button>
-                    </div>
-                  )}
+                <div className="w-full bg-dark h-2 rounded-full overflow-hidden mb-3">
+                  <div
+                    className="bg-terracotta h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, (user.used_chars / Math.max(1, user.monthly_chars + user.signup_bonus_chars + user.earned_chars)) * 100)}%`,
+                    }}
+                  ></div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-4">
+                  <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
+                    <div className="text-text-muted text-xs mb-1">Bulanan</div>
+                    <div className="font-bold text-text">{user.monthly_chars.toLocaleString("id-ID")}</div>
+                  </div>
+                  <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
+                    <div className="text-text-muted text-xs mb-1">Bonus Signup</div>
+                    <div className="font-bold text-text">{user.signup_bonus_chars.toLocaleString("id-ID")}</div>
+                  </div>
+                  <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
+                    <div className="text-text-muted text-xs mb-1">Ekstra</div>
+                    <div className="font-bold text-text">{user.earned_chars.toLocaleString("id-ID")}</div>
+                  </div>
+                  <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
+                    <div className="text-text-muted text-xs mb-1">Digunakan</div>
+                    <div className="font-bold text-terracotta">{user.used_chars.toLocaleString("id-ID")}</div>
+                  </div>
                 </div>
               </div>
-            )}
+              <div className="flex flex-col gap-2 min-w-[250px]">
+                <button
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-terracotta" />{" "}
+                    <span className="text-sm font-bold">
+                      Riwayat Penggunaan
+                    </span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
+                </button>
+                {user.tier === "ENTERPRISE" && (
+                  <button
+                    onClick={() => setIsVoiceMgmtOpen(true)}
+                    className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="w-4 h-4 text-terracotta" />{" "}
+                      <span className="text-sm font-bold">
+                        Voice Management
+                      </span>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
+                  </button>
+                )}
+                <div className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-terracotta" />{" "}
+                    <span className="text-sm font-bold">
+                      Referral ({user.valid_referrals}/2)
+                    </span>
+                  </div>
+                  <span className="text-xs bg-surface2 px-2 py-1 rounded text-gray-300">
+                    {user.referral_code}
+                  </span>
+                </div>
+                <button
+                  onClick={() =>
+                    user.social_bonus_status === "none" &&
+                    setShowSocialModal(true)
+                  }
+                  disabled={user.social_bonus_status !== "none"}
+                  className={`p-3 rounded-xl border flex justify-between items-center transition-colors border-none text-left ${user.social_bonus_status === "none" ? "bg-dark hover:bg-surface2 border-surface2 cursor-pointer" : "bg-surface/50 border-surface2/50 cursor-not-allowed opacity-70"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Share2
+                      className={`w-4 h-4 ${user.social_bonus_status === "none" ? "text-terracotta" : "text-text-muted"}`}
+                    />{" "}
+                    <span
+                      className={`text-sm font-bold ${user.social_bonus_status === "none" ? "text-text" : "text-text-muted"}`}
+                    >
+                      Social Bonus
+                    </span>
+                  </div>
+                  <span
+                    className={`text-xs font-bold ${user.social_bonus_status === "none" ? "text-terracotta animate-pulse" : user.social_bonus_status === "pending" ? "text-yellow-500" : "text-green-500"}`}
+                  >
+                    {user.social_bonus_status === "none"
+                      ? "Klaim 30rb!"
+                      : user.social_bonus_status === "pending"
+                        ? "Pending"
+                        : "Approved"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
           <div className="bg-surface rounded-3xl p-6 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
 
@@ -884,23 +888,9 @@ function App() {
 
                 <div className="space-y-4">
                   <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="block text-sm font-bold text-text-muted">
-                        Suara Pilihan
-                      </label>
-                      {text.length > 0 && (
-                        <span className="text-[10px] font-bold text-terracotta bg-terracotta/5 px-2 py-0.5 rounded-full border border-terracotta/10">
-                          Estimasi: {(() => {
-                            const matched = Object.values(VOICES).flat().find(v => v.id === voice);
-                            const m = voiceConfig.tiers?.[matched?.type] || 1;
-                            return (text.length * m).toLocaleString('id-ID');
-                          })()} kredit ({(() => {
-                            const matched = Object.values(VOICES).flat().find(v => v.id === voice);
-                            return voiceConfig.tiers?.[matched?.type] || 1;
-                          })()}x multiplier untuk {text.length} karakter)
-                        </span>
-                      )}
-                    </div>
+                    <label className="block text-sm font-bold text-text-muted mb-2">
+                      Suara Pilihan
+                    </label>
                     <div className="relative">
                       <select
                         value={voice}
@@ -1504,8 +1494,8 @@ function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
               <div className="col-span-1 md:col-span-2">
-                <div className="flex items-center gap-3 mb-6">
-                  <ShinervaLogo className="w-10 h-10 shadow-lg" />
+                <div className="flex items-center gap-4 mb-6">
+                  <ShinervaLogo className="w-12 h-12" />
                   <span className="font-black text-3xl tracking-tight text-text">
                     Shinerva<span className="text-terracotta">.id</span>
                   </span>
@@ -1553,9 +1543,7 @@ function App() {
                   </li>
                   <li>
                     <a
-                      href="https://wa.me/6281234567890"
-                      target="_blank"
-                      rel="noreferrer"
+                      href="#contact"
                       className="hover:text-terracotta transition-colors"
                     >
                       Hubungi Kami
@@ -1623,121 +1611,161 @@ function App() {
               <X className="w-5 h-5" />
             </button>
             <div className="text-center mb-8">
-              <ShinervaLogo className="w-14 h-14 shadow-xl mx-auto mb-4" />
+              <ShinervaLogo className="w-16 h-16 text-terracotta mx-auto mb-4" />
               <h2 className="text-2xl font-black">
-                {authMode === "login" ? "Masuk ke SHINERVA" : "Daftar Akun Baru"}
+                {authMode === "login" ? "Masuk ke SHINERVA" : authMode === "whatsapp" ? "Masuk dengan WhatsApp" : "Daftar Akun Baru"}
               </h2>
               <p className="text-gray-400 text-sm mt-2">
-                {authMode === "login"
+                {authMode === "login" || authMode === "whatsapp"
                   ? "Selamat datang kembali!"
                   : "Daftar sekarang dan dapatkan bonus 5.000 karakter gratis."}
               </p>
             </div>
 
-              <form onSubmit={submitAuth} className="space-y-4">
-                {authMode === "signup" && (
-                  <>
+            <form onSubmit={submitAuth} className="space-y-4">
+              {authMode === "whatsapp" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-400 mb-2">
+                      Nomor WhatsApp
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      disabled={otpSent}
+                      value={authData.whatsapp}
+                      onChange={(e) =>
+                        setAuthData({ ...authData, whatsapp: e.target.value })
+                      }
+                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                      placeholder="08..."
+                    />
+                  </div>
+                  {otpSent && (
                     <div>
                       <label className="block text-sm font-bold text-gray-400 mb-2">
-                        Nama Lengkap
+                        Kode OTP
                       </label>
                       <input
                         type="text"
                         required
-                        value={authData.name}
-                        onChange={(e) =>
-                          setAuthData({ ...authData, name: e.target.value })
-                        }
-                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                        placeholder="John Doe"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta tracking-widest text-center text-xl"
+                        placeholder="••••"
+                        maxLength={4}
                       />
                     </div>
-                  </>
-                )}
-                <div>
-                  <label className="block text-sm font-bold text-gray-400 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={authData.email}
-                    onChange={(e) =>
-                      setAuthData({ ...authData, email: e.target.value })
-                    }
-                    className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                    placeholder="anda@email.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-400 mb-2">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={authData.password}
-                    onChange={(e) =>
-                      setAuthData({ ...authData, password: e.target.value })
-                    }
-                    className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                    placeholder="••••••••"
-                  />
-                </div>
-                {authMode === "signup" && (
-                  <>
-                    <div className="pt-2 border-t border-surface2 mt-4">
-                      <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
-                        Nomor WhatsApp{" "}
-                        <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
-                          Opsional
-                        </span>
-                      </label>
-                      <p className="text-xs text-gray-500 mb-2">
-                        Untuk tips konten & support eksklusif. Kami tidak akan spam.
-                      </p>
-                      <input
-                        type="tel"
-                        value={authData.whatsapp}
-                        onChange={(e) =>
-                          setAuthData({ ...authData, whatsapp: e.target.value })
-                        }
-                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                        placeholder="08..."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
-                        Kode Referral{" "}
-                        <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
-                          Opsional
-                        </span>
-                      </label>
-                      <p className="text-xs text-gray-500 mb-2">
-                        Punya kode undangan teman?
-                      </p>
-                      <input
-                        type="text"
-                        value={authData.refCode}
-                        onChange={(e) =>
-                          setAuthData({
-                            ...authData,
-                            refCode: e.target.value.toUpperCase(),
-                          })
-                        }
-                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta uppercase"
-                        placeholder="KODE"
-                      />
-                    </div>
-                    <div className="bg-terracotta/10 border border-terracotta/20 rounded-xl p-3 flex gap-3 mt-4">
-                      <Gift className="w-5 h-5 text-terracotta flex-shrink-0" />
-                      <p className="text-xs text-terracotta font-medium">
-                        Selamat datang! Kamu dapat 5.000 karakter gratis untuk
-                        memulai (~3 menit audio).
-                      </p>
-                    </div>
-                  </>
-                )}
+                  )}
+                </>
+              )}
+              {authMode !== "whatsapp" && (
+                <>
+                  {authMode === "signup" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-400 mb-2">
+                          Nama Lengkap
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={authData.name}
+                          onChange={(e) =>
+                            setAuthData({ ...authData, name: e.target.value })
+                          }
+                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                          placeholder="John Doe"
+                        />
+                      </div>
+                    </>
+                  )}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-400 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={authData.email}
+                      onChange={(e) =>
+                        setAuthData({ ...authData, email: e.target.value })
+                      }
+                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                      placeholder="anda@email.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-400 mb-2">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={authData.password}
+                      onChange={(e) =>
+                        setAuthData({ ...authData, password: e.target.value })
+                      }
+                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  {authMode === "signup" && (
+                    <>
+                      <div className="pt-2 border-t border-surface2 mt-4">
+                        <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
+                          Nomor WhatsApp{" "}
+                          <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
+                            Opsional
+                          </span>
+                        </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                          Untuk tips konten & promo eksklusif. Kami tidak akan spam.
+                        </p>
+                        <input
+                          type="tel"
+                          value={authData.whatsapp}
+                          onChange={(e) =>
+                            setAuthData({ ...authData, whatsapp: e.target.value })
+                          }
+                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                          placeholder="08..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
+                          Kode Referral{" "}
+                          <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
+                            Opsional
+                          </span>
+                        </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                          Punya kode undangan teman?
+                        </p>
+                        <input
+                          type="text"
+                          value={authData.refCode}
+                          onChange={(e) =>
+                            setAuthData({
+                              ...authData,
+                              refCode: e.target.value.toUpperCase(),
+                            })
+                          }
+                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta uppercase"
+                          placeholder="KODE"
+                        />
+                      </div>
+                      <div className="bg-terracotta/10 border border-terracotta/20 rounded-xl p-3 flex gap-3 mt-4">
+                        <Gift className="w-5 h-5 text-terracotta flex-shrink-0" />
+                        <p className="text-xs text-terracotta font-medium">
+                          Selamat datang! Kamu dapat 10.000 karakter gratis untuk
+                          memulai (~6 menit audio).
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
 
               <button
                 type="submit"
@@ -1748,44 +1776,28 @@ function App() {
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : authMode === "login" ? (
                   "Masuk"
+                ) : authMode === "whatsapp" ? (
+                  otpSent ? "Verifikasi OTP" : "Kirim OTP"
                 ) : (
                   "Daftar Gratis"
                 )}
               </button>
 
               <div className="flex flex-col gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={loginWithGoogle}
-                  disabled={authLoading}
-                  className="w-full bg-white text-black py-3 rounded-xl font-bold transition-colors border border-surface2 cursor-pointer flex justify-center items-center gap-2"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                  Masuk dengan Google
-                </button>
-                <button
-                  type="button"
-                  onClick={loginWithFacebook}
-                  disabled={authLoading}
-                  className="w-full bg-[#1877F2] text-white py-3 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center gap-2"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/facebook.svg" alt="Facebook" className="w-5 h-5" />
-                  Masuk dengan Facebook
-                </button>
-                <button
-                  type="button"
-                  onClick={loginWithApple}
-                  disabled={authLoading}
-                  className="w-full bg-black text-white py-3 rounded-xl font-bold transition-colors border border-surface2 cursor-pointer flex justify-center items-center gap-2"
-                >
-                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/apple.svg" alt="Apple" className="w-5 h-5" />
-                  Masuk dengan Apple
-                </button>
+                {authMode !== "whatsapp" && (
+                  <button
+                    type="button"
+                    onClick={() => switchAuthMode("whatsapp")}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 my-2 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center"
+                  >
+                    Masuk dengan WhatsApp OTP
+                  </button>
+                )}
               </div>
 
               <div className="text-center text-sm text-gray-400 mt-4">
                 <span>
-                  {authMode === "login"
+                  {authMode === "login" || authMode === "whatsapp"
                     ? "Belum punya akun? "
                     : "Sudah punya akun? "}
                 </span>
@@ -1795,122 +1807,10 @@ function App() {
                   }
                   className="text-terracotta hover:text-white font-bold cursor-pointer"
                 >
-                  {authMode === "login" ? "Daftar sekarang" : "Masuk dengan Email"}
+                  {authMode === "login" || authMode === "whatsapp" ? "Daftar sekarang" : "Masuk dengan Email"}
                 </span>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Referral Dashboard Modal */}
-      {showReferralModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setShowReferralModal(false)}
-          ></div>
-          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-lg relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col overflow-y-auto custom-scrollbar">
-            <button
-              onClick={() => setShowReferralModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            
-            <div className="text-center mb-10">
-              <div className="w-16 h-16 rounded-2xl bg-terracotta/20 flex items-center justify-center mx-auto mb-4 animate-bounce">
-                <Gift className="w-8 h-8 text-terracotta" />
-              </div>
-              <h2 className="text-3xl font-black tracking-tight">Referral Program</h2>
-              <p className="text-gray-400 text-sm mt-2 max-w-xs mx-auto">
-                Ajak temanmu menggunakan Shinerva dan dapatkan keuntungan berdua!
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              {/* Rewards Summary */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-dark p-4 rounded-2xl border border-surface2">
-                  <div className="text-[10px] font-black text-terracotta uppercase mb-1">Anda Dapat</div>
-                  <div className="text-xl font-black text-white">10.000</div>
-                  <div className="text-[10px] text-gray-500 font-bold uppercase">Kredit per referral</div>
-                </div>
-                <div className="bg-dark p-4 rounded-2xl border border-surface2">
-                  <div className="text-[10px] font-black text-green-500 uppercase mb-1">Teman Dapat</div>
-                  <div className="text-xl font-black text-white">5.000</div>
-                  <div className="text-[10px] text-gray-500 font-bold uppercase">Kredit pendaftaran</div>
-                </div>
-              </div>
-
-              {/* Progress Tracker */}
-              <div className="bg-dark p-5 rounded-2xl border border-surface2">
-                <div className="flex justify-between items-center mb-3">
-                   <h3 className="text-xs font-black uppercase tracking-wider text-gray-400">Progress Bulan Ini</h3>
-                   <span className="text-xs font-black text-terracotta">{user.referrals_count_month || 0} / 20</span>
-                </div>
-                <div className="h-3 bg-surface2 rounded-full overflow-hidden mb-2">
-                   <div 
-                    className="h-full bg-terracotta rounded-full transition-all duration-1000"
-                    style={{ width: `${Math.min(100, ((user.referrals_count_month || 0) / 20) * 100)}%` }}
-                   ></div>
-                </div>
-                <p className="text-[10px] text-gray-500 font-medium">
-                  {20 - (user.referrals_count_month || 0)} kuota tersisa untuk bulan {new Date().toLocaleString('id-ID', { month: 'long' })}.
-                </p>
-              </div>
-
-              {/* Code Section */}
-              <div className="bg-surface2 p-6 rounded-2xl border border-terracotta/20 text-center">
-                 <p className="text-xs text-gray-400 mb-3 font-bold">KODE REFERRAL ANDA</p>
-                 <div className="flex items-center justify-center gap-4 mb-6">
-                    <span className="text-4xl font-black text-white tracking-[0.2em]">{user.referral_code}</span>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(user.referral_code);
-                        alert("Kode referral disalin!");
-                      }}
-                      className="p-2.5 bg-dark hover:bg-black rounded-xl text-terracotta transition-colors border border-surface2 cursor-pointer"
-                    >
-                      <Copy className="w-5 h-5" />
-                    </button>
-                 </div>
-                 <div className="flex flex-col gap-3">
-                    <button 
-                      onClick={() => {
-                        const text = `Woi, coba deh platform AI Voice Indonesia paling natural: Shinerva.id! Daftar pake kode referral gw [${user.referral_code}] biar dapet bonus 5.000 karakter gratis! #SuaraShinerva`;
-                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-                      }}
-                      className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-3 rounded-xl font-black text-sm border-none cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <MessageCircle className="w-4 h-4" /> Share ke WhatsApp
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const link = `${window.location.origin}?ref=${user.referral_code}`;
-                        navigator.clipboard.writeText(link);
-                        alert("Link pendaftaran disalin!");
-                      }}
-                      className="w-full bg-surface hover:bg-dark text-white py-3 rounded-xl font-black text-sm border border-surface2 cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <Share2 className="w-4 h-4" /> Salin Link Undangan
-                    </button>
-                 </div>
-              </div>
-
-              {/* Info section */}
-              <div className="bg-terracotta/5 p-4 rounded-xl border border-terracotta/10">
-                 <h4 className="text-[10px] font-black uppercase text-terracotta mb-2 flex items-center gap-2">
-                   <Info className="w-3 h-3" /> Syarat & Ketentuan
-                 </h4>
-                 <ul className="text-[10px] text-gray-400 space-y-1.5 list-disc pl-4 font-medium">
-                    <li>Bonus 10.000 kredit diberikan setelah teman yang diundang generate <span className="text-white">minimal 100 karakter</span>.</li>
-                    <li>Akun pengundang dan teman harus terverifikasi (Email/WA).</li>
-                    <li>Maksimal 20 referral per bulan per akun.</li>
-                    <li>Kredit bonus berlaku selama 60 hari dan hanya untuk suara <span className="text-white">Tier Standard</span>.</li>
-                 </ul>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -1934,18 +1834,18 @@ function App() {
                 <Share2 className="w-6 h-6 text-terracotta" />
               </div>
               <h2 className="text-2xl font-black">
-                Klaim Extra 5.000 Karakter!
+                Klaim Extra 30.000 Kredit!
               </h2>
               <p className="text-gray-400 text-sm mt-2">
-                Dapatkan kuota tambahan gratis! Bagikan video buatanmu
-                di TikTok atau Instagram Reels, gunakan hashtag <span className="text-terracotta">#SuaraShinerva</span>, 
-                tag @shinerva.id, dan kirimkan link postinganmu.
+                Dapatkan ~20 menit audio tambahan gratis! Bagikan audio buatanmu
+                di TikTok atau Instagram Reels, tag @shinerva.id, dan paste linknya
+                di bawah.
               </p>
             </div>
             <form onSubmit={handleSocialSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-400 mb-2">
-                  Link Postingan (TikTok/Reels)
+                  Link Postingan
                 </label>
                 <input
                   type="url"
@@ -1956,19 +1856,11 @@ function App() {
                   placeholder="https://tiktok.com/@kamu/video/..."
                 />
               </div>
-              <div className="bg-terracotta/5 border border-terracotta/10 p-3 rounded-xl">
-                 <p className="text-[10px] text-terracotta/80 leading-relaxed font-medium">
-                  Persyaratan: <br/>
-                  1. Video berdurasi minimal 15 detik. <br/>
-                  2. Menggunakan suara hasil Shinerva. <br/>
-                  3. Menggunakan hashtag #SuaraShinerva.
-                 </p>
-              </div>
               <button
                 type="submit"
-                className="w-full bg-terracotta text-white py-3 my-2 rounded-xl font-bold cursor-pointer border-none flex justify-center items-center shadow-lg shadow-terracotta/20"
+                className="w-full bg-terracotta text-white py-3 my-2 rounded-xl font-bold cursor-pointer border-none flex justify-center items-center"
               >
-                Kirim Pengajuan
+                Submit Link
               </button>
             </form>
           </div>
@@ -2281,60 +2173,6 @@ function App() {
                       </div>
                     </div>
                   </div>
-
-                  <div className="pt-6 border-t border-surface2">
-                    <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                       <MessageCircle className="w-4 h-4 text-terracotta" /> Test WhatsApp API
-                    </h3>
-                    <div className="bg-dark p-4 rounded-xl border border-surface2">
-                      <p className="text-[10px] text-gray-500 mb-4">
-                        Gunakan fitur ini untuk memverifikasi pengaturan WhatsApp Anda. Pastikan WHATSAPP_API_TOKEN sudah diatur di server (Fonnte/similiar).
-                      </p>
-                      <div className="flex gap-2">
-                        <input
-                           type="text"
-                           placeholder="628123456789"
-                           value={testPhone}
-                           onChange={(e) => setTestPhone(e.target.value)}
-                           className="flex-1 bg-surface2 text-white border border-surface2 rounded px-3 py-2 text-sm"
-                        />
-                        <button
-                          onClick={sendTestWhatsApp}
-                          disabled={testPhoneLoading}
-                          className="bg-terracotta hover:bg-trdark text-white px-4 py-2 rounded-lg font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-none cursor-pointer"
-                        >
-                          {testPhoneLoading ? "Mengirim..." : "Kirim WhatsApp"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 border-t border-surface2">
-                    <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                       <Mail className="w-4 h-4 text-terracotta" /> Test Email Notifications
-                    </h3>
-                    <div className="bg-dark p-4 rounded-xl border border-surface2">
-                      <p className="text-[10px] text-gray-500 mb-4">
-                        Gunakan fitur ini untuk memverifikasi pengaturan SMTP Anda. Pastikan variabel lingkungan (SMTP_USER, SMTP_PASS, dll) sudah diatur di server.
-                      </p>
-                      <div className="flex gap-2">
-                        <input
-                           type="email"
-                           placeholder="email@tujuan.com"
-                           value={testEmail}
-                           onChange={(e) => setTestEmail(e.target.value)}
-                           className="flex-1 bg-surface2 text-white border border-surface2 rounded px-3 py-2 text-sm"
-                        />
-                        <button
-                          onClick={sendTestEmail}
-                          disabled={testEmailLoading}
-                          className="bg-terracotta hover:bg-trdark text-white px-4 py-2 rounded-lg font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-none cursor-pointer"
-                        >
-                          {testEmailLoading ? "Mengirim..." : "Kirim Tes"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -2356,121 +2194,6 @@ function App() {
           </div>
         </div>
       )}
-      {/* Admin Submissions Review Modal */}
-      {isSubmissionsOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setIsSubmissionsOpen(false)}
-          ></div>
-          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-4xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
-            <button
-              onClick={() => setIsSubmissionsOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="text-center mb-8">
-              <MessageCircle className="w-16 h-16 text-terracotta mx-auto mb-4" />
-              <h2 className="text-2xl font-black text-white">Review Social Submissions</h2>
-              <p className="text-gray-400 text-sm mt-2">
-                Verifikasi postingan sosial media untuk memberikan bonus kredit.
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              {submissionsLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 text-terracotta animate-spin mb-4" />
-                  <p className="text-gray-500">Memuat pengajuan...</p>
-                </div>
-              ) : submissions.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {submissions.map((sub) => (
-                    <div key={sub.id} className="bg-dark p-5 rounded-2xl border border-surface2 flex flex-col gap-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex flex-col">
-                           <span className="text-[10px] font-black text-terracotta uppercase mb-1">User ID: {sub.userId}</span>
-                           <span className="text-xs text-text-muted">{new Date(sub.submittedAt).toLocaleString('id-ID')}</span>
-                        </div>
-                        <span className="text-[10px] bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded-full font-black uppercase tracking-widest">
-                          {sub.status}
-                        </span>
-                      </div>
-                      <div className="bg-surface2/30 p-3 rounded-xl border border-surface2 break-all text-xs font-mono">
-                        <a href={sub.socialUrl} target="_blank" rel="noreferrer" className="text-terracotta hover:underline">
-                          {sub.socialUrl}
-                        </a>
-                      </div>
-                      <div className="flex gap-2 mt-auto pt-4 border-t border-surface2">
-                        <button
-                          onClick={() => handleReviewSubmission(sub.id, 'approved')}
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-widest border-none cursor-pointer transition-colors"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleReviewSubmission(sub.id, 'rejected')}
-                          className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-500 font-black py-2.5 rounded-xl text-xs uppercase tracking-widest border border-red-600/30 cursor-pointer transition-colors"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 italic">Tidak ada pengajuan pending saat ini.</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-6 pt-6 border-t border-surface2 text-center">
-               <button 
-                onClick={() => setIsSubmissionsOpen(false)}
-                className="bg-surface2 hover:bg-gray-700 text-white px-8 py-2.5 rounded-xl font-bold cursor-pointer border-none"
-               >
-                 Selesai
-               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-full px-4 flex flex-col gap-2">
-        {toasts.map((t) => (
-           <div key={t.id} className={`flex items-center gap-3 p-4 rounded-2xl shadow-2xl border animate-in fade-in slide-in-from-bottom-4 duration-300 ${
-             t.type === 'error' 
-              ? 'bg-red-500/10 border-red-500/20 text-red-500' 
-              : 'bg-surface border-surface2 text-text'
-           }`}>
-             {t.type === 'error' ? (
-                <X className="w-5 h-5 flex-shrink-0" />
-             ) : (
-                <CheckCircle className="w-5 h-5 text-terracotta flex-shrink-0" />
-             )}
-             <p className="text-sm font-bold flex-1">{t.message}</p>
-             <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} className="p-1 hover:bg-white/10 rounded cursor-pointer border-none bg-transparent text-gray-500">
-                <X className="w-4 h-4" />
-             </button>
-           </div>
-        ))}
-      </div>
-
-      {/* Floating WhatsApp Support Button */}
-      <a
-        href="https://wa.me/6281234567890"
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-6 right-6 z-[90] bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center group"
-        title="Hubungi Support via WhatsApp"
-      >
-        <MessageCircle className="w-6 h-6" />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-300 font-bold whitespace-nowrap">
-          Support WhatsApp
-        </span>
-      </a>
     </div>
   );
 }
