@@ -24,7 +24,13 @@ const ReferralDashboard = ({ user }) => {
             value={`shinerva.id/ref/${stats.referralCode}`} 
             className="flex-grow bg-surface p-2 rounded border border-surface2"
           />
-          <button className="bg-terracotta text-white px-4 py-2 rounded font-bold">
+          <button 
+            className="bg-terracotta text-white px-4 py-2 rounded font-bold"
+            onClick={() => {
+              navigator.clipboard.writeText(`https://shinerva.id/ref/${stats.referralCode}`);
+              alert('Link telah disalin!');
+            }}
+          >
             <Copy size={16} />
           </button>
         </div>
@@ -34,7 +40,10 @@ const ReferralDashboard = ({ user }) => {
           <span>Monthly Progress ({stats.thisMonthCount} / 20)</span>
         </div>
         <div className="w-full bg-surface2 h-2 rounded-full overflow-hidden">
-          <div className="bg-terracotta h-full transition-all" style={{ width: `${(stats.thisMonthCount / 20) * 100}%` }}></div>
+          <div 
+            className={`${stats.thisMonthCount >= 15 ? 'bg-amber-500' : 'bg-terracotta'} h-full transition-all`} 
+            style={{ width: `${Math.min((stats.thisMonthCount / 20) * 100, 100)}%` }}
+          ></div>
         </div>
       </div>
       <p>Total Referral Bonuses: {stats.totalBonusEarned} characters</p>

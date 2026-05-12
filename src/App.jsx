@@ -123,29 +123,11 @@ const VOICES = {
   ]
 };
 
-const ShinervaLogo = ({ className }) => (
-  <div className={`flex items-center justify-center ${className} bg-dark rounded-xl border border-surface2 shadow-inner overflow-hidden p-1.5`}>
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#E2725B"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-full h-full"
-    >
-      {/* Concentric waves */}
-      <path d="M2 12 A 10 10 0 0 1 22 12" className="opacity-40" />
-      <path d="M5 12 A 7 7 0 0 1 19 12" className="opacity-70" />
-      <path d="M8 12 A 4 4 0 0 1 16 12" />
-      {/* Abstract ear shape */}
-      <path d="M12 15c-1.5 0-2-1-2-2.5 0-1.5 1-2 1-3a2.5 2.5 0 0 1 5 0c0 1-1 1.5-1 3s.5 2.5-1 2.5" />
-      <path d="M12.5 12c-.5 0-1-.5-1-1s.5-1 .5-2a1 1 0 0 1 2 0c0 .5-.5 1-.5 1.5" strokeWidth="1.5" />
-    </svg>
-  </div>
-);
+import ShinervaLogo from "./components/ShinervaLogo";
 
-function App() {
+const App = () => {
+  // ... rest of the component
+
   const [text, setText] = useState("");
   const [voice, setVoice] = useState("id-ID-Wavenet-A");
   const [speed, setSpeed] = useState(1);
@@ -592,7 +574,18 @@ function App() {
           setUser(data.user);
           setIsAuthOpen(false);
         } else {
-          alert("Auth error: " + (data.message || "Unknown error"));
+          if (data.message && (data.message.includes("already in use") || data.message.includes("sudah terdaftar"))) {
+            setNotification("Email Anda sudah terdaftar. Silakan log in.");
+            setTimeout(() => setNotification(null), 3000);
+          } else if (data.message && (data.message.includes("user-not-found") || data.message.includes("tidak terdaftar"))) {
+            setNotification("Email belum terdaftar. Silakan daftar dahulu.");
+            setTimeout(() => setNotification(null), 3000);
+          } else if (data.message && (data.message.includes("wrong-password") || data.message.includes("salah"))) {
+            setNotification("Password salah.");
+            setTimeout(() => setNotification(null), 3000);
+          } else {
+            alert("Auth error: " + (data.message || "Unknown error"));
+          }
         }
       }
     } catch (err) {
@@ -650,7 +643,7 @@ function App() {
             <div className="flex items-center gap-4">
               <ShinervaLogo className="w-12 h-12" />
               <span className="font-black text-3xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer">
-                Shinerva<span className="text-terracotta">.id</span>
+                Shinerva <span className="text-terracotta">TTS</span>
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
