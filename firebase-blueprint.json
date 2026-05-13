@@ -65,11 +65,25 @@
         "description": { "type": "string" }
       }
     }
+    ,"TTSGeneration": {
+      "title": "TTSGeneration",
+      "description": "Tracking for AI voice generation usage.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "text": { "type": "string" },
+        "voiceModel": { "type": "string" },
+        "charCount": { "type": "number" },
+        "createdAt": { "type": "timestamp" },
+        "audioUrl": { "type": "string" }
+      }
+    }
   },
   "firestore": {
     "/users/{uid}": { "schema": "User", "description": "User profiles." },
     "/referrals/{referralId}": { "schema": "Referral", "description": "Referral tracking records." },
     "/socialClaims/{claimId}": { "schema": "SocialClaim", "description": "Social media claim records." },
-    "/creditTransactions/{txId}": { "schema": "CreditTransaction", "description": "Credit history." }
+    "/creditTransactions/{txId}": { "schema": "CreditTransaction", "description": "Credit history." },
+    "/users/{uid}/tts_generations/{genId}": { "schema": "TTSGeneration", "description": "Audio generation history." }
   }
 }

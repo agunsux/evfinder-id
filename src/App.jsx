@@ -616,13 +616,14 @@ const App = () => {
   };
 
   const getFriendlyErrorMessage = (errorCodeOrMessage) => {
-    if (errorCodeOrMessage.includes('auth/invalid-email')) return 'Format email tidak valid.';
-    if (errorCodeOrMessage.includes('auth/user-not-found') || errorCodeOrMessage.includes("tidak terdaftar")) return 'Email tidak terdaftar.';
-    if (errorCodeOrMessage.includes('auth/wrong-password') || errorCodeOrMessage.includes("salah")) return 'Password salah.';
-    if (errorCodeOrMessage.includes('auth/too-many-requests')) return 'Terlalu banyak permintaan. Silakan coba lagi nanti.';
-    if (errorCodeOrMessage.includes('auth/network-request-failed')) return 'Koneksi internet bermasalah.';
-    if (errorCodeOrMessage.includes('auth/popup-closed-by-user')) return 'Proses login dibatalkan.';
-    if (errorCodeOrMessage.includes('auth/email-already-in-use') || errorCodeOrMessage.includes("already in use") || errorCodeOrMessage.includes("sudah terdaftar")) return 'This email is already registered. Please log in instead.';
+    const error = errorCodeOrMessage.toLowerCase();
+    if (error.includes('auth/invalid-email')) return 'Format email tidak valid.';
+    if (error.includes('auth/user-not-found') || error.includes("tidak terdaftar")) return 'Email tidak terdaftar.';
+    if (error.includes('auth/wrong-password') || error.includes("salah")) return 'Password salah.';
+    if (error.includes('auth/too-many-requests')) return 'Terlalu banyak permintaan. Silakan coba lagi nanti.';
+    if (error.includes('auth/network-request-failed')) return 'Koneksi internet bermasalah.';
+    if (error.includes('auth/popup-closed-by-user')) return 'Proses login dibatalkan.';
+    if (error.includes('auth/email-already-in-use') || error.includes("already in use") || error.includes("sudah terdaftar")) return 'Email sudah terdaftar. Silakan login.';
     return 'Terjadi kesalahan: ' + errorCodeOrMessage;
   };
 
