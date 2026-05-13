@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Toaster, toast } from 'react-hot-toast';
 import { auth } from './lib/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendPasswordResetEmail, sendEmailVerification, signOut } from 'firebase/auth';
 import {
   Waves,
   ChevronDown,
@@ -23,6 +23,7 @@ import {
   Sun,
   Moon,
   History,
+  AlertTriangle,
 } from "lucide-react";
 
 const PACKS = [
@@ -431,7 +432,22 @@ const App = () => {
   const fallbackTTS = () => {
     const synth = window.speechSynthesis;
     synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Strip all potential bracketed tags and excessive punctuation
+    let cleanedText = text
+      .replace(/\[.*?\]/g, '')
+      .replace(/[\*\_\~]/g, '')
+      .replace(/\.id\b/gi, " dot ay id ")
+      .replace(/\bAI\b/gi, "ey ay")
+      .replace(/\bIT\b/g, "ay ti")
+      .replace(/\bCEO\b/gi, "si i o")
+      .replace(/\bVIP\b/gi, "vi ay pi")
+      .replace(/\bAPI\b/gi, "ei pi ay");
+      
+    // Add suffix with pause
+    cleanedText += ". Dibuat oleh shinerva dot ay id.";
+      
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
     utterance.rate = parseFloat(speed);
     // map pitch -20 to 20 into 0 to 2
     utterance.pitch = 1 + (parseFloat(pitch) / 20);
@@ -629,9 +645,35 @@ const App = () => {
     }
   };
 
+  const handleResendVerification = async () => {
+    if (auth.currentUser) {
+        setAuthLoading(true);
+        try {
+            await sendEmailVerification(auth.currentUser);
+            toast.success('Email verifikasi telah dikirim ulang.');
+        } catch (err) {
+            toast.error('Gagal mengirim email verifikasi.');
+        } finally {
+            setAuthLoading(false);
+        }
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      toast.success('Berhasil keluar.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal keluar.');
+    }
+  };
+
   const handleSocialSubmit = async (e) => {
     e.preventDefault();
     if (!socialUrl) return;
+    setAuthLoading(true);
     try {
       const res = await fetch("/api/user/social-share", {
         method: "POST",
@@ -643,14 +685,16 @@ const App = () => {
       });
       const data = await res.json();
       if (data.success) {
-        alert("Tautan berhasil dikirim. Menunggu verifikasi admin!");
+        toast.success("Tautan berhasil dikirim. Menunggu verifikasi admin!");
         setShowSocialModal(false);
         refreshUser();
       } else {
-        alert(data.error);
+        toast.error(data.error);
       }
     } catch (err) {
-      alert("Error submitting social share");
+      toast.error("Error submitting social share");
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -712,7 +756,9 @@ const App = () => {
                 )}
               </button>
               {user ? (
-                <span className="font-bold text-terracotta">{user.email}</span>
+                <span onClick={handleLogout} className="font-bold text-terracotta cursor-pointer hover:underline" title="Klik untuk keluar">
+                  {user.email}
+                </span>
               ) : (
                 <>
                   <button
@@ -744,6 +790,21 @@ const App = () => {
       {notification && (
         <div className="fixed top-28 right-4 z-[60] bg-terracotta text-white px-6 py-3 rounded-xl shadow-lg border border-terracotta/50">
           {notification}
+        </div>
+      )}
+
+      {/* Verification Banner */}
+      {user && !user.emailVerified && auth.currentUser && (
+        <div className="fixed top-24 left-0 right-0 z-50 bg-yellow-500 text-black px-4 py-3 flex items-center justify-center gap-4 text-sm font-bold">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          <span>Email Anda belum diverifikasi.</span>
+          <button 
+            onClick={handleResendVerification}
+            disabled={authLoading}
+            className="underline cursor-pointer bg-transparent border-none font-bold"
+          >
+            {authLoading ? 'Mengirim...' : 'Kirim Ulang Verifikasi'}
+          </button>
         </div>
       )}
 
@@ -938,7 +999,10 @@ const App = () => {
                               const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
                               const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
                               const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
-                              const isLocked = v.premium && userTierIndex < requiredTierIndex;
+                              
+                              const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
+                              const isUserFree = userTierIndex < 1;
+                              const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
                               
                               return (
                                 <option key={v.id} value={v.id} disabled={isLocked}>
@@ -956,7 +1020,7 @@ const App = () => {
                     {(!user || user.tier === 'FREE') && (
                       <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20 animate-pulse">
                         <Gift className="w-3 h-3" />
-                        <span className="font-bold">Buka suara Neural2 & Studio Premium dengan paket Kreator! <a href="#pricing" className="underline">Upgrade Sekarang</a></span>
+                        <span className="font-bold">Buka suara Wavenet, Neural2 & Studio Premium dengan paket Starter! <a href="#pricing" className="underline">Upgrade Sekarang</a></span>
                       </div>
                     )}
                   </div>
@@ -1657,7 +1721,7 @@ const App = () => {
               </p>
             </div>
 
-            <form onSubmit={authMode === 'forgot-password' ? handleResetPassword : submitAuth} className="space-y-4">
+            <form key={authMode} onSubmit={authMode === 'forgot-password' ? handleResetPassword : submitAuth} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               {authMode === "whatsapp" && (
                 <>
                   <div>
@@ -1941,9 +2005,10 @@ const App = () => {
               </div>
               <button
                 type="submit"
-                className="w-full bg-terracotta text-white py-3 my-2 rounded-xl font-bold cursor-pointer border-none flex justify-center items-center"
+                disabled={authLoading}
+                className="w-full bg-terracotta hover:bg-trdark text-white py-3 my-2 rounded-xl font-bold cursor-pointer border-none flex justify-center items-center transition-opacity disabled:opacity-75 disabled:cursor-not-allowed"
               >
-                Submit Link
+                {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Link"}
               </button>
             </form>
           </div>

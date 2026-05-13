@@ -512,10 +512,15 @@ async function createServer() {
         }
       }
 
+      // Handle Emphasis Tags
+      modifiedText = modifiedText
+        .replace(/\[EMPHASIS_START\]/g, '<emphasis level="strong">')
+        .replace(/\[EMPHASIS_END\]/g, '</emphasis>');
+
       modifiedText = modifiedText
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/\.id\b/gi, " dot ay di ")
+        .replace(/\.id\b/gi, " dot ay id ")
         .replace(/\bAI\b/gi, "ey ay")
         .replace(/\bIT\b/g, "ay ti")
         .replace(/\bCEO\b/gi, "si i o")
@@ -524,7 +529,7 @@ async function createServer() {
         
       let ssmlText = `<speak>${modifiedText}`;
       if (tier === 'FREE') {
-         ssmlText += `<break time="0.5s"/><prosody volume="-6dB">Dibuat dengan shinerva dot ay di.</prosody>`;
+         ssmlText += `<break time="1s"/><prosody volume="-6dB">Dibuat oleh shinerva dot ay id.</prosody>`;
       }
       ssmlText += `</speak>`;
 
