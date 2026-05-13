@@ -13,7 +13,10 @@ export const handleApiError = (error, defaultMessage = "Terjadi kesalahan.") => 
     // Comprehensive error categorization
     const errorStr = message.toLowerCase();
 
-    if (errorStr.includes('401') || errorStr.includes('unauthorized')) {
+    if (errorStr.includes('unexpected token') || errorStr.includes('json')) {
+        message = 'Terjadi kesalahan sistem.';
+        suggestion = 'Mohon coba lagi dalam beberapa saat.';
+    } else if (errorStr.includes('401') || errorStr.includes('unauthorized')) {
         message = 'Sesi Anda telah berakhir.';
         suggestion = 'Silakan masuk kembali untuk melanjutkan.';
     } else if (errorStr.includes('403') || errorStr.includes('forbidden')) {
