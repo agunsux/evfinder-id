@@ -345,6 +345,12 @@ async function createServer() {
   app.post('/api/user/social-share', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { url } = req.body;
+    
+    // Basic verification: check if it's a valid social media URL
+    if (!url || !/(tiktok|instagram|facebook|twitter|x)\.com/.test(url)) {
+      return res.status(400).json({ error: 'Harap masukkan URL postingan yang valid dari TikTok, Instagram, Facebook, atau X/Twitter.' });
+    }
+
     if (req.user.social_bonus_status !== 'none') {
       return res.status(400).json({ error: 'Sudah pernah mengklaim bonus ini.' });
     }

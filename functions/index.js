@@ -100,14 +100,23 @@ exports.onFirstGeneration = functions.https.onCall(async (data, context) => {
       });
       
       // Log transactions
-      const txRef = db.collection('creditTransactions').doc();
-      batch.set(txRef, {
+      const txRef1 = db.collection('creditTransactions').doc();
+      batch.set(txRef1, {
         uid: userData.referredBy,
         type: 'referral_bonus',
         amount: 10000,
-        balanceAfter: userData.creditBalance + 10000, // This is simplified
+        balanceAfter: userData.creditBalance + 10000, 
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         description: 'Referral bonus'
+      });
+      const txRef2 = db.collection('creditTransactions').doc();
+      batch.set(txRef2, {
+        uid: context.auth.uid,
+        type: 'referral_bonus',
+        amount: 10000,
+        balanceAfter: userData.creditBalance + 10000, 
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        description: 'Referral bonus (referee)'
       });
       
       await batch.commit();
@@ -128,7 +137,63 @@ exports.onFirstGeneration = functions.https.onCall(async (data, context) => {
   return { success: true };
 });
 
-// 4. getReferralStats
+// 4. submitSocialClaim
+exports.submitSocialClaim = functions.https.onCall(async (data, context) => {
+    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Harap login.');
+    const { postUrl, platform } = data;
+    
+    const userRef = db.collection('users').doc(context.auth.uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.data().firstGenerationDone) throw new functions.https.HttpsError('failed-precondition', 'Harap lakukan generasi suara pertama.');
+
+    const month = new Date().toISOString().substring(0, 7);
+    const existingClaims = await db.collection('socialClaims')
+        .where('uid', '==', context.auth.uid)
+        .where('month', '==', month)
+        .get();
+    
+    if (existingClaims.size >= 4) throw new functions.https.HttpsError('failed-precondition', 'Limit klaim bulanan tercapai.');
+
+    const urlHash = require('crypto').createHash('sha256').update(postUrl).digest('hex');
+    const duplicateClaim = await db.collection('socialClaims').where('urlHash', '==', urlHash).get();
+    if (!duplicateClaim.empty) throw new functions.https.HttpsError('already-exists', 'Post ini sudah diklaim.');
+
+    await db.collection('socialClaims').add({
+        uid: context.auth.uid,
+        platform,
+        postUrl,
+        urlHash,
+        status: 'pending_review',
+        submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+        month: month,
+        bonusAwarded: 5000
+    });
+    
+    return { success: true };
+});
+
+// 5. reviewSocialClaim
+exports.reviewSocialClaim = functions.https.onCall(async (data, context) => {
+    if (!context.auth || !context.auth.token.admin) throw new functions.https.HttpsError('permission-denied', 'Hanya admin.');
+    const { claimId, action, rejectionReason } = data;
+    
+    const claimRef = db.collection('socialClaims').doc(claimId);
+    const claimDoc = await claimRef.get();
+    if (action === 'approve') {
+        const batch = db.batch();
+        batch.update(claimRef, { status: 'approved', reviewedAt: admin.firestore.FieldValue.serverTimestamp(), reviewedBy: context.auth.uid });
+        batch.update(db.collection('users').doc(claimDoc.data().uid), {
+            creditBalance: admin.firestore.FieldValue.increment(5000),
+            totalCreditsEarnedSocial: admin.firestore.FieldValue.increment(5000)
+        });
+        await batch.commit();
+    } else {
+        await claimRef.update({ status: 'rejected', reviewedAt: admin.firestore.FieldValue.serverTimestamp(), reviewedBy: context.auth.uid, rejectionReason });
+    }
+    return { success: true };
+});
+
+// 6. getReferralStats
 exports.getReferralStats = functions.https.onCall(async (data, context) => {
     if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Harap login.');
     const userDoc = await db.collection('users').doc(context.auth.uid).get();
@@ -144,5 +209,20 @@ exports.getReferralStats = functions.https.onCall(async (data, context) => {
         referralCode: userData.referralCode,
         thisMonthCount: referralSnapshot.size,
         totalBonusEarned: userData.totalCreditsEarnedReferral
+    };
+});
+
+// 7. getSocialClaimHistory
+exports.getSocialClaimHistory = functions.https.onCall(async (data, context) => {
+    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Harap login.');
+    const month = new Date().toISOString().substring(0, 7);
+    const claims = await db.collection('socialClaims')
+        .where('uid', '==', context.auth.uid)
+        .where('month', '==', month)
+        .get();
+        
+    return {
+        thisMonthClaims: claims.size,
+        history: claims.docs.map(doc => doc.data())
     };
 });

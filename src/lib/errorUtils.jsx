@@ -2,7 +2,7 @@ import { toast } from 'react-hot-toast';
 
 export const checkResponse = async (res) => {
     if (!res.ok) {
-        let errorMsg = `Server returned ${res.status}`;
+        let errorMsg = `Server returned ${res.status} for ${res.url}`;
         try {
             const errorData = await res.json();
             if (errorData.message) errorMsg = errorData.message;
@@ -36,6 +36,7 @@ export const handleApiError = (error, defaultMessage = "Terjadi kesalahan.") => 
     // Comprehensive error categorization
     const errorStatus = error && typeof error === 'object' ? error.status : null;
     const errorStr = (message || "").toLowerCase();
+    
 
     if (errorStatus === 401 || errorStr.includes('unauthorized')) {
         message = 'Anda perlu masuk (login) untuk melanjutkan.';

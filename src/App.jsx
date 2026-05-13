@@ -293,10 +293,19 @@ const App = () => {
     }
   };
 
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
   const textAreaRef = useRef(null);
   const [audioUrl, setAudioUrl] = useState("");
   const [isTeaser, setIsTeaser] = useState(false);
+
+  const updateProgress = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      setDuration(audioRef.current.duration);
+    }
+  };
 
   const insertAtCursor = (insertion) => {
     const textarea = textAreaRef.current;
@@ -1169,91 +1178,78 @@ const App = () => {
                     <audio
                       ref={audioRef}
                       src={audioUrl}
-                      onEnded={() => setIsPlaying(false)}
+                      onEnded={() => {
+                        setIsPlaying(false);
+                        setCurrentTime(0);
+                      }}
+                      onTimeUpdate={updateProgress}
+                      onLoadedMetadata={updateProgress}
                       className="hidden"
                     />
                   )}
 
                   {isAudioVisible && (
-                    <div className="bg-dark rounded-xl p-4 border border-surface2 mb-4">
+                    <div className="bg-dark rounded-2xl p-6 border border-surface2 mb-4 shadow-xl">
                       <div className="flex items-center gap-4 mb-4">
                         <button
                           onClick={togglePlay}
-                          className="w-10 h-10 rounded-full bg-terracotta flex items-center justify-center text-white hover:bg-trdark cursor-pointer border-none flex-shrink-0"
+                          className="w-12 h-12 rounded-full bg-terracotta flex items-center justify-center text-white hover:bg-trdark cursor-pointer border-none flex-shrink-0 transition-transform hover:scale-105"
                         >
                           {isPlaying ? (
-                            <Pause className="w-5 h-5 fill-current" />
+                            <Pause className="w-6 h-6 fill-current" />
                           ) : (
-                            <Play className="w-5 h-5 fill-current ml-1" />
+                            <Play className="w-6 h-6 fill-current ml-1" />
                           )}
                         </button>
-                        <div className="flex-1">
-                          <div className="text-xs text-terracotta mb-1 font-bold">
-                            Audio Ready{" "}
-                            {isTeaser && (
-                              <span className="ml-2 bg-terracotta text-white px-2 py-0.5 rounded text-[10px] uppercase">
-                                Preview Mode
-                              </span>
-                            )}
-                          </div>
-                          <div className="h-1.5 bg-surface2 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-terracotta rounded-full transition-all"
-                              style={{
-                                width: isPlaying ? "100%" : "0%",
-                                transitionDuration: isPlaying ? "3s" : "0s",
-                              }}
-                            ></div>
-                          </div>
+
+                        <div className="flex-1 flex flex-col gap-2">
+                           <div className="flex justify-between text-xs text-text-muted font-mono">
+                            <span>{Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}</span>
+                            <span>{duration ? `${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}` : '0:00'}</span>
+                           </div>
+                           <div className="h-2 bg-surface2 rounded-full overflow-hidden cursor-pointer" onClick={(e) => {
+                             if(audioRef.current && duration) {
+                               const rect = e.currentTarget.getBoundingClientRect();
+                               const x = e.clientX - rect.left;
+                               const percentage = x / rect.width;
+                               audioRef.current.currentTime = percentage * duration;
+                             }
+                           }}>
+                             <div
+                               className="h-full bg-terracotta rounded-full transition-all duration-100 ease-linear"
+                               style={{
+                                 width: `${duration ? (currentTime / duration) * 100 : 0}%`,
+                               }}
+                             ></div>
+                           </div>
                         </div>
-                        {audioUrl && !isTeaser && (
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={handleShare}
-                              className="text-gray-400 hover:text-terracotta transition-colors cursor-pointer border-none bg-transparent p-0"
-                              title="Bagikan Audio"
-                            >
-                              <Share2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                        {audioUrl && isTeaser && (
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() =>
-                                alert(
-                                  "Berbagi dinonaktifkan untuk mode Preview.",
-                                )
-                              }
-                              className="text-gray-600 hover:text-terracotta transition-colors cursor-pointer border-none bg-transparent p-0"
-                              title="Berbagi dikunci"
-                            >
-                              <Share2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                      </div>
+                      <div className="flex items-center gap-3 mt-4 pt-4 border-t border-surface2">
+                        {audioUrl && !isTeaser ? (
+                            <>
+                              <a
+                                href={audioUrl}
+                                download="shinerva-audio.mp3"
+                                className="flex-1 bg-terracotta hover:bg-trdark text-white font-bold py-2.5 rounded-lg transition-all border-none flex items-center justify-center gap-2 text-sm cursor-pointer"
+                              >
+                                <Download className="w-4 h-4" /> Unduh
+                              </a>
+                              <button
+                                onClick={handleShare}
+                                className="bg-surface2 hover:bg-gray-700 text-text px-4 py-2.5 rounded-lg transition-all border border-gray-700 flex items-center justify-center gap-2 text-sm cursor-pointer"
+                              >
+                                <Share2 className="w-4 h-4" /> Share
+                              </button>
+                            </>
+                        ) : (
+                           <button
+                            disabled
+                            className="w-full bg-surface2 text-text-muted font-bold py-3 rounded-lg flex items-center justify-center gap-2 text-sm cursor-not-allowed"
+                          >
+                             <Download className="w-4 h-4" /> Preview (Download Terkunci)
+                          </button>
                         )}
                       </div>
-                      {audioUrl && !isTeaser && (
-                          <a
-                            href={audioUrl}
-                            download="shinerva-audio.mp3"
-                            className="w-full bg-surface2 hover:bg-gray-700 text-white font-bold py-3 rounded-lg transition-all border border-gray-700 flex items-center justify-center gap-2 text-sm cursor-pointer"
-                          >
-                            <Download className="w-4 h-4" /> Unduh Audio
-                          </a>
-                        )}
-                      {audioUrl && isTeaser && (
-                        <button
-                          onClick={() =>
-                            alert(
-                              "Download dinonaktifkan untuk Preview Suara Studio. Upgrade ke paket Bisnis untuk mengunduh.",
-                            )
-                          }
-                          className="w-full bg-dark border border-surface2 text-gray-600 font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm cursor-not-allowed"
-                        >
-                          <Download className="w-4 h-4" /> Unduh Audio (Terkunci)
-                        </button>
-                      )}
                     </div>
                   )}
 
@@ -2012,51 +2008,53 @@ const App = () => {
 
       {/* Social Bonus Modal */}
       {showSocialModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowSocialModal(false)}
           ></div>
-          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-md relative z-10 shadow-2xl mx-4">
+          <div className="bg-surface border border-surface2 p-6 md:p-8 rounded-3xl w-full max-w-lg relative z-10 shadow-2xl">
             <button
               onClick={() => setShowSocialModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
             >
               <X className="w-5 h-5" />
             </button>
-            <div className="text-center mb-8">
-              <div className="w-12 h-12 rounded bg-terracotta/20 flex items-center justify-center mx-auto mb-4">
-                <Share2 className="w-6 h-6 text-terracotta" />
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-2xl bg-terracotta/10 flex items-center justify-center mx-auto mb-4 border border-terracotta/20">
+                <Share2 className="w-8 h-8 text-terracotta" />
               </div>
-              <h2 className="text-2xl font-black">
+              <h2 className="text-2xl font-black text-white">
                 Klaim Extra 30.000 Kredit!
               </h2>
-              <p className="text-gray-400 text-sm mt-2">
-                Dapatkan ~20 menit audio tambahan gratis! Bagikan audio buatanmu
-                di TikTok atau Instagram Reels, tag @shinerva.id, dan paste linknya
-                di bawah.
+              <p className="text-gray-400 text-sm mt-3 leading-relaxed">
+                Dapatkan bonus karakter untuk membuat konten lebih banyak! <br/>
+                1. Bagikan hasil audio ke <b>TikTok / Reels / Shorts</b>.<br/>
+                2. Tag akun kami <b>@shinerva.id</b>.<br/>
+                3. Pastikan post tidak di-private.<br/>
+                4. Masukkan link postingan di bawah.
               </p>
             </div>
             <form onSubmit={handleSocialSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold text-gray-400 mb-2">
-                  Link Postingan
+                  Link Postingan (TikTok/IG/FB/X)
                 </label>
                 <input
                   type="url"
                   required
                   value={socialUrl}
                   onChange={(e) => setSocialUrl(e.target.value)}
-                  className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta outline-none"
-                  placeholder="https://tiktok.com/@kamu/video/..."
+                  className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta outline-none transition-all placeholder:text-gray-600"
+                  placeholder="https://tiktok.com/@username/video/..."
                 />
               </div>
               <button
                 type="submit"
                 disabled={authLoading}
-                className="w-full bg-terracotta hover:bg-trdark text-white py-3 my-2 rounded-xl font-bold cursor-pointer border-none flex justify-center items-center transition-opacity disabled:opacity-75 disabled:cursor-not-allowed"
+                className="w-full bg-terracotta hover:bg-trdark text-white py-4 mt-2 rounded-xl font-black cursor-pointer border-none flex justify-center items-center transition-all disabled:opacity-75 disabled:cursor-not-allowed shadow-lg shadow-terracotta/10"
               >
-                {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Link"}
+                {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Link Postingan"}
               </button>
             </form>
           </div>

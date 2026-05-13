@@ -2,48 +2,76 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helpers
+    // --- Helpers ---
     function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return request.auth.token.email_verified == true; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['email', 'emailVerified', 'creditBalance', 'createdAt']) &&
-             data.email is string && data.email.size() <= 256 &&
+      return data.email is string && data.email.size() <= 256 &&
              data.emailVerified is bool &&
-             data.creditBalance is number && data.creditBalance >= 0 &&
-             data.createdAt is timestamp;
+             data.creditBalance is number && data.creditBalance >= 0;
     }
 
-    function isValidTTSGen(data) {
-      return data.keys().hasAll(['uid', 'text', 'voiceModel', 'charCount', 'createdAt', 'audioUrl']) &&
-             data.uid is string && data.uid.size() <= 128 &&
-             data.text is string && data.text.size() <= 10000 &&
-             data.voiceModel is string && data.voiceModel.size() <= 128 &&
-             data.charCount is number && data.charCount >= 0 &&
-             data.createdAt is timestamp &&
-             data.audioUrl is string && data.audioUrl.size() <= 2048;
+    function isValidReferral(data) {
+      return data.referrerUid is string && data.refereeUid is string &&
+             data.status in ['pending', 'completed', 'flagged', 'rejected', 'limit_reached'] &&
+             data.bonusAwarded is number && data.bonusAwarded >= 0;
     }
 
+    function isValidSocialClaim(data) {
+      return data.uid is string && data.platform in ['instagram', 'tiktok'] &&
+             data.status in ['pending_review', 'approved', 'rejected'] &&
+             data.bonusAwarded is number && data.bonusAwarded >= 0;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // --- Global Safety Net ---
     match /{document=**} {
       allow read, write: if false;
     }
 
+    // --- Collections ---
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+      allow read: if isSignedIn() && request.auth.uid == userId;
       
-      // Update validation
-      allow update: if isSignedIn() && isValidUser(incoming()) && request.auth.uid == userId &&
-                      incoming().createdAt == existing().createdAt;
+      // Update logic: users can update specific fields like creditBalance only via cloud functions
+      // Only owner can update profile fields, excluding read-only fields
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) &&
+                      incoming().createdAt == existing().createdAt &&
+                      incoming().referralCode == existing().referralCode;
 
       match /tts_generations/{genId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(genId);
-        
-        // Creation validation
-        allow create: if isSignedIn() && isValidTTSGen(incoming()) && incoming().uid == userId &&
-                        incoming().createdAt == request.time;
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isSignedIn() && request.auth.uid == userId && incoming().uid == userId;
       }
+    }
+
+    match /referrals/{referralId} {
+      allow read: if isSignedIn() && (resource.data.referrerUid == request.auth.uid || resource.data.refereeUid == request.auth.uid);
+      allow create: if isSignedIn() && incoming().referrerUid == request.auth.uid; // Basic check
+    }
+
+    match /socialClaims/{claimId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && incoming().uid == request.auth.uid && isValidSocialClaim(incoming());
+      
+      // Admin update only
+      allow update: if isAdmin() && incoming().diff(existing()).affectedKeys().hasAny(['status', 'reviewedAt', 'reviewedBy', 'rejectionReason']);
+    }
+
+    match /creditTransactions/{txId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+    
+    match /admins/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false; // Only via console/CLI
     }
   }
 }
