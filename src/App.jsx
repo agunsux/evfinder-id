@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Toaster, toast } from 'react-hot-toast';
+import { auth } from './lib/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import {
   Waves,
   ChevronDown,
@@ -123,12 +126,10 @@ const VOICES = {
   ]
 };
 
+import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
 
 const App = () => {
-  const maxChars = 5000;
-  // ... rest of the component
-
   const [text, setText] = useState("");
   const [voice, setVoice] = useState("id-ID-Wavenet-A");
   const [speed, setSpeed] = useState(1);
@@ -609,6 +610,29 @@ const App = () => {
     });
   };
 
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!authData.email) {
+      toast.error('Masukkan email Anda');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, authData.email);
+      toast.success('Email reset password telah dikirim');
+      switchAuthMode('login');
+    } catch (err) {
+      console.error(err);
+      if (err.code === 'auth/user-not-found') {
+        toast.error('Email tidak terdaftar');
+      } else {
+        toast.error('Gagal mengirim email reset password');
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const handleSocialSubmit = async (e) => {
     e.preventDefault();
     if (!socialUrl) return;
@@ -636,6 +660,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <Toaster position="top-right" />
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 glass-panel border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -880,13 +905,13 @@ const App = () => {
                     </label>
                     <div className="flex flex-col items-end">
                       <span
-                        className={`text-xs font-mono ${text.length > maxChars * 0.9 ? "text-terracotta" : "text-text-muted"}`}
+                        className={`text-xs font-mono ${text.length > MAX_CHARS * 0.9 ? "text-terracotta" : "text-text-muted"}`}
                       >
-                        {text.length} / {maxChars}
+                        {text.length} / {MAX_CHARS}
                       </span>
-                      {text.length > maxChars * 0.9 && (
+                      {text.length > MAX_CHARS * 0.9 && (
                         <span className="text-[10px] text-terracotta font-bold mt-1">
-                          {text.length >= maxChars ? "Batas Tercapai!" : "Hampir Mencapai Batas!"}
+                          {text.length >= MAX_CHARS ? "Batas Tercapai!" : "Hampir Mencapai Batas!"}
                         </span>
                       )}
                     </div>
@@ -895,7 +920,7 @@ const App = () => {
                     ref={textAreaRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className={`w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${text.length > maxChars * 0.9 ? "border-terracotta ring-1 ring-terracotta" : ""}`}
+                    className={`w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${text.length > MAX_CHARS * 0.9 ? "border-terracotta ring-1 ring-terracotta" : ""}`}
                     placeholder="Ketik naskah Anda di sini..."
                   />
                 </div>
@@ -1636,7 +1661,7 @@ const App = () => {
               </p>
             </div>
 
-            <form onSubmit={submitAuth} className="space-y-4">
+            <form onSubmit={authMode === 'forgot-password' ? handleResetPassword : submitAuth} className="space-y-4">
               {authMode === "whatsapp" && (
                 <>
                   <div>
@@ -1673,7 +1698,31 @@ const App = () => {
                   )}
                 </>
               )}
-              {authMode !== "whatsapp" && (
+              {authMode === "forgot-password" && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div className="bg-surface2/50 p-4 rounded-xl border border-surface2 mb-4">
+                    <p className="text-xs text-text-muted">
+                      Masukkan email Anda yang terdaftar. Kami akan mengirimkan tautan untuk mengatur ulang password Anda.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-400 mb-2">
+                      Alamat Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={authData.email}
+                      onChange={(e) =>
+                        setAuthData({ ...authData, email: e.target.value })
+                      }
+                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta transition-all"
+                      placeholder="anda@email.com"
+                    />
+                  </div>
+                </div>
+              )}
+              {authMode !== "whatsapp" && authMode !== "forgot-password" && (
                 <>
                   {authMode === "signup" && (
                     <>
@@ -1710,9 +1759,20 @@ const App = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
-                      Password
-                    </label>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-bold text-gray-400">
+                        Password
+                      </label>
+                      {authMode === "login" && (
+                        <button
+                          type="button"
+                          onClick={() => switchAuthMode("forgot-password")}
+                          className="text-xs text-terracotta hover:text-white font-bold cursor-pointer bg-transparent border-none p-0"
+                        >
+                          Lupa Password?
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="password"
                       required
@@ -1792,13 +1852,15 @@ const App = () => {
                   "Masuk"
                 ) : authMode === "whatsapp" ? (
                   otpSent ? "Verifikasi OTP" : "Kirim OTP"
+                ) : authMode === "forgot-password" ? (
+                  "Kirim Email Reset"
                 ) : (
                   "Daftar Gratis"
                 )}
               </button>
 
               <div className="flex flex-col gap-2 mt-4">
-                {authMode !== "whatsapp" && (
+                {authMode === "login" && (
                   <button
                     type="button"
                     onClick={() => switchAuthMode("whatsapp")}
@@ -1810,19 +1872,30 @@ const App = () => {
               </div>
 
               <div className="text-center text-sm text-gray-400 mt-4">
-                <span>
-                  {authMode === "login" || authMode === "whatsapp"
-                    ? "Belum punya akun? "
-                    : "Sudah punya akun? "}
-                </span>
-                <span
-                  onClick={() =>
-                    switchAuthMode(authMode === "signup" ? "login" : "signup")
-                  }
-                  className="text-terracotta hover:text-white font-bold cursor-pointer"
-                >
-                  {authMode === "login" || authMode === "whatsapp" ? "Daftar sekarang" : "Masuk dengan Email"}
-                </span>
+                {authMode === 'forgot-password' ? (
+                  <span
+                    onClick={() => switchAuthMode("login")}
+                    className="text-terracotta hover:text-white font-bold cursor-pointer"
+                  >
+                    &larr; Kembali ke Login
+                  </span>
+                ) : (
+                  <>
+                    <span>
+                      {authMode === "login" || authMode === "whatsapp"
+                        ? "Belum punya akun? "
+                        : "Sudah punya akun? "}
+                    </span>
+                    <span
+                      onClick={() =>
+                        switchAuthMode(authMode === "signup" ? "login" : "signup")
+                      }
+                      className="text-terracotta hover:text-white font-bold cursor-pointer"
+                    >
+                      {authMode === "login" || authMode === "whatsapp" ? "Daftar sekarang" : "Masuk dengan Email"}
+                    </span>
+                  </>
+                )}
               </div>
             </form>
           </div>
