@@ -5,6 +5,11 @@ import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import admin from 'firebase-admin';
+
+// Initialize Firebase Admin (assuming credentials are set in environment)
+admin.initializeApp();
+const authAdmin = admin.auth();
 
 dotenv.config();
 
@@ -82,23 +87,20 @@ async function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // --- MOCK AUTH MIDDLEWARE ---
-  const authenticate = (req, res, next) => {
-    console.log('[DEBUG] Auth middleware for:', req.url);
-    // We expect the frontend to send user's email in 'Authorization' or a custom header 'x-user-email' to identify them safely in this mock environment.
-    const email = req.headers['x-user-email'] || req.body.email; // For simplify
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.email === email) {
-        foundUser = u;
-        break;
-      }
+  const authenticate = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-    if (foundUser) {
-      req.user = foundUser;
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+      const decodedToken = await authAdmin.verifyIdToken(idToken);
+      req.user = { uid: decodedToken.uid, email: decodedToken.email };
+      next();
+    } catch (error) {
+      console.error('Error verifying Firebase ID token:', error);
+      res.status(401).json({ error: 'Unauthorized' });
     }
-    // We let it pass even if not found for public routes, or enforce later
-    next();
   };
 
   // --- API ROUTES ---

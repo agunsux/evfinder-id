@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'emailVerified', 'creditBalance', 'createdAt']) &&
+             data.email is string && data.email.size() <= 256 &&
+             data.emailVerified is bool &&
+             data.creditBalance is number && data.creditBalance >= 0 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidTTSGen(data) {
+      return data.keys().hasAll(['uid', 'text', 'voiceModel', 'charCount', 'createdAt', 'audioUrl']) &&
+             data.uid is string && data.uid.size() <= 128 &&
+             data.text is string && data.text.size() <= 10000 &&
+             data.voiceModel is string && data.voiceModel.size() <= 128 &&
+             data.charCount is number && data.charCount >= 0 &&
+             data.createdAt is timestamp &&
+             data.audioUrl is string && data.audioUrl.size() <= 2048;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+      
+      // Update validation
+      allow update: if isSignedIn() && isValidUser(incoming()) && request.auth.uid == userId &&
+                      incoming().createdAt == existing().createdAt;
+
+      match /tts_generations/{genId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(genId);
+        
+        // Creation validation
+        allow create: if isSignedIn() && isValidTTSGen(incoming()) && incoming().uid == userId &&
+                        incoming().createdAt == request.time;
+      }
+    }
+  }
+}

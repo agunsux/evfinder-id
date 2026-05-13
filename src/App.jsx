@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Toaster, toast } from 'react-hot-toast';
+import { handleApiError } from './lib/errorUtils.jsx';
 import { auth } from './lib/firebase';
 import { sendPasswordResetEmail, sendEmailVerification, signOut } from 'firebase/auth';
 import {
@@ -208,7 +209,7 @@ const App = () => {
       const data = await res.json();
       if (data.history) setHistory(data.history);
     } catch (e) {
-      console.error("Error fetching history:", e);
+      handleApiError(e, "Gagal memuat riwayat.");
     } finally {
       setHistoryLoading(false);
     }
@@ -223,7 +224,7 @@ const App = () => {
       const data = await res.json();
       if (data.tiers) setVoiceConfig(data);
     } catch (e) {
-      console.error("Error fetching voice config:", e);
+      handleApiError(e, "Gagal memuat konfigurasi suara.");
     } finally {
       setVoiceConfigLoading(false);
     }
@@ -246,8 +247,7 @@ const App = () => {
         alert("Konfigurasi berhasil disimpan!");
       }
     } catch (e) {
-      console.error("Error saving config:", e);
-      alert("Gagal menyimpan konfigurasi.");
+      handleApiError(e, "Gagal menyimpan konfigurasi.");
     }
   };
 
@@ -288,8 +288,7 @@ const App = () => {
         alert(data.error);
       }
     } catch (err) {
-      console.error(err);
-      alert("Gagal memperbarui panduan pengucapan.");
+      handleApiError(err, "Gagal memperbarui panduan pengucapan.");
     }
   };
 
@@ -423,9 +422,8 @@ const App = () => {
         throw new Error("No audio content returned");
       }
     } catch (err) {
-      console.error("TTS Generation Error:", err);
       setStatus("idle");
-      alert(err.message || "Gagal menghasilkan suara.");
+      handleApiError(err, "Gagal menghasilkan suara.");
     }
   };
 
@@ -591,12 +589,11 @@ const App = () => {
           setUser(data.user);
           setIsAuthOpen(false);
         } else {
-          toast.error(getFriendlyErrorMessage(data.message || "Unknown error"));
+          handleApiError(data.message || "Error saat masuk/daftar.");
         }
       }
     } catch (err) {
-      console.error(err);
-      toast.error("Terjadi kesalahan koneksi server.");
+      handleApiError(err, "Terjadi kesalahan saat autentikasi.");
     } finally {
       setAuthLoading(false);
     }
@@ -639,8 +636,7 @@ const App = () => {
       toast.success('Email reset password telah dikirim');
       switchAuthMode('login');
     } catch (err) {
-      console.error(err);
-      toast.error(getFriendlyErrorMessage(err.code || err.message));
+      handleApiError(err, 'Gagal mengirim email reset password.');
     } finally {
       setAuthLoading(false);
     }
@@ -653,7 +649,7 @@ const App = () => {
             await sendEmailVerification(auth.currentUser);
             toast.success('Email verifikasi telah dikirim ulang.');
         } catch (err) {
-            toast.error('Gagal mengirim email verifikasi.');
+            handleApiError(err, 'Gagal mengirim email verifikasi.');
         } finally {
             setAuthLoading(false);
         }
@@ -666,8 +662,7 @@ const App = () => {
       setUser(null);
       toast.success('Berhasil keluar.');
     } catch (err) {
-      console.error(err);
-      toast.error('Gagal keluar.');
+      handleApiError(err, 'Gagal keluar.');
     }
   };
 
@@ -693,7 +688,7 @@ const App = () => {
         toast.error(data.error);
       }
     } catch (err) {
-      toast.error("Error submitting social share");
+      handleApiError(err, "Gagal mengirim data.");
     } finally {
       setAuthLoading(false);
     }
@@ -1142,7 +1137,7 @@ const App = () => {
 
                   {isAudioVisible && (
                     <div className="bg-dark rounded-xl p-4 border border-surface2 mb-4">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 mb-4">
                         <button
                           onClick={togglePlay}
                           className="w-10 h-10 rounded-full bg-terracotta flex items-center justify-center text-white hover:bg-trdark cursor-pointer border-none flex-shrink-0"
@@ -1181,13 +1176,6 @@ const App = () => {
                             >
                               <Share2 className="w-4 h-4" />
                             </button>
-                            <a
-                              href={audioUrl}
-                              download="shinerva-audio.mp3"
-                              className="text-gray-400 hover:text-white transition-colors cursor-pointer"
-                            >
-                              <Download className="w-4 h-4" />
-                            </a>
                           </div>
                         )}
                         {audioUrl && isTeaser && (
@@ -1203,20 +1191,30 @@ const App = () => {
                             >
                               <Share2 className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() =>
-                                alert(
-                                  "Download dinonaktifkan untuk Preview Suara Studio. Upgrade ke paket Bisnis untuk mengunduh.",
-                                )
-                              }
-                              className="text-gray-600 hover:text-terracotta transition-colors cursor-pointer border-none bg-transparent"
-                              title="Download dikunci di mode Preview"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
                           </div>
                         )}
                       </div>
+                      {audioUrl && !isTeaser && (
+                          <a
+                            href={audioUrl}
+                            download="shinerva-audio.mp3"
+                            className="w-full bg-surface2 hover:bg-gray-700 text-white font-bold py-3 rounded-lg transition-all border border-gray-700 flex items-center justify-center gap-2 text-sm cursor-pointer"
+                          >
+                            <Download className="w-4 h-4" /> Unduh Audio
+                          </a>
+                        )}
+                      {audioUrl && isTeaser && (
+                        <button
+                          onClick={() =>
+                            alert(
+                              "Download dinonaktifkan untuk Preview Suara Studio. Upgrade ke paket Bisnis untuk mengunduh.",
+                            )
+                          }
+                          className="w-full bg-dark border border-surface2 text-gray-600 font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm cursor-not-allowed"
+                        >
+                          <Download className="w-4 h-4" /> Unduh Audio (Terkunci)
+                        </button>
+                      )}
                     </div>
                   )}
 
