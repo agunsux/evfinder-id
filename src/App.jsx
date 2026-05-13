@@ -575,23 +575,12 @@ const App = () => {
           setUser(data.user);
           setIsAuthOpen(false);
         } else {
-          if (data.message && (data.message.includes("already in use") || data.message.includes("sudah terdaftar"))) {
-            setNotification("Email Anda sudah terdaftar. Silakan log in.");
-            setTimeout(() => setNotification(null), 3000);
-          } else if (data.message && (data.message.includes("user-not-found") || data.message.includes("tidak terdaftar"))) {
-            setNotification("Email belum terdaftar. Silakan daftar dahulu.");
-            setTimeout(() => setNotification(null), 3000);
-          } else if (data.message && (data.message.includes("wrong-password") || data.message.includes("salah"))) {
-            setNotification("Password salah.");
-            setTimeout(() => setNotification(null), 3000);
-          } else {
-            alert("Auth error: " + (data.message || "Unknown error"));
-          }
+          toast.error(getFriendlyErrorMessage(data.message || "Unknown error"));
         }
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan koneksi server.");
+      toast.error("Terjadi kesalahan koneksi server.");
     } finally {
       setAuthLoading(false);
     }
@@ -610,6 +599,17 @@ const App = () => {
     });
   };
 
+  const getFriendlyErrorMessage = (errorCodeOrMessage) => {
+    if (errorCodeOrMessage.includes('auth/invalid-email')) return 'Format email tidak valid.';
+    if (errorCodeOrMessage.includes('auth/user-not-found') || errorCodeOrMessage.includes("tidak terdaftar")) return 'Email tidak terdaftar.';
+    if (errorCodeOrMessage.includes('auth/wrong-password') || errorCodeOrMessage.includes("salah")) return 'Password salah.';
+    if (errorCodeOrMessage.includes('auth/too-many-requests')) return 'Terlalu banyak permintaan. Silakan coba lagi nanti.';
+    if (errorCodeOrMessage.includes('auth/network-request-failed')) return 'Koneksi internet bermasalah.';
+    if (errorCodeOrMessage.includes('auth/popup-closed-by-user')) return 'Proses login dibatalkan.';
+    if (errorCodeOrMessage.includes('auth/email-already-in-use') || errorCodeOrMessage.includes("already in use") || errorCodeOrMessage.includes("sudah terdaftar")) return 'This email is already registered. Please log in instead.';
+    return 'Terjadi kesalahan: ' + errorCodeOrMessage;
+  };
+
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!authData.email) {
@@ -623,11 +623,7 @@ const App = () => {
       switchAuthMode('login');
     } catch (err) {
       console.error(err);
-      if (err.code === 'auth/user-not-found') {
-        toast.error('Email tidak terdaftar');
-      } else {
-        toast.error('Gagal mengirim email reset password');
-      }
+      toast.error(getFriendlyErrorMessage(err.code || err.message));
     } finally {
       setAuthLoading(false);
     }
