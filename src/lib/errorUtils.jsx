@@ -37,6 +37,7 @@ export const handleApiError = (error, defaultMessage = "Terjadi kesalahan.") => 
     const errorStatus = error && typeof error === 'object' ? error.status : null;
     const errorStr = (message || "").toLowerCase();
     
+    console.error("handleApiError: Message:", message, "Error Status:", errorStatus, "Error Object:", error);
 
     if (errorStatus === 401 || errorStr.includes('unauthorized')) {
         message = 'Anda perlu masuk (login) untuk melanjutkan.';

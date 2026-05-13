@@ -197,7 +197,9 @@ const App = () => {
       });
       const data = await checkResponse(res);
       if (data.user) setUser(data.user);
-    } catch (e) {}
+    } catch (e) {
+      console.warn("refreshUser failed, ignoring:", e);
+    }
   };
 
   const fetchHistory = async () => {
@@ -217,6 +219,7 @@ const App = () => {
   };
 
   const fetchVoiceConfig = async () => {
+    if (!user) return;
     setVoiceConfigLoading(true);
     try {
       const res = await fetch("/api/admin/voice-config", {
@@ -225,7 +228,8 @@ const App = () => {
       const data = await checkResponse(res);
       if (data.tiers) setVoiceConfig(data);
     } catch (e) {
-      handleApiError(e, "Gagal memuat konfigurasi suara.");
+      // Ignored for non-admin users or unauthorized attempts
+      console.warn("fetchVoiceConfig skipping or failed:", e);
     } finally {
       setVoiceConfigLoading(false);
     }
