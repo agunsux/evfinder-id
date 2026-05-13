@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Toaster, toast } from 'react-hot-toast';
-import { handleApiError } from './lib/errorUtils.jsx';
+import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
 import { auth } from './lib/firebase';
-import { sendPasswordResetEmail, sendEmailVerification, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, sendEmailVerification, signOut } from 'firebase/auth';
 import {
   Waves,
   ChevronDown,
@@ -154,6 +154,7 @@ const App = () => {
     refCode: "",
   });
   const [authLoading, setAuthLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
 
@@ -194,7 +195,7 @@ const App = () => {
       const res = await fetch("/api/user/me", {
         headers: { "x-user-email": user.email },
       });
-      const data = await res.json();
+      const data = await checkResponse(res);
       if (data.user) setUser(data.user);
     } catch (e) {}
   };
@@ -206,7 +207,7 @@ const App = () => {
       const res = await fetch("/api/user/history", {
         headers: { "x-user-email": user.email },
       });
-      const data = await res.json();
+      const data = await checkResponse(res);
       if (data.history) setHistory(data.history);
     } catch (e) {
       handleApiError(e, "Gagal memuat riwayat.");
@@ -221,7 +222,7 @@ const App = () => {
       const res = await fetch("/api/admin/voice-config", {
         headers: { "x-user-email": user?.email || "" },
       });
-      const data = await res.json();
+      const data = await checkResponse(res);
       if (data.tiers) setVoiceConfig(data);
     } catch (e) {
       handleApiError(e, "Gagal memuat konfigurasi suara.");
@@ -241,7 +242,7 @@ const App = () => {
         },
         body: JSON.stringify({ tiers: newTiers, limits: newLimits }),
       });
-      const data = await res.json();
+      const data = await checkResponse(res);
       if (data.success) {
         setVoiceConfig(data.voiceConfig);
         alert("Konfigurasi berhasil disimpan!");
@@ -281,7 +282,7 @@ const App = () => {
         },
         body: JSON.stringify({ word, pronunciation }),
       });
-      const data = await res.json();
+      const data = await checkResponse(res);
       if (data.success) {
         setUser({ ...user, pronunciations: data.pronunciations });
       } else {
@@ -542,6 +543,37 @@ const App = () => {
     // document.getElementById('studio').scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: user.email,
+          name: user.displayName,
+          googleId: user.uid
+        }),
+      });
+
+      const data = await checkResponse(res);
+      if (data.success) {
+        setUser(data.user);
+        setIsAuthOpen(false);
+      } else {
+        handleApiError(data.message || "Error saat login dengan Google.");
+      }
+    } catch (err) {
+      handleApiError(err, "Gagal login dengan Google.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const submitAuth = async (e) => {
     e.preventDefault();
     setAuthLoading(true);
@@ -554,7 +586,7 @@ const App = () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ whatsapp: authData.whatsapp }),
           });
-          const data = await res.json();
+          const data = await checkResponse(res);
           if (data.success) {
             setOtpSent(true);
             alert(`OTP telah dikirim ke WhatsApp Anda (mock: ${data.mockOtp})`); // Highlight mock OTP for development
@@ -568,7 +600,7 @@ const App = () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ whatsapp: authData.whatsapp, otp: otpCode }),
           });
-          const data = await res.json();
+          const data = await checkResponse(res);
           if (data.success) {
             setUser(data.user);
             setIsAuthOpen(false);
@@ -584,7 +616,8 @@ const App = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(authData),
         });
-        const data = await res.json();
+
+        const data = await checkResponse(res);
         if (data.success) {
           setUser(data.user);
           setIsAuthOpen(false);
@@ -679,7 +712,7 @@ const App = () => {
         },
         body: JSON.stringify({ url: socialUrl }),
       });
-      const data = await res.json();
+      const data = await checkResponse(res);
       if (data.success) {
         toast.success("Tautan berhasil dikirim. Menunggu verifikasi admin!");
         setShowSocialModal(false);
@@ -702,7 +735,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-24 items-center">
             <div className="flex items-center gap-4">
-              <ShinervaLogo className="w-12 h-12" />
+              <img src="/shinerva.svg" className="w-12 h-12" alt="Logo" />
               <span className="font-black text-3xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer">
                 Shinerva <span className="text-terracotta">TTS</span>
               </span>
@@ -1593,7 +1626,7 @@ const App = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center gap-4 mb-6">
-                  <ShinervaLogo className="w-12 h-12" />
+                  <img src="/shinerva.svg" className="w-12 h-12" alt="Logo" />
                   <span className="font-black text-3xl tracking-tight text-text">
                     Shinerva<span className="text-terracotta">.id</span>
                   </span>
@@ -1709,7 +1742,7 @@ const App = () => {
               <X className="w-5 h-5" />
             </button>
             <div className="text-center mb-8">
-              <ShinervaLogo className="w-16 h-16 text-terracotta mx-auto mb-4" />
+              <img src="/shinerva.svg" className="w-16 h-16 mx-auto mb-4" alt="Logo" />
               <h2 className="text-2xl font-black">
                 {authMode === "login" ? "Masuk ke SHINERVA" : authMode === "whatsapp" ? "Masuk dengan WhatsApp" : "Daftar Akun Baru"}
               </h2>
@@ -1920,13 +1953,23 @@ const App = () => {
 
               <div className="flex flex-col gap-2 mt-4">
                 {authMode === "login" && (
-                  <button
-                    type="button"
-                    onClick={() => switchAuthMode("whatsapp")}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 my-2 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center"
-                  >
-                    Masuk dengan WhatsApp OTP
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                      disabled={googleLoading}
+                      className="w-full bg-white text-black hover:bg-gray-200 py-3 my-2 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center gap-2"
+                    >
+                      {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Masuk dengan Google</>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => switchAuthMode("whatsapp")}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white py-3 my-2 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center"
+                    >
+                      Masuk dengan WhatsApp OTP
+                    </button>
+                  </>
                 )}
               </div>
 
