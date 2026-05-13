@@ -242,6 +242,51 @@ async function createServer() {
     res.json({ success: true, message: 'Login successful', user: foundUser });
   });
 
+  app.post('/api/auth/google', (req, res) => {
+    const { email, name, googleId } = req.body;
+    
+    // Find or create
+    let foundUser = null;
+    for (const [id, u] of users.entries()) {
+      if (u.email === email) {
+        foundUser = u;
+        break;
+      }
+    }
+    
+    if (!foundUser) {
+      // Create new user (similar to signup)
+      foundUser = {
+        id: generateId(),
+        name,
+        email,
+        password: 'google-auth-' + generateId(), // Dummy password
+        whatsapp: '',
+        whatsapp_opted_in: false,
+        email_subscribed: true,
+        tier: 'FREE',
+        signup_date: Date.now(),
+        referral_code: generateRefCode(),
+        referred_by: null,
+        valid_referrals: 0,
+        has_received_referral_bonus: false,
+        social_bonus_status: 'none',
+        social_url: '',
+        signup_bonus_chars: 5000,
+        monthly_chars: 0,
+        earned_chars: 0,
+        used_chars: 0,
+        generation_count: 0,
+        pronunciations: {},
+        history: []
+      };
+      users.set(foundUser.id, foundUser);
+      saveUsers();
+    }
+    
+    res.json({ success: true, message: 'Login successful', user: foundUser });
+  });
+
   app.get('/api/user/me', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ user: req.user });

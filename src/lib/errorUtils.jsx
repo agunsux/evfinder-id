@@ -34,12 +34,12 @@ export const handleApiError = (error, defaultMessage = "Terjadi kesalahan.") => 
     }
 
     // Comprehensive error categorization
-    const errorStatus = error.status;
-    const errorStr = message.toLowerCase();
+    const errorStatus = error && typeof error === 'object' ? error.status : null;
+    const errorStr = (message || "").toLowerCase();
 
     if (errorStatus === 401 || errorStr.includes('unauthorized')) {
-        message = 'Sesi Anda telah berakhir.';
-        suggestion = 'Silakan masuk kembali untuk melanjutkan.';
+        message = 'Anda perlu masuk (login) untuk melanjutkan.';
+        suggestion = 'Silakan masuk ke akun Anda terlebih dahulu.';
     } else if (errorStatus === 403 || errorStr.includes('forbidden')) {
         message = 'Anda tidak memiliki akses ke fitur ini.';
         suggestion = 'Silakan periksa langganan Anda atau hubungi support.';
@@ -79,8 +79,6 @@ export const handleApiError = (error, defaultMessage = "Terjadi kesalahan.") => 
         message = 'Email sudah terdaftar.';
         suggestion = 'Silakan login menggunakan email tersebut.';
     }
-
-    console.error("handleApiError:", error);
 
     toast.error(
         <div>

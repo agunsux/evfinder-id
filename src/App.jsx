@@ -546,9 +546,11 @@ const App = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     const provider = new GoogleAuthProvider();
+    console.log("Starting Google Sign-In...");
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      console.log("Google Sign-In Success:", user.email);
       
       const res = await fetch("/api/auth/google", {
         method: "POST",
@@ -560,7 +562,10 @@ const App = () => {
         }),
       });
 
+      console.log("API response status:", res.status);
       const data = await checkResponse(res);
+      console.log("API response data:", data);
+      
       if (data.success) {
         setUser(data.user);
         setIsAuthOpen(false);
@@ -568,6 +573,7 @@ const App = () => {
         handleApiError(data.message || "Error saat login dengan Google.");
       }
     } catch (err) {
+      console.error("Google Sign-In Error:", err);
       handleApiError(err, "Gagal login dengan Google.");
     } finally {
       setGoogleLoading(false);
