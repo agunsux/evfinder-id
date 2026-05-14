@@ -901,7 +901,11 @@ async function setupFrontend() {
 
 // --- DEBUG & HEALTH ---
 app.get("/api", (req, res) => {
-  res.json({ message: "Shinerva API is live", version: "1.0.0" });
+  res.json({ message: "Shinerva API is live", version: "1.0.1" });
+});
+
+app.get("/api/debug-path", (req, res) => {
+  res.json({ url: req.url, originalUrl: req.originalUrl, path: req.path });
 });
 
 app.get("/api/health", (req, res) => {
