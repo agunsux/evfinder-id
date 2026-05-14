@@ -165,6 +165,19 @@ const App = () => {
   const [authMode, setAuthMode] = useState("login"); // login, signup
   const [user, setUser] = useState(null);
 
+  const getRemainingCredits = () => {
+    if (!user) return 0;
+    return Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0));
+  };
+
+  const getVoiceType = (voiceId) => {
+    for (const group of Object.values(VOICES)) {
+      const v = group.find(i => i.id === voiceId);
+      if (v) return v.type;
+    }
+    return "Standard";
+  };
+
   const [authData, setAuthData] = useState({
     name: "",
     email: "",
@@ -194,8 +207,19 @@ const App = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const [isVoiceMgmtOpen, setIsVoiceMgmtOpen] = useState(false);
-  const [voiceConfig, setVoiceConfig] = useState({ tiers: {} });
+  const [voiceConfig, setVoiceConfig] = useState({ tiers: {}, limits: {} });
   const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
+
+  const currentMaxRequestChars = user?.tier === 'FREE' 
+    ? (voiceConfig.limits?.free_request_chars || 500)
+    : (voiceConfig.limits?.paid_request_chars || 5000);
+
+  const currentMultiplier = (voiceConfig.tiers && voiceConfig.tiers[getVoiceType(voice)]) || 1;
+  const estimatedCost = text.length * currentMultiplier;
+  const remainingCredits = getRemainingCredits();
+  const isCappedByQuota = remainingCredits > 0 && estimatedCost > remainingCredits;
+  const isCappedByRequest = text.length > currentMaxRequestChars;
+  const isNearLimit = text.length > currentMaxRequestChars * 0.9 || (remainingCredits > 0 && estimatedCost > remainingCredits * 0.9);
 
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
   const [billingCycle, setBillingCycle] = useState("monthly"); // monthly, yearly
@@ -943,12 +967,19 @@ const App = () => {
           <h3 className="text-xs font-black text-terracotta uppercase mb-2">Pesan Kesalahan:</h3>
           <p className="text-xs font-mono text-text-muted break-all mb-4">{initError || "Firebase configuration missing or project mismatch."}</p>
           
-          <h3 className="text-xs font-black text-blue-400 uppercase mb-2 border-t border-surface/50 pt-4">Saran Perbaikan:</h3>
+          <div className="mt-4 p-3 bg-black/20 rounded border border-white/5 font-mono text-[10px] space-y-1">
+            <div className="flex justify-between"><span className="text-gray-500">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">API Key:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_API_KEY ? (import.meta.env.VITE_FIREBASE_API_KEY.slice(0, 6) + "...") : "Missing"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">App ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_APP_ID ? "Present" : "Missing"}</span></div>
+          </div>
+
+          <h3 className="text-xs font-black text-blue-400 uppercase mb-2 border-t border-surface/50 pt-4 mt-4">Saran Perbaikan:</h3>
           <ul className="text-xs text-text-muted list-disc pl-4 space-y-2">
             <li>Buka <b>Settings</b> &gt; <b>Secrets</b>.</li>
             <li>Pastikan <b>VITE_FIREBASE_API_KEY</b> berisi API Key yang valid (diawali AIza...).</li>
             <li>Pastikan <b>VITE_FIREBASE_PROJECT_ID</b> bernilai <code>practical-gecko-476621-q4</code>.</li>
-            <li>Jika sudah benar, coba <b>Restart Dev Server</b>.</li>
+            <li>Jika Anda meremote project lain, pastikan kedua nilai tersebut berasal dari project yang sama di Firebase Console.</li>
+            <li>Hapus tanda kutip jika ada di nilai secret tersebut.</li>
           </ul>
         </div>
         <button 
@@ -1297,14 +1328,26 @@ const App = () => {
                       Editor Naskah
                     </label>
                     <div className="flex flex-col items-end">
-                      <span
-                        className={`text-xs font-mono ${text.length > MAX_CHARS * 0.9 ? "text-terracotta" : "text-text-muted"}`}
-                      >
-                        {text.length} / {MAX_CHARS}
-                      </span>
-                      {text.length > MAX_CHARS * 0.9 && (
+                      <div className="flex items-center gap-2">
+                        {estimatedCost > 0 && (
+                          <span className="text-[10px] font-bold text-text-muted bg-surface2 px-2 py-0.5 rounded">
+                            Beban: {estimatedCost.toLocaleString("id-ID")} Kredit
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs font-mono ${(isNearLimit || isCappedByRequest || isCappedByQuota) ? "text-terracotta" : "text-text-muted"}`}
+                        >
+                          {text.length} / {currentMaxRequestChars}
+                        </span>
+                      </div>
+                      {(isCappedByRequest || isCappedByQuota) && (
+                        <span className="text-[10px] text-terracotta font-bold mt-1 animate-pulse">
+                          {isCappedByRequest ? "Batas Request Tercapai!" : "Kredit Tidak Mencukupi!"}
+                        </span>
+                      )}
+                      {!isCappedByRequest && !isCappedByQuota && isNearLimit && (
                         <span className="text-[10px] text-terracotta font-bold mt-1">
-                          {text.length >= MAX_CHARS ? "Batas Tercapai!" : "Hampir Mencapai Batas!"}
+                          Hampir Mencapai Batas!
                         </span>
                       )}
                     </div>
@@ -1313,9 +1356,24 @@ const App = () => {
                     ref={textAreaRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className={`w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${text.length > MAX_CHARS * 0.9 ? "border-terracotta ring-1 ring-terracotta" : ""}`}
+                    className={`w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${(isNearLimit || isCappedByRequest || isCappedByQuota) ? "border-terracotta ring-1 ring-terracotta" : ""}`}
                     placeholder="Ketik naskah Anda di sini..."
                   />
+                  {user && (
+                    <div className="mt-2 flex justify-between items-center text-[10px] font-bold">
+                      <div className="flex items-center gap-1 text-text-muted">
+                        <span>Sisa Kredit:</span>
+                        <span className={remainingCredits < 1000 ? "text-terracotta" : "text-text"}>
+                          {remainingCredits.toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                      {user.tier === 'FREE' && (
+                        <div className="text-terracotta">
+                          Kuota Harian: {Math.max(0, 20 - user.generation_count)} Sisa
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -1554,14 +1612,14 @@ const App = () => {
 
                   <button
                     onClick={handleGenerate}
-                    disabled={status === "loading" || status === "success" || cooldown > 0}
+                    disabled={status === "loading" || status === "success" || cooldown > 0 || isCappedByRequest || isCappedByQuota}
                     className={`w-full py-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-all shadow-lg border-none cursor-pointer 
                       ${
                         status === "success"
                           ? "bg-green-600 text-white"
                           : status === "loading"
                             ? "bg-terracotta/75 text-white cursor-not-allowed"
-                            : cooldown > 0
+                            : (cooldown > 0 || isCappedByRequest || isCappedByQuota)
                               ? "bg-surface2 text-text-muted cursor-not-allowed border border-surface2"
                               : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-white"
                       }`}

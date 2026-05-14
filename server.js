@@ -43,7 +43,12 @@ let voiceConfig = {
 
 if (fs.existsSync(voiceConfigFile)) {
   try {
-    voiceConfig = JSON.parse(fs.readFileSync(voiceConfigFile, 'utf8'));
+    const savedConfig = JSON.parse(fs.readFileSync(voiceConfigFile, 'utf8'));
+    voiceConfig = {
+      ...voiceConfig,
+      ...savedConfig,
+      limits: { ...voiceConfig.limits, ...(savedConfig.limits || {}) }
+    };
   } catch(e) {
     console.error("Error reading voice_config.json", e);
   }
@@ -674,7 +679,6 @@ async function createServer() {
   });
 
   app.post('/api/tts', authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, async (req, res) => {
-    console.log('[DEBUG] Hit /api/tts');
     try {
       const { text, voice, speed, pitch, volume } = req.body;
       const apiKey = process.env.GOOGLE_API_KEY;
@@ -684,8 +688,12 @@ async function createServer() {
         return res.status(401).json({ error: 'Harap masuk (login) untuk menggunakan layanan TTS.' });
       }
 
+      if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        return res.status(400).json({ error: 'Teks diperlukan untuk konversi suara.' });
+      }
+
       if (!apiKey || apiKey === 'YOUR_GOOGLE_API_KEY') {
-        return res.status(401).json({ error: 'Missing GOOGLE_API_KEY in .env' });
+        return res.status(401).json({ error: 'Sistem TTS sedang tidak tersedia (API Key missing).' });
       }
 
       // Tier Specific Constraints
@@ -693,7 +701,7 @@ async function createServer() {
       const maxRequestChars = tier === 'FREE' ? voiceConfig.limits.free_request_chars : voiceConfig.limits.paid_request_chars;
       
       if (text.length > maxRequestChars) {
-        return res.status(400).json({ error: `Batas karakter per request untuk paket Anda adalah ${maxRequestChars}. Upgrade untuk limit lebih besar.` });
+        return res.status(400).json({ error: `Batas karakter per request untuk paket ${tier} adalah ${maxRequestChars} karakter. Upgrade untuk limit lebih besar.` });
       }
 
       // Check Quota
@@ -879,15 +887,19 @@ async function createServer() {
       status: "ok",
       firebaseAdmin: !!authAdmin,
       projectId: process.env.FIREBASE_PROJECT_ID,
-      isCorrectProject: process.env.FIREBASE_PROJECT_ID === "practical-gecko-476621-q4"
+      isCorrectProject: process.env.FIREBASE_PROJECT_ID === "practical-gecko-476621-q4",
+      hasClientConfig: fs.existsSync(path.resolve(process.cwd(), 'firebase-applet-config.json'))
     });
   });
 
   app.get("/api/debug-env", (req, res) => {
     res.json({
-      projectId: process.env.FIREBASE_PROJECT_ID,
+      VITE_FIREBASE_PROJECT_ID: process.env.VITE_FIREBASE_PROJECT_ID,
+      FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
       hasApiKey: !!process.env.VITE_FIREBASE_API_KEY,
-      apiKeyPrefix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(0, 5) : "MISSING",
+      apiKeyPrefix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(0, 6) : "(none)",
+      apiKeySuffix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(-4) : "(none)",
+      apiKeyLen: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.length : 0,
       nodeEnv: process.env.NODE_ENV
     });
   });
