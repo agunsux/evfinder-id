@@ -2378,7 +2378,7 @@ const App = () => {
               <p className="text-text-muted text-sm mt-2">
                 {authMode === "login" || authMode === "whatsapp"
                   ? "Selamat datang kembali!"
-                  : "Daftar sekarang dan dapatkan bonus 5.000 karakter gratis."}
+                  : "Daftar sekarang dan dapatkan bonus 10.000 karakter gratis."}
               </p>
             </div>
 
