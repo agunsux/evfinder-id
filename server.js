@@ -16,9 +16,16 @@ const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
 // --- FILE-BACKED DB ---
-const dataFolder = path.join(process.cwd(), 'data');
-if (!fs.existsSync(dataFolder)) {
-  fs.mkdirSync(dataFolder, { recursive: true });
+// Vercel only allows writes to /tmp; use ./data for local dev
+const dataFolder = process.env.VERCEL
+  ? path.join('/tmp', 'data')
+  : path.join(process.cwd(), 'data');
+try {
+  if (!fs.existsSync(dataFolder)) {
+    fs.mkdirSync(dataFolder, { recursive: true });
+  }
+} catch (e) {
+  console.warn('[Server] Could not create data folder:', e.message);
 }
 const usersFile = path.join(dataFolder, 'users.json');
 const voiceConfigFile = path.join(dataFolder, 'voice_config.json');
@@ -55,7 +62,11 @@ if (fs.existsSync(voiceConfigFile)) {
 }
 
 function saveVoiceConfig() {
-  fs.writeFileSync(voiceConfigFile, JSON.stringify(voiceConfig, null, 2));
+  try {
+    fs.writeFileSync(voiceConfigFile, JSON.stringify(voiceConfig, null, 2));
+  } catch (e) {
+    console.warn('[Server] Could not save voice config:', e.message);
+  }
 }
 
 let users = new Map();
@@ -69,7 +80,11 @@ if (fs.existsSync(usersFile)) {
 }
 
 function saveUsers() {
-  fs.writeFileSync(usersFile, JSON.stringify(Array.from(users.entries()), null, 2));
+  try {
+    fs.writeFileSync(usersFile, JSON.stringify(Array.from(users.entries()), null, 2));
+  } catch (e) {
+    console.warn('[Server] Could not save users:', e.message);
+  }
 }
 
 function generateId() {
@@ -853,33 +868,35 @@ async function createServer() {
   });
 
   // --- VITE FRONTEND SERVING ---
-  
-  if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa'
-    });
-    app.use(vite.middlewares);
-    
-    app.use('*', async (req, res) => {
-      const url = req.originalUrl;
-      try {
-        let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
-        template = await vite.transformIndexHtml(url, template);
-        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
-      } catch (e) {
-        vite.ssrFixStacktrace(e);
-        console.error(e.stack);
-        res.status(500).end(e.stack);
-      }
-    });
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+  // Skip on Vercel as Vercel serves the static files directly from the dist folder
+  if (!process.env.VERCEL) {
+    if (process.env.NODE_ENV !== 'production') {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa'
+      });
+      app.use(vite.middlewares);
+      
+      app.use('*', async (req, res) => {
+        const url = req.originalUrl;
+        try {
+          let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+          template = await vite.transformIndexHtml(url, template);
+          res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+        } catch (e) {
+          vite.ssrFixStacktrace(e);
+          console.error(e.stack);
+          res.status(500).end(e.stack);
+        }
+      });
+    } else {
+      const distPath = path.join(process.cwd(), 'dist');
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    }
   }
 
   // --- DEBUG & HEALTH ---
