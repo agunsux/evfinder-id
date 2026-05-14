@@ -183,6 +183,7 @@ const App = () => {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     whatsapp: "",
     refCode: "",
   });
@@ -308,6 +309,33 @@ const App = () => {
       }
     } catch (e) {
       console.warn("refreshUser failed:", e);
+    }
+  };
+
+  // Validated backend sync — used after auth actions to ensure backend profile exists
+  // Rolls back Firebase session if backend rejects
+  const syncAuthProfile = async (refCode = '') => {
+    if (!auth?.currentUser) throw new Error('No authenticated user');
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      const res = await fetch("/api/auth/sync", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${idToken}`,
+          "x-ref-code": refCode || ""
+        },
+      });
+      const data = await checkResponse(res);
+      if (data.user) setUser(data.user);
+      return data;
+    } catch (e) {
+      console.error("syncAuthProfile failed, rolling back:", e);
+      try { await logout(); } catch (_) {}
+      setUser(null);
+      if (e.status === 503) {
+        throw new Error('Server auth belum siap. Pastikan konfigurasi Firebase Admin di server sudah benar.');
+      }
+      throw e;
     }
   };
 
@@ -762,30 +790,13 @@ const App = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const userCredential = await loginWithGoogle();
-      
-      // Set user state immediately
-      setUser({
-        email: userCredential.user.email,
-        uid: userCredential.user.uid,
-        tier: 'FREE',
-        generation_count: 0,
-        used_chars: 0,
-        monthly_chars: 0,
-        signup_bonus_chars: 0,
-        earned_chars: 0,
-        valid_referrals: 0,
-        referral_code: "",
-        social_bonus_status: "none"
-      });
-
+      await loginWithGoogle();
+      // Validate backend sync — rollback if server rejects
+      await syncAuthProfile();
       setIsAuthOpen(false);
       toast.success("Login Google berhasil!");
-      
-      // Sync/Refresh
-      await refreshUser();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message || "Gagal login dengan Google.");
     } finally {
       setGoogleLoading(false);
     }
@@ -796,32 +807,18 @@ const App = () => {
     setAuthLoading(true);
     try {
       if (authMode === "signup") {
-        const userCredential = await signup(authData.email, authData.password, authData.name);
-        
-        // Pass referral code to backend during the first user sync
-        const idToken = await userCredential.user.getIdToken(true);
-        await fetch("/api/auth/sync", {
-          method: "POST",
-          headers: { 
-            "Authorization": `Bearer ${idToken}`,
-            "x-ref-code": authData.refCode || ""
-          },
-        });
-        
-        // Set user state immediately so UI updates before refreshUser returns
-        setUser({
-          email: userCredential.user.email,
-          uid: userCredential.user.uid,
-          tier: 'FREE',
-          generation_count: 0,
-          used_chars: 0,
-          monthly_chars: 0,
-          signup_bonus_chars: 0,
-          earned_chars: 0,
-          valid_referrals: 0,
-          referral_code: "",
-          social_bonus_status: "none"
-        });
+        if (!authData.password || authData.password.length < 8) {
+          throw new Error("Password minimal 8 karakter.");
+        }
+        if (authData.password !== authData.confirmPassword) {
+          throw new Error("Password tidak cocok.");
+        }
+
+        await signup(authData.email, authData.password, authData.name);
+
+        // Sync with backend — validates and creates user profile
+        // Rolls back Firebase session if backend rejects
+        await syncAuthProfile(authData.refCode);
 
         // Send verification email
         try {
@@ -832,31 +829,12 @@ const App = () => {
 
         setIsAuthOpen(false);
         toast.success("Pendaftaran berhasil!");
-        
-        // Final refresh to get full profile from backend
-        await refreshUser();
       } else if (authMode === "login") {
-        const userCredential = await login(authData.email, authData.password);
-        
-        // Set user state immediately
-        setUser({
-          email: userCredential.user.email,
-          uid: userCredential.user.uid,
-          tier: 'FREE',
-          generation_count: 0,
-          used_chars: 0,
-          monthly_chars: 0,
-          signup_bonus_chars: 0,
-          earned_chars: 0,
-          valid_referrals: 0,
-          referral_code: "",
-          social_bonus_status: "none"
-        });
-
+        await login(authData.email, authData.password);
+        // Sync with backend — ensures user profile exists server-side
+        await syncAuthProfile();
         setIsAuthOpen(false);
         toast.success("Berhasil masuk!");
-        
-        await refreshUser();
       } else if (authMode === "whatsapp") {
         if (!otpSent) {
           const res = await fetch("/api/auth/otp/request", {
@@ -898,6 +876,7 @@ const App = () => {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
       whatsapp: "",
       refCode: "",
     });
@@ -2528,6 +2507,21 @@ const App = () => {
                   </div>
                   {authMode === "signup" && (
                     <>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-400 mb-2">
+                          Konfirmasi Password
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={authData.confirmPassword}
+                          onChange={(e) =>
+                            setAuthData({ ...authData, confirmPassword: e.target.value })
+                          }
+                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
+                          placeholder="••••••••"
+                        />
+                      </div>
                       <div className="pt-2 border-t border-surface2 mt-4">
                         <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
                           Nomor WhatsApp{" "}
