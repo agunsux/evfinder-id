@@ -941,7 +941,15 @@ const App = () => {
         </p>
         <div className="bg-surface2 p-4 rounded-xl border border-surface2 text-left w-full max-w-md">
           <h3 className="text-xs font-black text-terracotta uppercase mb-2">Pesan Kesalahan:</h3>
-          <p className="text-xs font-mono text-text-muted break-all">{initError || "Firebase configuration missing or project mismatch."}</p>
+          <p className="text-xs font-mono text-text-muted break-all mb-4">{initError || "Firebase configuration missing or project mismatch."}</p>
+          
+          <h3 className="text-xs font-black text-blue-400 uppercase mb-2 border-t border-surface/50 pt-4">Saran Perbaikan:</h3>
+          <ul className="text-xs text-text-muted list-disc pl-4 space-y-2">
+            <li>Buka <b>Settings</b> &gt; <b>Secrets</b>.</li>
+            <li>Pastikan <b>VITE_FIREBASE_API_KEY</b> berisi API Key yang valid (diawali AIza...).</li>
+            <li>Pastikan <b>VITE_FIREBASE_PROJECT_ID</b> bernilai <code>practical-gecko-476621-q4</code>.</li>
+            <li>Jika sudah benar, coba <b>Restart Dev Server</b>.</li>
+          </ul>
         </div>
         <button 
           onClick={() => window.location.reload()} 

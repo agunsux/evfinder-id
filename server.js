@@ -1,7 +1,6 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
@@ -13,15 +12,13 @@ import { PLANS } from './src/lib/plans.js';
 
 dotenv.config();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
 // --- FILE-BACKED DB ---
-const dataFolder = path.join(__dirname, 'data');
+const dataFolder = path.join(process.cwd(), 'data');
 if (!fs.existsSync(dataFolder)) {
-  fs.mkdirSync(dataFolder);
+  fs.mkdirSync(dataFolder, { recursive: true });
 }
 const usersFile = path.join(dataFolder, 'users.json');
 const voiceConfigFile = path.join(dataFolder, 'voice_config.json');
@@ -848,34 +845,51 @@ async function createServer() {
 
   // --- VITE FRONTEND SERVING ---
   
-  let vite;
-  if (!isProd) {
+  if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
-    vite = await createViteServer({
+    const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa'
     });
     app.use(vite.middlewares);
+    
+    app.use('*', async (req, res) => {
+      const url = req.originalUrl;
+      try {
+        let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e);
+        console.error(e.stack);
+        res.status(500).end(e.stack);
+      }
+    });
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
   }
 
-  app.use('*', async (req, res, next) => {
-    const url = req.originalUrl;
-    try {
-      let template, render;
-      if (!isProd) {
-        template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
-        template = await vite.transformIndexHtml(url, template);
-      } else {
-        template = fs.readFileSync(path.resolve(__dirname, 'dist/index.html'), 'utf-8');
-      }
-      res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
-    } catch (e) {
-      !isProd && vite?.ssrFixStacktrace(e);
-      console.error(e.stack);
-      res.status(500).end(e.stack);
-    }
+  // --- DEBUG & HEALTH ---
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok",
+      firebaseAdmin: !!authAdmin,
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      isCorrectProject: process.env.FIREBASE_PROJECT_ID === "practical-gecko-476621-q4"
+    });
+  });
+
+  app.get("/api/debug-env", (req, res) => {
+    res.json({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      hasApiKey: !!process.env.VITE_FIREBASE_API_KEY,
+      apiKeyPrefix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(0, 5) : "MISSING",
+      nodeEnv: process.env.NODE_ENV
+    });
   });
 
   app.listen(PORT, '0.0.0.0', () => {
