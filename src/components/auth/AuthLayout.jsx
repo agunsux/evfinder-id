@@ -9,8 +9,8 @@ const AuthLayout = ({ children, title, subtitle }) => {
             <ShinervaLogo className="w-12 h-12" />
         </div>
         <div className="text-center mb-8">
-            <h1 className="text-2xl font-black text-white">{title}</h1>
-            <p className="text-gray-400 text-sm mt-2">{subtitle}</p>
+            <h1 className="text-2xl font-black text-text">{title}</h1>
+            <p className="text-text-muted text-sm mt-2">{subtitle}</p>
         </div>
         {children}
       </div>

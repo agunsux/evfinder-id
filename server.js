@@ -5,16 +5,13 @@ import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
-import admin from 'firebase-admin';
+import { authAdmin } from './src/lib/firebaseAdmin.js';
 import { rateLimit } from 'express-rate-limit';
-
-// Initialize Firebase Admin (assuming credentials are set in environment)
-admin.initializeApp();
-const authAdmin = admin.auth();
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
@@ -94,9 +91,83 @@ async function createServer() {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     const idToken = authHeader.split('Bearer ')[1];
+    if (!idToken || idToken === 'null' || idToken === 'undefined') {
+      return res.status(401).json({ error: 'Invalid token format' });
+    }
     try {
       const decodedToken = await authAdmin.verifyIdToken(idToken);
-      req.user = { uid: decodedToken.uid, email: decodedToken.email };
+      const uid = decodedToken.uid;
+      const email = decodedToken.email;
+      
+      // Sync with local users map
+      let user = users.get(uid);
+      
+      // If not found by UID, try finding by email (for legacy or first-time sync)
+      if (!user) {
+        for (const [id, u] of users.entries()) {
+          if (u.email === email) {
+            // Found by email, migrate to UID key
+            user = u;
+            user.id = uid; // Update ID to match UID
+            users.set(uid, user);
+            users.delete(id);
+            break;
+          }
+        }
+      }
+
+      // If still not found, it's a completely new user (e.g. first time Google Login)
+      if (!user) {
+        const refCode = req.headers['x-ref-code'] || '';
+        let referredBy = null;
+        if (refCode) {
+          for (const [rid, ru] of users.entries()) {
+            if (ru.referral_code === refCode) {
+              referredBy = rid;
+              break;
+            }
+          }
+        }
+
+        user = {
+          id: uid,
+          name: decodedToken.name || email.split('@')[0],
+          email: email,
+          password: 'firebase-managed',
+          whatsapp: '',
+          whatsapp_opted_in: false,
+          email_subscribed: true,
+          tier: 'FREE',
+          signup_date: Date.now(),
+          last_generation_at: 0,
+          referral_code: generateRefCode(),
+          referred_by: referredBy,
+          valid_referrals: 0,
+          has_received_referral_bonus: false,
+          social_bonus_status: 'none',
+          social_url: '',
+          signup_bonus_chars: 10000, // New Signup Bonus: 10,000 Chars
+          monthly_chars: 10000,     // Free Tier Monthly: 10,000 Chars
+          earned_chars: referredBy ? 5000 : 0,
+          used_chars: 0,
+          generation_count: 0,
+          pronunciations: {},
+          history: []
+        };
+        users.set(uid, user);
+        saveUsers();
+      }
+
+      // Check for monthly reset (simple version: if month changed since signup or last check)
+      const now = new Date();
+      const lastCheck = user.last_reset_check ? new Date(user.last_reset_check) : new Date(user.signup_date);
+      if (now.getMonth() !== lastCheck.getMonth() || now.getFullYear() !== lastCheck.getFullYear()) {
+         user.monthly_chars = user.tier === 'FREE' ? 10000 : user.monthly_chars; // Only reset if FREE for now
+         user.last_reset_check = Date.now();
+         saveUsers();
+      }
+
+      req.user = user;
       next();
     } catch (error) {
       console.error('Error verifying Firebase ID token:', error);
@@ -491,7 +562,25 @@ async function createServer() {
     next();
   };
 
-  app.post('/api/tts', authenticate, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, async (req, res) => {
+  const hourlyFreeLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: (req) => (req.user && req.user.tier === 'FREE' ? 3 : 1000),
+    keyGenerator: (req) => req.user ? req.user.id : getClientIp(req),
+    message: { error: 'Batas 3 generasi per jam untuk paket FREE tercapai. Upgrade untuk akses tak terbatas!' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const dailyFreeLimiter = rateLimit({
+    windowMs: 24 * 60 * 60 * 1000,
+    max: (req) => (req.user && req.user.tier === 'FREE' ? 10 : 5000),
+    keyGenerator: (req) => req.user ? req.user.id : getClientIp(req),
+    message: { error: 'Batas 10 generasi per hari untuk paket FREE tercapai. Nikmati tak terbatas dengan paket STARTER hanya Rp19rb!' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.post('/api/tts', authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, async (req, res) => {
     console.log('[DEBUG] Hit /api/tts');
     try {
       const { text, voice, speed, pitch, volume } = req.body;
@@ -519,28 +608,31 @@ async function createServer() {
       const totalAvailable = user.monthly_chars + user.signup_bonus_chars + user.earned_chars;
       let remaining = totalAvailable - user.used_chars;
       
-      // Voice Authorization
+      // Voice Authorization - SMART VOICE ROUTING
       let actualVoice = voice || 'id-ID-Standard-A';
       
-      const isPremiumVoice = actualVoice.includes('Neural2') || actualVoice.includes('Studio') || actualVoice.includes('Chirp');
+      const isNeuralVoice = actualVoice.includes('Neural2');
+      const isWavenetVoice = actualVoice.includes('Wavenet');
       const isStudioVoice = actualVoice.includes('Studio') || actualVoice.includes('Chirp');
 
-      if (tier === 'FREE') {
-        if (isPremiumVoice) {
-          return res.status(403).json({ error: 'Suara premium (Neural2/Studio) hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
-        }
-      } else if (tier === 'STARTER' || tier === 'KREATOR') {
-        if (isStudioVoice) {
-          return res.status(403).json({ error: 'Suara Studio/Chirp hanya tersedia untuk paket PRODUKTIF ke atas. Silakan upgrade paket Anda.' });
-        }
+      const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
+      const userTierIndex = tierOrder.indexOf(tier);
+
+      if (isStudioVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
+        return res.status(403).json({ error: 'Suara Studio Premium hanya tersedia untuk paket BISNIS ke atas. Silakan upgrade paket Anda.' });
+      }
+      if (isWavenetVoice && userTierIndex < tierOrder.indexOf('PRODUKTIF')) {
+        return res.status(403).json({ error: 'Suara WaveNet hanya tersedia untuk paket PRODUKTIF ke atas. Silakan upgrade paket Anda.' });
+      }
+      if (isNeuralVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
+        return res.status(403).json({ error: 'Suara Neural2 hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
       }
 
       // Multiplier logic
       let voiceTierName = 'Standard';
-      if (actualVoice.includes('Wavenet')) voiceTierName = 'Wavenet';
-      else if (actualVoice.includes('Neural2')) voiceTierName = 'Neural2';
-      else if (actualVoice.includes('Studio')) voiceTierName = 'Studio';
-      else if (actualVoice.includes('Chirp')) voiceTierName = 'Chirp';
+      if (isWavenetVoice) voiceTierName = 'Wavenet';
+      else if (isNeuralVoice) voiceTierName = 'Neural2';
+      else if (isStudioVoice) voiceTierName = 'Studio';
 
       const multiplier = voiceConfig.tiers[voiceTierName] || 1;
       const totalCharCost = text.length * multiplier;
@@ -549,26 +641,35 @@ async function createServer() {
         return res.status(402).json({ error: 'Kredit karakter tidak mencukupi (Membutuhkan ' + totalCharCost + ' kredit). Anda memiliki ' + remaining + ' kredit.' });
       }
 
-      // Apply custom pronunciations
-      let modifiedText = text;
+      // Initial text cleaning and escaping
+      let modifiedText = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+
+      // Apply custom pronunciations (these can now safely contain SSML if we want, 
+      // but we need to make sure the user-provided rules are NOT escaped if they are meant to be SSML)
+      // Actually, if we want to allow SSML in rules, we shouldn't escape the pronunciation value.
       
       if (user.pronunciations) {
         const sortedWords = Object.keys(user.pronunciations).sort((a, b) => b.length - a.length);
         for (const word of sortedWords) {
           const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+          // We allow the substitution to remain un-escaped to support SSML from the rule
           modifiedText = modifiedText.replace(regex, user.pronunciations[word]);
         }
       }
 
-      // Handle Emphasis Tags
+      // Handle Emphasis Tags (Special internal tags)
       modifiedText = modifiedText
         .replace(/\[EMPHASIS_START\]/g, '<emphasis level="strong">')
         .replace(/\[EMPHASIS_END\]/g, '</emphasis>');
 
+      // Global fixes (careful not to break SSML)
       modifiedText = modifiedText
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
         .replace(/\.id\b/gi, " dot ay id ")
         .replace(/\bAI\b/gi, "ey ay")
         .replace(/\bIT\b/g, "ay ti")
@@ -577,8 +678,10 @@ async function createServer() {
         .replace(/\bAPI\b/gi, "ei pi ay");
         
       let ssmlText = `<speak>${modifiedText}`;
+      
+      // WATERMARK FOR FREE TIER
       if (tier === 'FREE') {
-         ssmlText += `<break time="1s"/><prosody volume="-6dB">Dibuat oleh shinerva dot ay id.</prosody>`;
+         ssmlText += `<break time="500ms"/><prosody volume="-6dB">Dibuat dengan Rungu dot ay id.</prosody>`;
       }
       ssmlText += `</speak>`;
 

@@ -55,14 +55,14 @@ const SignupForm = ({ onSuccess, onLoginClick }) => {
           </div>
         )}
         {password && (
-          <p className="text-[10px] text-gray-500">Min 8 karakter, huruf besar/kecil, angka, simbol.</p>
+          <p className="text-[10px] text-text-muted">Min 8 karakter, huruf besar/kecil, angka, simbol.</p>
         )}
       </div>
       <button type="submit" disabled={loading} className="w-full bg-terracotta text-white py-3 rounded-xl font-bold">
         {loading ? <Loader2 className="animate-spin mx-auto"/> : 'Daftar'}
       </button>
       <div className="text-center text-sm">
-        <p className="text-gray-500">Sudah punya akun? <button type="button" onClick={onLoginClick} className="text-terracotta font-bold">Masuk</button></p>
+        <p className="text-text-muted">Sudah punya akun? <button type="button" onClick={onLoginClick} className="text-terracotta font-bold bg-transparent border-none cursor-pointer">Masuk</button></p>
       </div>
     </form>
   );
