@@ -99,14 +99,12 @@ users.set('admin', {
   id: 'admin', name: 'Admin', email: 'admin@shinerva.id', password: 'admin', tier: 'ENTERPRISE', valid_referrals: 0, has_received_referral_bonus: false, signup_bonus_chars: 10000, monthly_chars: 1000000, earned_chars: 0, used_chars: 0, generation_count: 0, email_subscribed: true, whatsapp_opted_in: false
 });
 
-let app;
-async function createServer() {
-  app = express();
-  app.use(cors());
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-  const authenticate = async (req, res, next) => {
+const authenticate = async (req, res, next) => {
     if (!authAdmin) {
       console.error("[Firebase Admin] Auth is not initialized. Check server environment variables.");
       return res.status(503).json({ error: 'Sistem autentikasi sementara tidak tersedia.' });
@@ -867,7 +865,8 @@ async function createServer() {
     }
   });
 
-  // --- VITE FRONTEND SERVING ---
+// --- VITE FRONTEND SERVING ---
+async function setupFrontend() {
   // Skip on Vercel as Vercel serves the static files directly from the dist folder
   if (!process.env.VERCEL) {
     if (process.env.NODE_ENV !== 'production') {
@@ -898,42 +897,38 @@ async function createServer() {
       });
     }
   }
-
-  // --- DEBUG & HEALTH ---
-  app.get("/api/health", (req, res) => {
-    res.json({ 
-      status: "ok",
-      firebaseAdmin: !!authAdmin,
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      isCorrectProject: process.env.FIREBASE_PROJECT_ID === "practical-gecko-476621-q4",
-      hasClientConfig: fs.existsSync(path.resolve(process.cwd(), 'firebase-applet-config.json'))
-    });
-  });
-
-  app.get("/api/debug-env", (req, res) => {
-    res.json({
-      VITE_FIREBASE_PROJECT_ID: process.env.VITE_FIREBASE_PROJECT_ID,
-      FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-      hasApiKey: !!process.env.VITE_FIREBASE_API_KEY,
-      apiKeyPrefix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(0, 6) : "(none)",
-      apiKeySuffix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(-4) : "(none)",
-      apiKeyLen: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.length : 0,
-      nodeEnv: process.env.NODE_ENV
-    });
-  });
-
-  // Only listen when running standalone (not on Vercel)
-  if (!process.env.VERCEL) {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server listening at http://localhost:${PORT}`);
-    });
-  }
-
-  return app;
 }
 
-// Initialize immediately
-const serverReady = createServer();
+// --- DEBUG & HEALTH ---
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "ok",
+    firebaseAdmin: !!authAdmin,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    isCorrectProject: process.env.FIREBASE_PROJECT_ID === "practical-gecko-476621-q4",
+    hasClientConfig: fs.existsSync(path.resolve(process.cwd(), 'firebase-applet-config.json'))
+  });
+});
+
+app.get("/api/debug-env", (req, res) => {
+  res.json({
+    VITE_FIREBASE_PROJECT_ID: process.env.VITE_FIREBASE_PROJECT_ID,
+    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+    hasApiKey: !!process.env.VITE_FIREBASE_API_KEY,
+    apiKeyPrefix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(0, 6) : "(none)",
+    apiKeySuffix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(-4) : "(none)",
+    apiKeyLen: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.length : 0,
+    nodeEnv: process.env.NODE_ENV
+  });
+});
+
+setupFrontend();
+
+// Only listen when running standalone (not on Vercel)
+if (!process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server listening at http://localhost:${PORT}`);
+  });
+}
 
 export default app;
-export { serverReady };

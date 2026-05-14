@@ -1,11 +1,6 @@
 // Vercel Serverless Function entry point
-import { serverReady } from '../server.js';
+import app from '../server.js';
 
-let app;
-
-export default async function handler(req, res) {
-  if (!app) {
-    app = await serverReady;
-  }
+export default function handler(req, res) {
   return app(req, res);
 }
