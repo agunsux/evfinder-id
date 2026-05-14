@@ -39,6 +39,11 @@ export const handleApiError = (error, defaultMessage = "Terjadi kesalahan.") => 
     
     console.error("handleApiError: Message:", message, "Error Status:", errorStatus, "Error Object:", error);
 
+    // DEBUG: Look for 404 specifically
+    if (errorStatus === 404) {
+        console.error("DEBUG: 404 Error encountered! Request URL:", error.request ? error.request.url : "unknown");
+    }
+
     if (errorStatus === 401 || errorStr.includes('unauthorized')) {
         message = 'Anda perlu masuk (login) untuk melanjutkan.';
         suggestion = 'Silakan masuk ke akun Anda terlebih dahulu.';
@@ -46,8 +51,8 @@ export const handleApiError = (error, defaultMessage = "Terjadi kesalahan.") => 
         message = 'Anda tidak memiliki akses ke fitur ini.';
         suggestion = 'Silakan periksa langganan Anda atau hubungi support.';
     } else if (errorStatus === 404 || errorStr.includes('not found')) {
-        message = 'Data yang diminta tidak ditemukan.';
-        suggestion = 'Refresh halaman atau hubungi support jika masalah berlanjut.';
+        message = `Data tidak ditemukan (Status: ${errorStatus})`;
+        suggestion = 'Pastikan URL benar atau hubungi support.';
     } else if (errorStatus === 429 || errorStr.includes('too many requests') || errorStr.includes('rate limit')) {
         message = 'Terlalu banyak permintaan.';
         suggestion = 'Tunggu beberapa saat sebelum mencoba lagi.';
