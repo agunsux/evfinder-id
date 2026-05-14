@@ -6,6 +6,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import admin from 'firebase-admin';
+import { rateLimit } from 'express-rate-limit';
 
 // Initialize Firebase Admin (assuming credentials are set in environment)
 admin.initializeApp();
@@ -412,74 +413,69 @@ async function createServer() {
   });
 
 
-  // --- RATE LIMITER & CONCURRENCY ---
-  const rateLimitStore = new Map();
+  // --- RATE LIMITERS ---
   const activeRequests = new Map();
-
   const getClientIp = (req) => req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-  const ttsRateLimiter = (req, res, next) => {
+  const TIER_LIMITS = {
+    'FREE': { requests: 2, simultaneous: 1 },
+    'STARTER': { requests: 10, simultaneous: 2 },
+    'KREATOR': { requests: 10, simultaneous: 2 },
+    'PRODUKTIF': { requests: 30, simultaneous: 5 },
+    'BISNIS': { requests: 30, simultaneous: 5 },
+    'ENTERPRISE': { requests: 30, simultaneous: 5 },
+  };
+
+  const ttsRateLimiterMiddleware = rateLimit({
+    windowMs: 60 * 1000,
+    max: (req) => {
+      const tier = req.user ? req.user.tier : 'FREE';
+      return TIER_LIMITS[tier]?.requests || 2;
+    },
+    keyGenerator: (req) => req.user ? req.user.id : getClientIp(req),
+    message: { error: 'Batas request per menit tercapai. Silakan coba lagi beberapa saat lagi.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const cooldownLimiter = (req, res, next) => {
+    const user = req.user;
+    if (!user) return next();
+    
+    const now = Date.now();
+    const tier = user.tier;
+    const cooldownSec = tier === 'FREE' ? voiceConfig.limits.free_cooldown_sec : voiceConfig.limits.paid_cooldown_sec;
+    const cooldownMs = cooldownSec * 1000;
+    const timeSinceLast = now - (user.last_generation_at || 0);
+    if (timeSinceLast < cooldownMs) {
+      const remaining = Math.ceil((cooldownMs - timeSinceLast) / 1000);
+      return res.status(429).json({ 
+        error: `Cooldown aktif. Silakan tunggu ${remaining} detik lagi.`,
+        cooldownRemaining: remaining
+      });
+    }
+    next();
+  };
+
+  const dailyLimitLimiter = (req, res, next) => {
+    const user = req.user;
+    if (user && user.tier === 'FREE' && user.generation_count >= 20) {
+       return res.status(429).json({ error: 'Batas 20 generasi harian untuk paket FREE telah tercapai. Nikmati tak terbatas dengan paket STARTER hanya Rp19rb!' });
+    }
+    next();
+  };
+
+  const concurrencyLimiter = (req, res, next) => {
     const user = req.user;
     const tier = user ? user.tier : 'FREE';
     const clientId = user ? user.id : getClientIp(req);
-    const now = Date.now();
-    
-    // IP Logging for abuse detection
-    const ip = getClientIp(req);
-    console.log(`[TTS_REQUEST] User: ${user?.email || 'GUEST'} | IP: ${ip} | Tier: ${tier}`);
+    const maxSimultaneous = TIER_LIMITS[tier]?.simultaneous || 1;
 
-    // Cooldown check
-    if (user) {
-      const cooldownSec = tier === 'FREE' ? voiceConfig.limits.free_cooldown_sec : voiceConfig.limits.paid_cooldown_sec;
-      const cooldownMs = cooldownSec * 1000;
-      const timeSinceLast = now - (user.last_generation_at || 0);
-      if (timeSinceLast < cooldownMs) {
-        const remaining = Math.ceil((cooldownMs - timeSinceLast) / 1000);
-        return res.status(429).json({ 
-          error: `Cooldown aktif. Silakan tunggu ${remaining} detik lagi.`,
-          cooldownRemaining: remaining
-        });
-      }
-    }
-
-    let maxRequestsPerMinute = 3;
-    let maxSimultaneous = 1;
-
-    if (tier === 'FREE') {
-      maxRequestsPerMinute = 2; // Strict for free
-    } else if (tier === 'STARTER' || tier === 'KREATOR') {
-      maxRequestsPerMinute = 10;
-      maxSimultaneous = 2;
-    } else if (tier === 'PRODUKTIF' || tier === 'BISNIS' || tier === 'ENTERPRISE') {
-      maxRequestsPerMinute = 30; 
-      maxSimultaneous = 5;
-    }
-
-    const windowMs = 60 * 1000; // 1 min
-
-    // Concurrency Check
     const activeCount = activeRequests.get(clientId) || 0;
     if (activeCount >= maxSimultaneous) {
       return res.status(429).json({ error: 'Terlalu banyak antrean proses bersamaan. Harap tunggu proses sebelumnya selesai.' });
     }
 
-    // Rate Limit Check
-    let userStats = rateLimitStore.get(clientId);
-    if (!userStats || now - userStats.windowStart > windowMs) {
-      userStats = { windowStart: now, count: 0 };
-    }
-
-    if (userStats.count >= maxRequestsPerMinute) {
-      return res.status(429).json({ error: 'Batas request per menit tercapai. Silakan coba lagi beberapa saat lagi.' });
-    }
-
-    // Daily Check for FREE
-    if (tier === 'FREE' && user && user.generation_count >= 20) {
-       return res.status(429).json({ error: 'Batas 20 generasi harian untuk paket FREE telah tercapai. Nikmati tak terbatas dengan paket STARTER hanya Rp19rb!' });
-    }
-
-    userStats.count += 1;
-    rateLimitStore.set(clientId, userStats);
     activeRequests.set(clientId, activeCount + 1);
 
     const decrementActive = () => {
@@ -495,7 +491,7 @@ async function createServer() {
     next();
   };
 
-  app.post('/api/tts', authenticate, ttsRateLimiter, async (req, res) => {
+  app.post('/api/tts', authenticate, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, async (req, res) => {
     console.log('[DEBUG] Hit /api/tts');
     try {
       const { text, voice, speed, pitch, volume } = req.body;
