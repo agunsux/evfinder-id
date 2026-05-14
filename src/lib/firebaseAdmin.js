@@ -1,22 +1,7 @@
 import admin from 'firebase-admin';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const configPath = path.resolve(__dirname, '../../firebase-applet-config.json');
-
-let firebaseConfig = {};
-try {
-  if (fs.existsSync(configPath)) {
-    firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  }
-} catch (error) {
-  console.log('No firebase-applet-config.json found or invalid');
-}
 
 // --- Environment and Config Setup ---
-const projectId = process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId;
+const projectId = process.env.FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
