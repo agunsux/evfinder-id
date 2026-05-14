@@ -3,6 +3,14 @@ import { Toaster, toast } from 'react-hot-toast';
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
 import { auth, isConfigValid, initError } from './lib/firebase';
 import { 
+  login, 
+  signup, 
+  logout, 
+  loginWithGoogle, 
+  resetPassword, 
+  verifyEmail 
+} from './lib/authService';
+import { 
   GoogleAuthProvider, 
   signInWithPopup, 
   sendPasswordResetEmail, 
@@ -35,6 +43,9 @@ import {
   History,
   AlertTriangle,
 } from "lucide-react";
+
+import { PLANS } from "./lib/plans";
+import ReferralDashboard from "./components/ReferralDashboard";
 
 const PACKS = [
   {
@@ -161,8 +172,10 @@ const App = () => {
     whatsapp: "",
     refCode: "",
   });
+  const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [purchaseLoading, setPurchaseLoading] = useState(null); // planId or null
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
 
@@ -175,6 +188,8 @@ const App = () => {
   const [testLoading, setTestLoading] = useState(false);
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isReferralOpen, setIsReferralOpen] = useState(false);
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(localStorage.getItem("hasSeenWelcome") === "true");
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
@@ -286,21 +301,39 @@ const App = () => {
   }, [isVoiceMgmtOpen]);
 
   useEffect(() => {
+    // Handle Referral URL
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref && !user) {
+      setAuthData(prev => ({ ...prev, refCode: ref.toUpperCase() }));
+      setAuthMode("signup");
+      setIsAuthOpen(true);
+      // Clean up URL without refreshing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     fetchHistory();
     // Watch for auth changes
     let unsubscribe = () => {};
     if (auth) {
       try {
-        unsubscribe = auth.onAuthStateChanged((u) => {
+        unsubscribe = auth.onAuthStateChanged(async (u) => {
           if (u) {
-            refreshUser();
+            await refreshUser();
           } else {
             setUser(null);
           }
+          setIsAuthInitializing(false);
+        }, (error) => {
+          console.error("Auth state change error:", error);
+          setIsAuthInitializing(false);
         });
       } catch (e) {
         console.error("onAuthStateChanged setup failed:", e);
+        setIsAuthInitializing(false);
       }
+    } else {
+      setIsAuthInitializing(false);
     }
     return () => unsubscribe();
   }, []);
@@ -645,21 +678,15 @@ const App = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    if (!auth) {
-      toast.error("Firebase tidak terinisialisasi. Silakan periksa konfigurasi.");
-      return;
-    }
     setGoogleLoading(true);
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await loginWithGoogle();
       // Backend automatically syncs/creates user on next authenticated request
       await refreshUser();
       setIsAuthOpen(false);
       toast.success("Login Google berhasil!");
     } catch (err) {
-      console.error("Google Sign-In Error:", err);
-      handleApiError(err, "Gagal login dengan Google.");
+      toast.error(err.message);
     } finally {
       setGoogleLoading(false);
     }
@@ -670,40 +697,61 @@ const App = () => {
     setAuthLoading(true);
     try {
       if (authMode === "signup") {
-        if (authData.password !== authData.confirmPassword) {
-          throw new Error("Password tidak cocok.");
-        }
-        // Referral system: pass refCode to backend via next request metadata or just use it in creation logic.
-        // For simplicity with auto-creation, we can set a cookie or just accept it might need a separate endpoint if complex.
-        // Actually, let's keep the signup endpoint ONLY if we need to pass the referral code.
-        // OR: Use a custom attribute in the next request.
+        const userCredential = await signup(authData.email, authData.password, authData.name);
         
-        const userCredential = await createUserWithEmailAndPassword(auth, authData.email, authData.password);
-        await updateProfile(userCredential.user, { displayName: authData.name });
-        
-        // If there's a refCode, we still need to tell the backend about it during creation.
-        // Since authenticate middleware auto-creates, we can provide refCode in the headers of first refreshUser call.
-        
+        // Pass referral code to backend during the first user sync
         const idToken = await userCredential.user.getIdToken();
-        await fetch("/api/user/me", {
-          method: "GET",
+        await fetch("/api/auth/sync", {
+          method: "POST",
           headers: { 
             "Authorization": `Bearer ${idToken}`,
             "x-ref-code": authData.refCode || ""
           },
         });
         
+        // Send verification email
+        try {
+          await verifyEmail();
+        } catch (vErr) {
+          console.warn("Could not send initial verification email:", vErr);
+        }
+
         await refreshUser();
         setIsAuthOpen(false);
         toast.success("Pendaftaran berhasil!");
       } else if (authMode === "login") {
-        await signInWithEmailAndPassword(auth, authData.email, authData.password);
+        await login(authData.email, authData.password);
         await refreshUser();
         setIsAuthOpen(false);
         toast.success("Berhasil masuk!");
+      } else if (authMode === "whatsapp") {
+        if (!otpSent) {
+          const res = await fetch("/api/auth/otp/request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ whatsapp: authData.whatsapp }),
+          });
+          const data = await checkResponse(res);
+          if (data.success) {
+            setOtpSent(true);
+            toast.success("OTP telah dikirim ke WhatsApp Anda.");
+          }
+        } else {
+          const res = await fetch("/api/auth/otp/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ whatsapp: authData.whatsapp, otp: otpCode }),
+          });
+          const data = await checkResponse(res);
+          if (data.success) {
+            setUser(data.user);
+            setIsAuthOpen(false);
+            toast.success("Login berhasil!");
+          }
+        }
       }
     } catch (err) {
-      handleApiError(err, "Gagal autentikasi.");
+      toast.error(err.message || "Gagal autentikasi.");
     } finally {
       setAuthLoading(false);
     }
@@ -742,27 +790,25 @@ const App = () => {
     }
     setAuthLoading(true);
     try {
-      await sendPasswordResetEmail(auth, authData.email);
-      toast.success('Email reset password telah dikirim');
+      await resetPassword(authData.email);
+      toast.success('Email reset password telah dikirim. Harap cek inbox Anda.');
       switchAuthMode('login');
     } catch (err) {
-      handleApiError(err, 'Gagal mengirim email reset password.');
+      toast.error(err.message);
     } finally {
       setAuthLoading(false);
     }
   };
 
   const handleResendVerification = async () => {
-    if (auth?.currentUser) {
-        setAuthLoading(true);
-        try {
-            await sendEmailVerification(auth.currentUser);
-            toast.success('Email verifikasi telah dikirim ulang. Silakan cek kotak masuk atau folder spam Anda.');
-        } catch (err) {
-            handleApiError(err, 'Gagal mengirim email verifikasi.');
-        } finally {
-            setAuthLoading(false);
-        }
+    setAuthLoading(true);
+    try {
+      await verifyEmail();
+      toast.success('Email verifikasi telah dikirim ulang. Silakan cek kotak masuk atau folder spam Anda.');
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -778,7 +824,7 @@ const App = () => {
           toast.error("Email belum diverifikasi. Silakan cek inbox Anda.");
         }
       } catch (err) {
-        handleApiError(err, "Gagal memperbarui status verifikasi.");
+        toast.error("Gagal memperbarui status verifikasi.");
       } finally {
         setAuthLoading(false);
       }
@@ -787,11 +833,11 @@ const App = () => {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await logout();
       setUser(null);
       toast.success('Berhasil keluar.');
     } catch (err) {
-      handleApiError(err, 'Gagal keluar.');
+      toast.error(err.message);
     }
   };
 
@@ -829,6 +875,59 @@ const App = () => {
     }
   };
 
+  const handlePurchase = async (planId) => {
+    if (!auth?.currentUser) {
+      setAuthMode("signup");
+      setIsAuthOpen(true);
+      toast.error("Silakan login terlebih dahulu untuk melakukan pembelian.");
+      return;
+    }
+
+    setPurchaseLoading(planId);
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/payment/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          planId,
+          billingCycle
+        }),
+      });
+
+      const data = await checkResponse(res);
+      
+      if (data.token) {
+        // @ts-ignore
+        window.snap.pay(data.token, {
+          onSuccess: (result) => {
+            console.log('success', result);
+            toast.success("Pembayaran berhasil! Kredit Anda akan segera diperbarui.");
+            refreshUser();
+          },
+          onPending: (result) => {
+            console.log('pending', result);
+            toast("Pembayaran pending. Silakan selesaikan pembayaran Anda.", { icon: '⏳' });
+          },
+          onError: (result) => {
+            console.log('error', result);
+            toast.error("Pembayaran gagal. Silakan coba lagi.");
+          },
+          onClose: () => {
+            console.log('customer closed the popup without finishing the payment');
+          }
+        });
+      }
+    } catch (err) {
+      handleApiError(err, "Gagal memulai proses pembayaran.");
+    } finally {
+      setPurchaseLoading(null);
+    }
+  };
+
   if (!isConfigValid) {
     return (
       <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-4 text-center">
@@ -850,6 +949,15 @@ const App = () => {
         >
           Coba Muat Ulang
         </button>
+      </div>
+    );
+  }
+
+  if (isAuthInitializing) {
+    return (
+      <div className="min-h-screen bg-dark flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 text-terracotta animate-spin mb-4" />
+        <p className="text-text-muted font-medium">Menghubungkan ke layanan...</p>
       </div>
     );
   }
@@ -899,12 +1007,20 @@ const App = () => {
                 Hubungi Kami
               </a>
               {user && (
-                <a
-                  href="#pronunciation"
-                  className="text-terracotta hover:text-trdark font-bold transition-colors"
-                >
-                  Aturan Pengucapan
-                </a>
+                <>
+                  <a
+                    href="#pronunciation"
+                    className="text-text-muted hover:text-text font-medium transition-colors"
+                  >
+                    Aturan Pengucapan
+                  </a>
+                  <button
+                    onClick={() => setIsReferralOpen(true)}
+                    className="flex items-center gap-2 text-terracotta hover:text-trdark font-bold transition-all border-none bg-transparent cursor-pointer"
+                  >
+                    <Gift className="w-4 h-4" /> Bonus Referral
+                  </button>
+                </>
               )}
             </div>
             <div className="flex items-center gap-4">
@@ -958,12 +1074,21 @@ const App = () => {
       )}
 
       {/* Welcome Message */}
-      {user && user.generation_count === 0 && (
+      {user && user.generation_count === 0 && !hasSeenWelcome && (
         <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[60] bg-dark border border-terracotta p-6 rounded-2xl shadow-2xl max-w-sm text-center">
              <div className="text-4xl mb-4">🎉</div>
              <h3 className="font-black text-xl mb-2">Selamat Datang!</h3>
              <p className="text-gray-400 text-sm mb-4">Kamu dapat 10.000 karakter gratis untuk memulai (~6 menit audio).</p>
-             <button onClick={() => refreshUser()} className="bg-terracotta px-6 py-2 rounded-full font-bold text-sm border-none cursor-pointer">Siap!</button>
+             <button 
+               onClick={() => {
+                 setHasSeenWelcome(true);
+                 localStorage.setItem("hasSeenWelcome", "true");
+                 refreshUser();
+               }} 
+               className="bg-terracotta px-6 py-2 rounded-full font-bold text-sm border-none cursor-pointer text-white"
+             >
+               Siap!
+             </button>
         </div>
       )}
 
@@ -1107,7 +1232,10 @@ const App = () => {
                     <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
                   </button>
                 )}
-                <div className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center">
+                <button
+                  onClick={() => setIsReferralOpen(true)}
+                  className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left w-full"
+                >
                   <div className="flex items-center gap-2">
                     <UserPlus className="w-4 h-4 text-terracotta" />{" "}
                     <span className="text-sm font-bold">
@@ -1117,7 +1245,7 @@ const App = () => {
                   <span className="text-xs bg-surface2 px-2 py-1 rounded text-gray-300">
                     {user.referral_code}
                   </span>
-                </div>
+                </button>
                 <button
                   onClick={() =>
                     user.social_bonus_status === "none" &&
@@ -1753,8 +1881,12 @@ const App = () => {
                   Kredit Tidak Akan Hangus
                 </li>
               </ul>
-              <button className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer">
-                Pilih Paket
+              <button 
+                onClick={() => handlePurchase(PLANS.STARTER.id)}
+                disabled={purchaseLoading === PLANS.STARTER.id}
+                className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer flex justify-center items-center"
+              >
+                {purchaseLoading === PLANS.STARTER.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
               </button>
             </div>
             {/* Kreator */}
@@ -1792,8 +1924,12 @@ const App = () => {
                   WA Lengkap
                 </li>
               </ul>
-              <button className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer">
-                Pilih Paket
+              <button 
+                onClick={() => handlePurchase(PLANS.KREATOR.id)}
+                disabled={purchaseLoading === PLANS.KREATOR.id}
+                className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer flex justify-center items-center"
+              >
+                {purchaseLoading === PLANS.KREATOR.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
               </button>
             </div>
             {/* Produktif */}
@@ -1831,8 +1967,12 @@ const App = () => {
                   Full Commercial
                 </li>
               </ul>
-              <button className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer">
-                Pilih Paket
+              <button 
+                onClick={() => handlePurchase(PLANS.PRODUKTIF.id)}
+                disabled={purchaseLoading === PLANS.PRODUKTIF.id}
+                className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer flex justify-center items-center"
+              >
+                {purchaseLoading === PLANS.PRODUKTIF.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
               </button>
             </div>
             {/* Bisnis */}
@@ -1870,8 +2010,12 @@ const App = () => {
                   Khusus Tim
                 </li>
               </ul>
-              <button className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer">
-                Pilih Paket
+              <button 
+                onClick={() => handlePurchase(PLANS.BISNIS.id)}
+                disabled={purchaseLoading === PLANS.BISNIS.id}
+                className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer flex justify-center items-center"
+              >
+                {purchaseLoading === PLANS.BISNIS.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
               </button>
             </div>
           </div>
@@ -2036,6 +2180,27 @@ const App = () => {
           </div>
         </footer>
       </main>
+
+      {/* Referral Dashboard Modal */}
+      {isReferralOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            onClick={() => setIsReferralOpen(false)}
+          ></div>
+          <div className="bg-dark border border-surface2 rounded-[2rem] w-full max-w-5xl relative z-10 shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
+            <div className="p-6 md:p-10">
+              <button
+                onClick={() => setIsReferralOpen(false)}
+                className="absolute top-6 right-6 text-text-muted hover:text-text cursor-pointer bg-surface2/50 hover:bg-surface2 p-2 rounded-full transition-all border-none"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <ReferralDashboard user={user} auth={auth} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Auth Modal */}
       {isAuthOpen && (

@@ -1,53 +1,71 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-// We can use the JSON file directly in Vite
-import localConfig from "../../firebase-applet-config.json";
 
-const getEnv = (key, fallback) => {
-  const val = import.meta.env[key];
-  // Prioritize env vars over localConfig if they are present and valid
-  return (val && typeof val === 'string' && val !== "" && val !== "undefined") ? val.trim() : fallback;
+const getCleanEnv = (key) => {
+  let val = import.meta.env[key];
+  if (typeof val !== 'string') {
+    if (val === undefined) return undefined;
+    return String(val);
+  }
+  
+  // Remove whitespace and potential surrounding quotes from environment managers
+  let cleaned = val.trim();
+  
+  // Some environments might include literal quotes if not handled by the loader
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.substring(1, cleaned.length - 1).trim();
+  }
+  
+  // Remove any invisible characters (zero-width spaces, etc.)
+  cleaned = cleaned.replace(/[\u200B-\u200D\uFEFF]/g, "");
+  
+  return cleaned;
 };
 
 const firebaseConfig = {
-  apiKey: getEnv('VITE_FIREBASE_API_KEY', localConfig.apiKey),
-  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN', localConfig.authDomain),
-  projectId: getEnv('VITE_FIREBASE_PROJECT_ID', localConfig.projectId),
-  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET', localConfig.storageBucket),
-  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', localConfig.messagingSenderId),
-  appId: getEnv('VITE_FIREBASE_APP_ID', localConfig.appId),
+  apiKey: getCleanEnv('VITE_FIREBASE_API_KEY'),
+  authDomain: getCleanEnv('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: getCleanEnv('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: getCleanEnv('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: getCleanEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: getCleanEnv('VITE_FIREBASE_APP_ID'),
 };
 
+// Diagnostics
+const diagKey = firebaseConfig.apiKey;
+console.log("[Firebase] Initialization Attempt:", {
+  apiKeyPresent: !!diagKey,
+  apiKeyType: typeof diagKey,
+  apiKeyFormat: diagKey ? (diagKey.startsWith("AIza") ? "Standard (AIza...)" : "Unknown Prefix") : "Missing",
+  apiKeyLength: diagKey?.length,
+  projectId: firebaseConfig.projectId
+});
+
 // Optional: Custom Firestore Database ID
-const firestoreDatabaseId = getEnv('VITE_FIREBASE_FIRESTORE_DB_ID', localConfig.firestoreDatabaseId) || "(default)";
+const firestoreDatabaseId = getCleanEnv('VITE_FIREBASE_FIRESTORE_DB_ID') || "(default)";
 
 // Basic validation: check if all required variables are present
 const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
 const missingVars = requiredKeys
   .filter(key => {
     const val = firebaseConfig[key];
-    return !val || val === "undefined" || val === "" || val === null;
+    // Check for empty, undefined, or obvious placeholders
+    return !val || val === "undefined" || val === "" || val === "YOUR_API_KEY" || (typeof val === 'string' && val.includes("YOUR_"));
   })
   .map(key => `VITE_FIREBASE_${key.replace(/[A-Z]/g, (m) => `_${m}`).toUpperCase()}`);
 
-// Additional project ID validation
 const correctProjectId = "practical-gecko-476621-q4";
 const isCorrectProject = firebaseConfig.projectId === correctProjectId;
 
-export let isConfigValid = missingVars.length === 0;
-export let initError = null;
-
-if (!isConfigValid) {
-  if (missingVars.length > 0) {
-    console.error(`[Firebase] ERROR: Missing environment variables: ${missingVars.join(", ")}`);
-  }
-  if (firebaseConfig.projectId && !isCorrectProject) {
-    console.error(`[Firebase] ERROR: Project ID mismatch. Expected ${correctProjectId}, got ${firebaseConfig.projectId}`);
-  }
-  console.warn("[Firebase] Verification failed. Check your .env or AI Studio Settings.");
+let initError = null;
+if (missingVars.length > 0) {
+  initError = `Missing or default configuration values: ${missingVars.join(", ")}`;
+} else if (!isCorrectProject) {
+  initError = `Project ID mismatch: Expected ${correctProjectId}, found ${firebaseConfig.projectId}. Please update your VITE_FIREBASE_PROJECT_ID.`;
 }
 
+export let isConfigValid = !initError;
 let app = null;
 let auth = null;
 let db = null;
@@ -55,27 +73,25 @@ let db = null;
 try {
   if (isConfigValid) {
     if (!getApps().length) {
-      console.log(`[Firebase] Attempting init with Project ID: ${firebaseConfig.projectId}`);
-      console.log(`[Firebase] API Key hint: ${firebaseConfig.apiKey?.substring(0, 5)}... (Length: ${firebaseConfig.apiKey?.length})`);
       app = initializeApp(firebaseConfig);
-      console.log("[Firebase] App initialized successfully for project:", firebaseConfig.projectId);
+      console.log("[Firebase] Initialized frontend successfully.");
     } else {
       app = getApp();
     }
     
-    // Explicitly check for successful app before auth/db
-    if (app) {
-      auth = getAuth(app);
-      db = getFirestore(app, firestoreDatabaseId === "(default)" ? undefined : firestoreDatabaseId);
-      console.log("[Firebase] Auth and Firestore initialized.");
-    }
+    auth = getAuth(app);
+    db = getFirestore(app, firestoreDatabaseId === "(default)" ? undefined : firestoreDatabaseId);
   } else {
-    console.warn("[Firebase] Initialization skipped due to invalid configuration.");
+    console.warn("[Firebase] Initialization skipped. Cause:", initError);
   }
 } catch (error) {
-  console.error("[Firebase] CRITICAL ERROR during initialization:", error.message);
-  initError = error.message;
-  isConfigValid = false; 
+  console.error("[Firebase] Fatal Init Error:", error.message);
+  isConfigValid = false;
+  if (error.message.includes("auth/invalid-api-key")) {
+    initError = "API Key yang Anda masukkan tidak valid (auth/invalid-api-key). Silakan periksa kembali VITE_FIREBASE_API_KEY di pengaturan dashboard.";
+  } else {
+    initError = error.message;
+  }
 }
 
-export { app, auth, db };
+export { app, auth, db, initError };

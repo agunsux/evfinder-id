@@ -5,8 +5,11 @@ import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import midtransClient from 'midtrans-client';
 import { authAdmin } from './src/lib/firebaseAdmin.js';
 import { rateLimit } from 'express-rate-limit';
+
+import { PLANS } from './src/lib/plans.js';
 
 dotenv.config();
 
@@ -86,29 +89,39 @@ async function createServer() {
   app.use(express.urlencoded({ extended: true }));
 
   const authenticate = async (req, res, next) => {
+    if (!authAdmin) {
+      console.error("[Firebase Admin] Auth is not initialized. Check server environment variables.");
+      return res.status(503).json({ error: 'Sistem autentikasi sementara tidak tersedia.' });
+    }
+
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Auth token missing' });
     }
+
     const idToken = authHeader.split('Bearer ')[1];
     if (!idToken || idToken === 'null' || idToken === 'undefined') {
       return res.status(401).json({ error: 'Invalid token format' });
     }
+
     try {
       const decodedToken = await authAdmin.verifyIdToken(idToken);
       const uid = decodedToken.uid;
       const email = decodedToken.email;
       
+      if (!email) {
+        return res.status(401).json({ error: 'Token does not contain email' });
+      }
+
       // Sync with local users map
       let user = users.get(uid);
       
-      // If not found by UID, try finding by email (for legacy or first-time sync)
+      // Migration: If not found by UID, try finding by email
       if (!user) {
         for (const [id, u] of users.entries()) {
           if (u.email === email) {
-            // Found by email, migrate to UID key
             user = u;
-            user.id = uid; // Update ID to match UID
+            user.id = uid; 
             users.set(uid, user);
             users.delete(id);
             break;
@@ -116,7 +129,7 @@ async function createServer() {
         }
       }
 
-      // If still not found, it's a completely new user (e.g. first time Google Login)
+      // If still not found, it's a completely new Firebase user
       if (!user) {
         const refCode = req.headers['x-ref-code'] || '';
         let referredBy = null;
@@ -146,8 +159,8 @@ async function createServer() {
           has_received_referral_bonus: false,
           social_bonus_status: 'none',
           social_url: '',
-          signup_bonus_chars: 10000, // New Signup Bonus: 10,000 Chars
-          monthly_chars: 10000,     // Free Tier Monthly: 10,000 Chars
+          signup_bonus_chars: 10000, 
+          monthly_chars: 10000,     
           earned_chars: referredBy ? 5000 : 0,
           used_chars: 0,
           generation_count: 0,
@@ -156,13 +169,23 @@ async function createServer() {
         };
         users.set(uid, user);
         saveUsers();
+        console.log(`[Server] New user created via Firebase: ${email} (${uid})`);
       }
 
-      // Check for monthly reset (simple version: if month changed since signup or last check)
+      // Monthly Credits Reset Check
       const now = new Date();
       const lastCheck = user.last_reset_check ? new Date(user.last_reset_check) : new Date(user.signup_date);
       if (now.getMonth() !== lastCheck.getMonth() || now.getFullYear() !== lastCheck.getFullYear()) {
-         user.monthly_chars = user.tier === 'FREE' ? 10000 : user.monthly_chars; // Only reset if FREE for now
+         // Reset monthly allowance based on tier
+         const tierLimits = {
+           'FREE': 10000,
+           'STARTER': 50000,
+           'KREATOR': 150000,
+           'PRODUKTIF': 400000,
+           'BISNIS': 1500000,
+           'ENTERPRISE': 5000000
+         };
+         user.monthly_chars = tierLimits[user.tier] || 10000;
          user.last_reset_check = Date.now();
          saveUsers();
       }
@@ -170,79 +193,22 @@ async function createServer() {
       req.user = user;
       next();
     } catch (error) {
-      console.error('Error verifying Firebase ID token:', error);
-      res.status(401).json({ error: 'Unauthorized' });
+      console.error('Error verifying Firebase ID token:', error.message);
+      const status = error.code === 'auth/id-token-expired' ? 401 : 403;
+      res.status(status).json({ error: 'Token invalid or expired', code: error.code });
     }
   };
 
   // --- API ROUTES ---
   
-  app.post('/api/auth/login', (req, res) => {
-    const { email, password } = req.body;
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.email === email && u.password === password) {
-        foundUser = u;
-        break;
-      }
-    }
-    if (foundUser) {
-      res.json({ success: true, message: 'Login successful', user: foundUser });
-    } else {
-      res.status(401).json({ success: false, message: 'Email atau password salah' });
-    }
+  // Login route is now just a verification/sync route for the client
+  app.post('/api/auth/sync', authenticate, (req, res) => {
+    res.json({ success: true, user: req.user });
   });
 
-  app.post('/api/auth/signup', (req, res) => {
-    const { name, email, password, whatsapp, refCode } = req.body;
-    
-    // Check existing
-    for (const [id, u] of users.entries()) {
-      if (u.email === email) {
-        return res.status(400).json({ success: false, message: 'Email sudah terdaftar' });
-      }
-    }
-
-    let referredBy = null;
-    if (refCode) {
-      for (const [id, u] of users.entries()) {
-        if (u.referral_code === refCode) {
-          referredBy = id;
-          break;
-        }
-      }
-    }
-
-    const newUser = {
-      id: generateId(),
-      name,
-      email,
-      password,
-      whatsapp: whatsapp || '',
-      whatsapp_opted_in: !!whatsapp,
-      email_subscribed: true,
-      tier: 'FREE',
-      signup_date: Date.now(),
-      last_generation_at: 0,
-      referral_code: generateRefCode(),
-      referred_by: referredBy,
-      valid_referrals: 0,
-      has_received_referral_bonus: false,
-      social_bonus_status: 'none',
-      social_url: '',
-      signup_bonus_chars: 5000,
-      monthly_chars: 0, 
-      earned_chars: 0, // social + referral
-      used_chars: 0,
-      generation_count: 0,
-      pronunciations: {},
-      history: []
-    };
-
-    users.set(newUser.id, newUser);
-    saveUsers();
-    res.json({ success: true, message: 'Signup successful', user: newUser });
-  });
+  // Legacy manual auth routes are disabled in favor of Firebase Auth
+  app.post('/api/auth/login', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
+  app.post('/api/auth/signup', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
 
   app.post('/api/auth/otp/request', (req, res) => {
     const { whatsapp } = req.body;
@@ -359,6 +325,26 @@ async function createServer() {
     res.json({ success: true, message: 'Login successful', user: foundUser });
   });
 
+  app.get('/api/user/referrals', authenticate, (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+    
+    // Count how many people have used this user's referral code
+    let inviteCount = 0;
+    for (const [id, u] of users.entries()) {
+      if (u.referred_by === req.user.id) {
+        inviteCount++;
+      }
+    }
+
+    res.json({
+      referral_code: req.user.referral_code,
+      invite_count: inviteCount,
+      valid_referrals: req.user.valid_referrals,
+      bonus_earned: req.user.has_received_referral_bonus ? 20000 : 0,
+      has_received_bonus: req.user.has_received_referral_bonus
+    });
+  });
+
   app.get('/api/user/me', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ user: req.user });
@@ -454,6 +440,116 @@ async function createServer() {
     res.header('Content-Type', 'text/csv');
     res.attachment('email_list.csv');
     res.send(csv);
+  });
+
+  // --- MIDTRANS CONFIG ---
+  const snap = new midtransClient.Snap({
+    isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+    serverKey: process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-YOUR_KEY',
+    clientKey: process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-YOUR_KEY'
+  });
+
+  // --- PAYMENT ROUTES ---
+  app.post('/api/payment/create', authenticate, async (req, res) => {
+    const { planId, billingCycle } = req.body;
+    const user = req.user;
+
+    const plan = Object.values(PLANS).find(p => p.id === planId);
+    if (!plan) {
+      return res.status(400).json({ error: 'Paket tidak valid' });
+    }
+
+    const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
+    const orderId = `ORDER-${user.id}-${generateId().substring(0, 4)}-${Date.now()}`;
+
+    const parameter = {
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: price
+      },
+      customer_details: {
+        first_name: user.name,
+        email: user.email,
+        phone: user.whatsapp
+      },
+      item_details: [{
+        id: plan.id,
+        price: price,
+        quantity: 1,
+        name: `Paket ${plan.name} (${billingCycle || 'One-time'})`
+      }],
+      callbacks: {
+        finish: `${req.protocol}://${req.get('host')}`
+      }
+    };
+
+    try {
+      const transaction = await snap.createTransaction(parameter);
+      // Save pending transaction if needed, but for simplicity we rely on webhook
+      res.json({ token: transaction.token, redirect_url: transaction.redirect_url });
+    } catch (error) {
+      console.error('Midtrans Error:', error);
+      res.status(500).json({ error: 'Gagal membuat transaksi pembayaran' });
+    }
+  });
+
+  app.post('/api/payment/webhook', async (req, res) => {
+    const notification = req.body;
+    try {
+      const statusResponse = await snap.transaction.notification(notification);
+      const orderId = statusResponse.order_id;
+      const transactionStatus = statusResponse.transaction_status;
+      const fraudStatus = statusResponse.fraud_status;
+
+      console.log(`Transaction notification received. Order ID: ${orderId}. Status: ${transactionStatus}. Fraud: ${fraudStatus}`);
+
+      if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
+        if (fraudStatus === 'challenge') {
+          // TODO: handle challenge case
+        } else {
+          // SUCCESS
+          // Extract UID from orderId if we saved it, or we need to find user by some other way
+          // Actually, we should have passed UID in metadata or something.
+          // Let's use a simple lookup for now or pass custom field.
+          // For now, let's assume we can get it from item_details or custom_field
+          
+          // Re-fetch custom fields if available
+          // Since we didn't use custom_field in createTransaction, let's look at how we can identify the user.
+          // Better: include user UID in orderId prefix or use metadata.
+          
+          const parts = orderId.split('-');
+          // If we use ORDER-UID-TIMESTAMP
+          const uid = parts[1];
+          const user = users.get(uid);
+
+          if (user) {
+            const planId = statusResponse.item_details ? statusResponse.item_details[0].id : null;
+            // Fallback: If not in notification, we might need to store pending orders
+            // For now, let's look at gross_amount to match plan
+            const amount = parseInt(statusResponse.gross_amount);
+            
+            const matchedPlan = Object.values(PLANS).find(p => p.price === amount || p.yearlyPrice === amount);
+            
+            if (matchedPlan) {
+              if (matchedPlan.type === 'topup') {
+                user.earned_chars += matchedPlan.credits;
+              } else {
+                user.tier = matchedPlan.tier;
+                user.monthly_chars = matchedPlan.credits;
+              }
+              user.last_payment_at = Date.now();
+              user.last_order_id = orderId;
+              saveUsers();
+              console.log(`User ${user.email} upgraded to ${matchedPlan.tier} / received ${matchedPlan.credits} credits`);
+            }
+          }
+        }
+      }
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('Webhook Error:', error);
+      res.status(500).send('Error');
+    }
   });
 
   app.get('/api/admin/export/whatsapp', authenticate, (req, res) => {
