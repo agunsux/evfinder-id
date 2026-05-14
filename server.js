@@ -104,6 +104,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const apiRouter = express.Router();
+
 const authenticate = async (req, res, next) => {
     if (!authAdmin) {
       console.error("[Firebase Admin] Auth is not initialized. Check server environment variables.");
@@ -217,16 +219,14 @@ const authenticate = async (req, res, next) => {
 
   // --- API ROUTES ---
   
-  // Login route is now just a verification/sync route for the client
-  app.post('/api/auth/sync', authenticate, (req, res) => {
+  apiRouter.post('/auth/sync', authenticate, (req, res) => {
     res.json({ success: true, user: req.user });
   });
 
-  // Legacy manual auth routes are disabled in favor of Firebase Auth
-  app.post('/api/auth/login', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
-  app.post('/api/auth/signup', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
+  apiRouter.post('/auth/login', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
+  apiRouter.post('/auth/signup', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
 
-  app.post('/api/auth/otp/request', (req, res) => {
+  apiRouter.post('/auth/otp/request', (req, res) => {
     const { whatsapp } = req.body;
     if (!whatsapp) return res.status(400).json({ error: 'Nomor WhatsApp diperlukan' });
     
@@ -242,7 +242,7 @@ const authenticate = async (req, res, next) => {
     res.json({ success: true, message: 'OTP telah dikirim ke WhatsApp Anda (mock: check console)' });
   });
 
-  app.post('/api/auth/otp/verify', (req, res) => {
+  apiRouter.post('/auth/otp/verify', (req, res) => {
     const { whatsapp, otp } = req.body;
     if (!whatsapp || !otp) return res.status(400).json({ error: 'WhatsApp dan OTP diperlukan' });
     
@@ -296,7 +296,7 @@ const authenticate = async (req, res, next) => {
     res.json({ success: true, message: 'Login successful', user: foundUser });
   });
 
-  app.post('/api/auth/google', (req, res) => {
+  apiRouter.post('/auth/google', (req, res) => {
     const { email, name, googleId } = req.body;
     
     // Find or create
@@ -341,7 +341,7 @@ const authenticate = async (req, res, next) => {
     res.json({ success: true, message: 'Login successful', user: foundUser });
   });
 
-  app.get('/api/user/referrals', authenticate, (req, res) => {
+  apiRouter.get('/user/referrals', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     
     // Count how many people have used this user's referral code
@@ -361,27 +361,27 @@ const authenticate = async (req, res, next) => {
     });
   });
 
-  app.get('/api/user/me', authenticate, (req, res) => {
+  apiRouter.get('/user/me', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ user: req.user });
   });
 
-  app.get('/api/user/pronunciations', authenticate, (req, res) => {
+  apiRouter.get('/user/pronunciations', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ pronunciations: req.user.pronunciations || {} });
   });
 
-  app.get('/api/user/history', authenticate, (req, res) => {
+  apiRouter.get('/user/history', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json({ history: req.user.history || [] });
   });
 
-  app.get('/api/admin/voice-config', authenticate, (req, res) => {
+  apiRouter.get('/admin/voice-config', authenticate, (req, res) => {
     // Let all users see it, but only admin can change
     res.json(voiceConfig);
   });
 
-  app.post('/api/admin/voice-config', authenticate, (req, res) => {
+  apiRouter.post('/admin/voice-config', authenticate, (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     const { tiers, limits } = req.body;
     if (tiers) {
@@ -399,7 +399,7 @@ const authenticate = async (req, res, next) => {
     }
   });
 
-  app.post('/api/user/pronunciations', authenticate, (req, res) => {
+  apiRouter.post('/user/pronunciations', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { word, pronunciation } = req.body;
     if (!word) return res.status(400).json({ error: 'Word is required' });
@@ -416,7 +416,7 @@ const authenticate = async (req, res, next) => {
     res.json({ success: true, pronunciations: req.user.pronunciations });
   });
 
-  app.post('/api/user/social-share', authenticate, (req, res) => {
+  apiRouter.post('/user/social-share', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { url } = req.body;
     
@@ -434,7 +434,7 @@ const authenticate = async (req, res, next) => {
     res.json({ success: true, message: 'Pengajuan berhasil. Menunggu verifikasi admin.', user: req.user });
   });
 
-  app.post('/api/user/settings', authenticate, (req, res) => {
+  apiRouter.post('/user/settings', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { whatsapp, whatsapp_opted_in, email_subscribed } = req.body;
     if (whatsapp !== undefined) req.user.whatsapp = whatsapp;
@@ -445,7 +445,7 @@ const authenticate = async (req, res, next) => {
   });
 
   // --- ADMIN EXPORTS ---
-  app.get('/api/admin/export/email', authenticate, (req, res) => {
+  apiRouter.get('/admin/export/email', authenticate, (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     let csv = "Name,Email,Tier,Signup Date,Total Characters Used\n";
     for (const [id, u] of users.entries()) {
@@ -466,7 +466,7 @@ const authenticate = async (req, res, next) => {
   });
 
   // --- PAYMENT ROUTES ---
-  app.post('/api/payment/create', authenticate, async (req, res) => {
+  apiRouter.post('/payment/create', authenticate, async (req, res) => {
     const { planId, billingCycle } = req.body;
     const user = req.user;
 
@@ -509,7 +509,7 @@ const authenticate = async (req, res, next) => {
     }
   });
 
-  app.post('/api/payment/webhook', async (req, res) => {
+  apiRouter.post('/payment/webhook', async (req, res) => {
     const notification = req.body;
     try {
       const statusResponse = await snap.transaction.notification(notification);
@@ -568,7 +568,7 @@ const authenticate = async (req, res, next) => {
     }
   });
 
-  app.get('/api/admin/export/whatsapp', authenticate, (req, res) => {
+  apiRouter.get('/admin/export/whatsapp', authenticate, (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     let csv = "Name,WhatsApp,Tier,Signup Date,Total Characters Used\n";
     for (const [id, u] of users.entries()) {
@@ -581,7 +581,7 @@ const authenticate = async (req, res, next) => {
     res.send(csv);
   });
   
-  app.post('/api/admin/social-approvals/:id/approve', authenticate, (req, res) => {
+  apiRouter.post('/admin/social-approvals/:id/approve', authenticate, (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     const targetId = req.params.id;
     const targetUser = users.get(targetId);
@@ -692,7 +692,7 @@ const authenticate = async (req, res, next) => {
     legacyHeaders: false,
   });
 
-  app.post('/api/tts', authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, async (req, res) => {
+  apiRouter.post('/tts', authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, async (req, res) => {
     try {
       const { text, voice, speed, pitch, volume } = req.body;
       const apiKey = process.env.GOOGLE_API_KEY;
@@ -900,15 +900,11 @@ async function setupFrontend() {
 }
 
 // --- DEBUG & HEALTH ---
-app.get("/api", (req, res) => {
-  res.json({ message: "Shinerva API is live", version: "1.0.1" });
+apiRouter.get("/", (req, res) => {
+  res.json({ message: "Shinerva API is live", version: "1.0.2" });
 });
 
-app.get("/api/debug-path", (req, res) => {
-  res.json({ url: req.url, originalUrl: req.originalUrl, path: req.path });
-});
-
-app.get("/api/health", (req, res) => {
+apiRouter.get("/health", (req, res) => {
   res.json({ 
     status: "ok",
     firebaseAdmin: !!authAdmin,
@@ -917,6 +913,12 @@ app.get("/api/health", (req, res) => {
     hasClientConfig: fs.existsSync(path.resolve(process.cwd(), 'firebase-applet-config.json'))
   });
 });
+
+// Mount the router at both /api and / to handle Vercel rewrites gracefully
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
+
+setupFrontend();
 
 app.get("/api/debug-env", (req, res) => {
   res.json({
