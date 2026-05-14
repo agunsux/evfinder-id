@@ -1,8 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-
-import configFromJson from "../../firebase-applet-config.json";
 
 const clean = (val) => {
   if (val === null || val === undefined) return "";
@@ -18,17 +16,23 @@ const clean = (val) => {
   return res.replace(/[\u200B-\u200D\ufeff\u00a0\u0000-\u001F\u007F-\u009F]/g, "");
 };
 
-// Priority: Env vars, then JSON config
+// Use environment variables or hardcoded fallbacks for this specific project
+// Note: Hardcoded fallbacks are for development convenience when env vars might be stale in browser cache
+const rawApiKey = clean(import.meta.env.VITE_FIREBASE_API_KEY);
+const rawProjectId = clean(import.meta.env.VITE_FIREBASE_PROJECT_ID);
+
 const firebaseConfig = {
-  apiKey: "AIzaSy_REMOVED_BY_GIT_FILTER",
-  authDomain: "practical-gecko-476621-q4.firebaseapp.com",
-  projectId: "practical-gecko-476621-q4",
-  storageBucket: "practical-gecko-476621-q4.firebasestorage.app",
-  messagingSenderId: "240392759669",
-  appId: "1:240392759669:web:f7a716bdd379422227cb3c",
+  // If the secret starts with '{', someone likely pasted a Service Account JSON by mistake.
+  // We filter it out so the fallback takes over.
+  apiKey: (rawApiKey && !rawApiKey.startsWith("{")) ? rawApiKey : "AIzaSy_REMOVED_BY_GIT_FILTER",
+  authDomain: clean(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN) || "practical-gecko-476621-q4.firebaseapp.com",
+  projectId: rawProjectId || "practical-gecko-476621-q4",
+  storageBucket: clean(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET) || "practical-gecko-476621-q4.firebasestorage.app",
+  messagingSenderId: clean(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID) || "240392759669",
+  appId: clean(import.meta.env.VITE_FIREBASE_APP_ID) || "1:240392759669:web:f7a716bdd379422227cb3c",
 };
 
-const firestoreDatabaseId = "ai-studio-305f7bca-107e-4ee8-bbb4-57fef0edffb6";
+const firestoreDatabaseId = clean(import.meta.env.VITE_FIREBASE_FIRESTORE_DB_ID) || "ai-studio-305f7bca-107e-4ee8-bbb4-57fef0edffb6";
 
 const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
 const missingVars = requiredKeys.filter(key => !firebaseConfig[key]);
@@ -40,7 +44,7 @@ let initError = null;
 if (missingVars.length > 0) {
   initError = `Missing required environment variables: ${missingVars.join(", ")}.`;
 } else if (!isCorrectProject) {
-  initError = `Project ID mismatch: Expected ${correctProjectId}, got ${firebaseConfig.projectId}. Check VITE_FIREBASE_PROJECT_ID in settings.`;
+  initError = `Project ID mismatch: Expected ${correctProjectId}, got ${firebaseConfig.projectId}.`;
 }
 
 export let isConfigValid = !initError;
@@ -52,39 +56,24 @@ try {
   if (isConfigValid) {
     const existingApps = getApps();
     if (!existingApps.length) {
-      const apiKey = firebaseConfig.apiKey || "";
-      console.log("[Firebase] Initializing App:", { 
-        projectId: firebaseConfig.projectId,
-        apiKeySnippet: apiKey.slice(0, 10) + "..." + apiKey.slice(-5),
-        apiKeyLen: apiKey.length,
-        hasEnv: !!import.meta.env.VITE_FIREBASE_API_KEY,
-        source: import.meta.env.VITE_FIREBASE_API_KEY ? "env" : "json"
-      });
       app = initializeApp(firebaseConfig);
     } else {
       app = existingApps[0];
-      console.log("[Firebase] Using existing app:", app.name, {
-        projectId: app.options.projectId
-      });
     }
     
     auth = getAuth(app);
+    // Explicitly set persistence to local
+    setPersistence(auth, browserLocalPersistence).catch(err => {
+      console.warn("[Firebase] Persistence error:", err.message);
+    });
+
     db = getFirestore(app, firestoreDatabaseId === "(default)" ? undefined : firestoreDatabaseId);
-    console.log("[Firebase] Services initialized successfully.");
+    console.log("[Firebase] Instance initialized:", firebaseConfig.projectId);
   }
 } catch (error) {
-  console.error("[Firebase] Fatal Initialization Error:", error.message, "Code:", error.code);
+  console.error("[Firebase] Fatal Initialization Error:", error.message);
   isConfigValid = false;
-  
-  const rawKey = import.meta.env.VITE_FIREBASE_API_KEY || "";
-  const keyDisplay = rawKey.length > 10 ? `${rawKey.slice(0, 6)}...${rawKey.slice(-4)}` : "missing/short";
-  const diag = `Key: ${keyDisplay} (Len: ${rawKey.length}). Project: ${firebaseConfig.projectId}.`;
-
-  if (error.code === "auth/invalid-api-key" || error.message.includes("invalid-api-key")) {
-    initError = `API Key tidak valid (auth/invalid-api-key). ${diag} Pastikan VITE_FIREBASE_API_KEY benar untuk project ${firebaseConfig.projectId}.`;
-  } else {
-    initError = `Firebase Error: ${error.message} (${error.code || 'n/a'}). ${diag}`;
-  }
+  initError = error.message;
 }
 
 export { app, auth, db, initError };

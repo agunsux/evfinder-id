@@ -18,7 +18,8 @@ import {
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  onAuthStateChanged
 } from 'firebase/auth';
 import {
   Waves,
@@ -225,6 +226,57 @@ const App = () => {
   const [billingCycle, setBillingCycle] = useState("monthly"); // monthly, yearly
 
   useEffect(() => {
+    if (!auth) {
+      setIsAuthInitializing(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("[Auth] Firebase state changed:", firebaseUser?.email || "No User");
+      if (firebaseUser) {
+        // Set basic user info immediately for a better UX
+        setUser(prev => prev || { 
+          email: firebaseUser.email, 
+          uid: firebaseUser.uid,
+          tier: 'FREE',
+          generation_count: 0,
+          used_chars: 0,
+          monthly_chars: 0,
+          signup_bonus_chars: 0,
+          earned_chars: 0,
+          valid_referrals: 0,
+          referral_code: "",
+          social_bonus_status: "none"
+        });
+
+        // Sync with backend to get full profile
+        try {
+          const idToken = await firebaseUser.getIdToken(true);
+          const res = await fetch("/api/user/me", {
+            headers: { 
+              "Authorization": `Bearer ${idToken}`
+            },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.user) {
+              console.log("[Auth] Profile synced from backend:", data.user.email);
+              setUser(data.user);
+            }
+          }
+        } catch (e) {
+          console.warn("[Auth] Failed to sync profile:", e);
+        }
+      } else {
+        setUser(null);
+      }
+      setIsAuthInitializing(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
     } else {
@@ -238,18 +290,24 @@ const App = () => {
   };
 
   const refreshUser = async () => {
-    if (!auth?.currentUser) return;
+    if (!auth?.currentUser) {
+      console.warn("refreshUser called but no currentUser");
+      return;
+    }
     try {
-      const idToken = await auth.currentUser.getIdToken();
+      const idToken = await auth.currentUser.getIdToken(true);
       const res = await fetch("/api/user/me", {
         headers: { 
           "Authorization": `Bearer ${idToken}`
         },
       });
       const data = await checkResponse(res);
-      if (data.user) setUser(data.user);
+      if (data.user) {
+        console.log("[Auth] User refreshed:", data.user.email);
+        setUser(data.user);
+      }
     } catch (e) {
-      console.warn("refreshUser failed, ignoring:", e);
+      console.warn("refreshUser failed:", e);
     }
   };
 
@@ -704,11 +762,28 @@ const App = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      await loginWithGoogle();
-      // Backend automatically syncs/creates user on next authenticated request
-      await refreshUser();
+      const userCredential = await loginWithGoogle();
+      
+      // Set user state immediately
+      setUser({
+        email: userCredential.user.email,
+        uid: userCredential.user.uid,
+        tier: 'FREE',
+        generation_count: 0,
+        used_chars: 0,
+        monthly_chars: 0,
+        signup_bonus_chars: 0,
+        earned_chars: 0,
+        valid_referrals: 0,
+        referral_code: "",
+        social_bonus_status: "none"
+      });
+
       setIsAuthOpen(false);
       toast.success("Login Google berhasil!");
+      
+      // Sync/Refresh
+      await refreshUser();
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -724,7 +799,7 @@ const App = () => {
         const userCredential = await signup(authData.email, authData.password, authData.name);
         
         // Pass referral code to backend during the first user sync
-        const idToken = await userCredential.user.getIdToken();
+        const idToken = await userCredential.user.getIdToken(true);
         await fetch("/api/auth/sync", {
           method: "POST",
           headers: { 
@@ -733,6 +808,21 @@ const App = () => {
           },
         });
         
+        // Set user state immediately so UI updates before refreshUser returns
+        setUser({
+          email: userCredential.user.email,
+          uid: userCredential.user.uid,
+          tier: 'FREE',
+          generation_count: 0,
+          used_chars: 0,
+          monthly_chars: 0,
+          signup_bonus_chars: 0,
+          earned_chars: 0,
+          valid_referrals: 0,
+          referral_code: "",
+          social_bonus_status: "none"
+        });
+
         // Send verification email
         try {
           await verifyEmail();
@@ -740,14 +830,33 @@ const App = () => {
           console.warn("Could not send initial verification email:", vErr);
         }
 
-        await refreshUser();
         setIsAuthOpen(false);
         toast.success("Pendaftaran berhasil!");
-      } else if (authMode === "login") {
-        await login(authData.email, authData.password);
+        
+        // Final refresh to get full profile from backend
         await refreshUser();
+      } else if (authMode === "login") {
+        const userCredential = await login(authData.email, authData.password);
+        
+        // Set user state immediately
+        setUser({
+          email: userCredential.user.email,
+          uid: userCredential.user.uid,
+          tier: 'FREE',
+          generation_count: 0,
+          used_chars: 0,
+          monthly_chars: 0,
+          signup_bonus_chars: 0,
+          earned_chars: 0,
+          valid_referrals: 0,
+          referral_code: "",
+          social_bonus_status: "none"
+        });
+
         setIsAuthOpen(false);
         toast.success("Berhasil masuk!");
+        
+        await refreshUser();
       } else if (authMode === "whatsapp") {
         if (!otpSent) {
           const res = await fetch("/api/auth/otp/request", {
@@ -1209,10 +1318,10 @@ const App = () => {
                   <span className="text-3xl font-black text-text">
                     {Math.max(
                       0,
-                      user.monthly_chars +
-                        user.signup_bonus_chars +
-                        user.earned_chars -
-                        user.used_chars,
+                      (user.monthly_chars || 0) +
+                        (user.signup_bonus_chars || 0) +
+                        (user.earned_chars || 0) -
+                        (user.used_chars || 0),
                     ).toLocaleString("id-ID")}
                   </span>
                   <span className="text-sm text-gray-500 mb-1">karakter</span>
@@ -1221,26 +1330,26 @@ const App = () => {
                   <div
                     className="bg-terracotta h-full rounded-full"
                     style={{
-                      width: `${Math.min(100, (user.used_chars / Math.max(1, user.monthly_chars + user.signup_bonus_chars + user.earned_chars)) * 100)}%`,
+                      width: `${Math.min(100, ((user.used_chars || 0) / Math.max(1, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0))) * 100)}%`,
                     }}
                   ></div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-4">
                   <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
                     <div className="text-text-muted text-xs mb-1">Bulanan</div>
-                    <div className="font-bold text-text">{user.monthly_chars.toLocaleString("id-ID")}</div>
+                    <div className="font-bold text-text">{(user.monthly_chars || 0).toLocaleString("id-ID")}</div>
                   </div>
                   <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
                     <div className="text-text-muted text-xs mb-1">Bonus Signup</div>
-                    <div className="font-bold text-text">{user.signup_bonus_chars.toLocaleString("id-ID")}</div>
+                    <div className="font-bold text-text">{(user.signup_bonus_chars || 0).toLocaleString("id-ID")}</div>
                   </div>
                   <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
                     <div className="text-text-muted text-xs mb-1">Estimasi Video</div>
-                    <div className="font-bold text-green-500">~{Math.floor(Math.max(0, user.monthly_chars + user.signup_bonus_chars + user.earned_chars - user.used_chars) / 1500)} Video</div>
+                    <div className="font-bold text-green-500">~{Math.floor(Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0)) / 1500)} Video</div>
                   </div>
                   <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
                     <div className="text-text-muted text-xs mb-1">Digunakan</div>
-                    <div className="font-bold text-terracotta">{user.used_chars.toLocaleString("id-ID")}</div>
+                    <div className="font-bold text-terracotta">{(user.used_chars || 0).toLocaleString("id-ID")}</div>
                   </div>
                 </div>
               </div>
