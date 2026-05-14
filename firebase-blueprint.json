@@ -77,6 +77,17 @@
         "createdAt": { "type": "timestamp" },
         "audioUrl": { "type": "string" }
       }
+    },
+    "PronunciationRule": {
+      "title": "PronunciationRule",
+      "description": "Custom word-pronunciation pairs for a user.",
+      "type": "object",
+      "properties": {
+        "originalWord": { "type": "string" },
+        "pronunciation": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["originalWord", "pronunciation", "createdAt"]
     }
   },
   "firestore": {
@@ -84,6 +95,7 @@
     "/referrals/{referralId}": { "schema": "Referral", "description": "Referral tracking records." },
     "/socialClaims/{claimId}": { "schema": "SocialClaim", "description": "Social media claim records." },
     "/creditTransactions/{txId}": { "schema": "CreditTransaction", "description": "Credit history." },
-    "/users/{uid}/tts_generations/{genId}": { "schema": "TTSGeneration", "description": "Audio generation history." }
+    "/users/{uid}/tts_generations/{genId}": { "schema": "TTSGeneration", "description": "Audio generation history." },
+    "/users/{uid}/pronunciation_rules/{ruleId}": { "schema": "PronunciationRule", "description": "Custom pronunciation rules for a specific user." }
   }
 }

@@ -1,8 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Toaster, toast } from 'react-hot-toast';
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
-import { auth } from './lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, sendEmailVerification, signOut } from 'firebase/auth';
+import { auth, isConfigValid, initError } from './lib/firebase';
+import { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  sendPasswordResetEmail, 
+  sendEmailVerification, 
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
+} from 'firebase/auth';
 import {
   Waves,
   ChevronDown,
@@ -190,7 +199,7 @@ const App = () => {
   };
 
   const refreshUser = async () => {
-    if (!auth.currentUser) return;
+    if (!auth?.currentUser) return;
     try {
       const idToken = await auth.currentUser.getIdToken();
       const res = await fetch("/api/user/me", {
@@ -206,7 +215,7 @@ const App = () => {
   };
 
   const fetchHistory = async () => {
-    if (!auth.currentUser) return;
+    if (!auth?.currentUser) return;
     setHistoryLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken();
@@ -225,7 +234,7 @@ const App = () => {
   };
 
   const fetchVoiceConfig = async () => {
-    if (!auth.currentUser) return;
+    if (!auth?.currentUser) return;
     setVoiceConfigLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken();
@@ -245,7 +254,7 @@ const App = () => {
   };
 
   const saveVoiceConfig = async (newTiers, newLimits) => {
-    if (!auth.currentUser || user?.tier !== "ENTERPRISE") return;
+    if (!auth?.currentUser || user?.tier !== "ENTERPRISE") return;
     try {
       const idToken = await auth.currentUser.getIdToken();
       const res = await fetch("/api/admin/voice-config", {
@@ -279,13 +288,20 @@ const App = () => {
   useEffect(() => {
     fetchHistory();
     // Watch for auth changes
-    const unsubscribe = auth.onAuthStateChanged((u) => {
-      if (u) {
-        refreshUser();
-      } else {
-        setUser(null);
+    let unsubscribe = () => {};
+    if (auth) {
+      try {
+        unsubscribe = auth.onAuthStateChanged((u) => {
+          if (u) {
+            refreshUser();
+          } else {
+            setUser(null);
+          }
+        });
+      } catch (e) {
+        console.error("onAuthStateChanged setup failed:", e);
       }
-    });
+    }
     return () => unsubscribe();
   }, []);
 
@@ -296,7 +312,7 @@ const App = () => {
   }, [isHistoryOpen]);
 
   const handleUpdatePronunciation = async (word, pronunciation) => {
-    if (!auth.currentUser) {
+    if (!auth?.currentUser) {
       alert("Harap login terlebih dahulu untuk menggunakan fitur ini.");
       return;
     }
@@ -325,7 +341,7 @@ const App = () => {
   };
 
   const handleTestPronunciation = async (word, pronunciation) => {
-    if (!auth.currentUser) return;
+    if (!auth?.currentUser) return;
     if (!word || !pronunciation) {
       toast.error("Masukkan kata asli dan cara baca terlebih dahulu.");
       return;
@@ -442,7 +458,7 @@ const App = () => {
   }, [cooldown]);
 
   const handleGenerate = async () => {
-    if (!auth.currentUser) {
+    if (!auth?.currentUser) {
       setNotification("anda belum sign up/log in");
       setTimeout(() => setNotification(null), 3000);
       return;
@@ -629,6 +645,10 @@ const App = () => {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!auth) {
+      toast.error("Firebase tidak terinisialisasi. Silakan periksa konfigurasi.");
+      return;
+    }
     setGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
@@ -733,7 +753,7 @@ const App = () => {
   };
 
   const handleResendVerification = async () => {
-    if (auth.currentUser) {
+    if (auth?.currentUser) {
         setAuthLoading(true);
         try {
             await sendEmailVerification(auth.currentUser);
@@ -747,7 +767,7 @@ const App = () => {
   };
 
   const handleRefreshVerificationStatus = async () => {
-    if (auth.currentUser) {
+    if (auth?.currentUser) {
       setAuthLoading(true);
       try {
         await auth.currentUser.reload();
@@ -778,9 +798,14 @@ const App = () => {
   const handleSocialSubmit = async (e) => {
     e.preventDefault();
     if (!socialUrl) return;
+    if (!auth?.currentUser) {
+      toast.error("Harap login terlebih dahulu.");
+      return;
+    }
     setAuthLoading(true);
     try {
-      const idToken = await auth.currentUser.getIdToken();
+      const idToken = await auth?.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Gagal mendapatkan token autentikasi.");
       const res = await fetch("/api/user/social-share", {
         method: "POST",
         headers: {
@@ -803,6 +828,31 @@ const App = () => {
       setAuthLoading(false);
     }
   };
+
+  if (!isConfigValid) {
+    return (
+      <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-4 text-center">
+        <div className="w-16 h-16 bg-terracotta/20 rounded-full flex items-center justify-center mb-6">
+          <AlertTriangle className="w-8 h-8 text-terracotta" />
+        </div>
+        <h1 className="text-2xl font-black text-text mb-2">Konfigurasi Firebase Bermasalah</h1>
+        <p className="text-text-muted max-w-md mb-8">
+          Aplikasi tidak dapat terhubung ke Firebase karena beberapa variabel lingkungan belum diatur atau salah. 
+          Silakan periksa pengaturan .env atau pastikan API Key sudah benar.
+        </p>
+        <div className="bg-surface2 p-4 rounded-xl border border-surface2 text-left w-full max-w-md">
+          <h3 className="text-xs font-black text-terracotta uppercase mb-2">Pesan Kesalahan:</h3>
+          <p className="text-xs font-mono text-text-muted break-all">{initError || "Firebase configuration missing or project mismatch."}</p>
+        </div>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-8 bg-terracotta px-6 py-3 rounded-full font-bold text-white border-none cursor-pointer hover:bg-trdark transition-colors"
+        >
+          Coba Muat Ulang
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -848,6 +898,14 @@ const App = () => {
               >
                 Hubungi Kami
               </a>
+              {user && (
+                <a
+                  href="#pronunciation"
+                  className="text-terracotta hover:text-trdark font-bold transition-colors"
+                >
+                  Aturan Pengucapan
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-4">
               <button
@@ -910,7 +968,7 @@ const App = () => {
       )}
 
       {/* Verification Banner */}
-      {user && !user.emailVerified && auth.currentUser && !isVerificationDismissed && (
+      {user && !user.emailVerified && auth?.currentUser && !isVerificationDismissed && (
         <div className="fixed top-24 left-4 right-4 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="max-w-4xl mx-auto bg-terracotta text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 border border-white/10">
             <div className="flex items-center gap-4">
@@ -1262,7 +1320,14 @@ const App = () => {
                         Panduan Pengucapan
                       </span>
                       <button
-                        onClick={() => setIsPronunciationOpen(true)}
+                        onClick={() => {
+                          const element = document.getElementById('pronunciation');
+                          if (element) {
+                            element.scrollIntoView({ behavior: 'smooth' });
+                          } else {
+                            setIsPronunciationOpen(true);
+                          }
+                        }}
                         className="text-xs bg-surface2 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 cursor-pointer"
                       >
                         Kelola
@@ -1392,6 +1457,151 @@ const App = () => {
             </div>
           </div>
         </section>
+
+        {/* Pronunciation Management Section */}
+        {user && (
+          <section id="pronunciation" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
+            <div className="bg-surface rounded-3xl p-8 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
+              
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                  <h2 className="text-3xl font-black text-text flex items-center gap-3">
+                    <BookOpen className="w-8 h-8 text-terracotta" /> 
+                    Daftar Aturan Pengucapan
+                  </h2>
+                  <p className="text-text-muted mt-2">
+                    Kelola bagaimana AI menyebutkan kata atau istilah khusus Anda.
+                  </p>
+                </div>
+                <div className="bg-surface2 px-4 py-2 rounded-full border border-surface2">
+                  <span className="text-sm font-bold text-terracotta">
+                    {Object.keys(user.pronunciations || {}).length} Aturan Aktif
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Form to add new rule */}
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="bg-dark/50 rounded-2xl p-6 border border-surface2 h-full">
+                    <h3 className="font-bold text-text mb-4 text-sm uppercase tracking-wider">Tambah Aturan Baru</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Kata Asli</label>
+                        <input
+                          type="text"
+                          value={newWord}
+                          onChange={(e) => setNewWord(e.target.value)}
+                          className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none text-sm"
+                          placeholder="Contoh: Shinerva"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Cara Baca</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={newPronunciation}
+                            onChange={(e) => setNewPronunciation(e.target.value)}
+                            className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none pr-10 text-sm"
+                            placeholder="Contoh: shi ner va"
+                          />
+                          <button 
+                            onClick={() => handleTestPronunciation(newWord, newPronunciation)}
+                            disabled={testLoading}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-surface2 rounded-lg transition-colors text-terracotta disabled:opacity-50 border-none bg-transparent cursor-pointer"
+                            title="Tes suara"
+                          >
+                            {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (newWord.trim() && newPronunciation.trim()) {
+                            handleUpdatePronunciation(newWord.trim(), newPronunciation.trim());
+                            setNewWord("");
+                            setNewPronunciation("");
+                          }
+                        }}
+                        className="w-full bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-none cursor-pointer mt-2"
+                      >
+                        <Plus className="w-4 h-4" /> Simpan Aturan
+                      </button>
+                    </div>
+                    
+                    <div className="mt-8 pt-6 border-t border-surface2">
+                      <h4 className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Tips Cepat</h4>
+                      <div className="space-y-2">
+                        {[
+                          { w: "AI", p: "ey ai" },
+                          { w: "TTS", p: "te te es" }
+                        ].map(tip => (
+                          <div 
+                            key={tip.w}
+                            onClick={() => {setNewWord(tip.w); setNewPronunciation(tip.p);}}
+                            className="flex justify-between items-center text-xs p-2 rounded-lg hover:bg-surface2 cursor-pointer transition-colors border border-transparent hover:border-surface2"
+                          >
+                            <span className="text-text font-bold">{tip.w}</span>
+                            <span className="text-text-muted">→ {tip.p}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* List of existing rules */}
+                <div className="lg:col-span-8">
+                  <div className="bg-dark/30 rounded-2xl p-2 border border-surface2 min-h-[300px] flex flex-col">
+                    <div className="max-h-[500px] overflow-y-auto custom-scrollbar p-2">
+                      {user.pronunciations && Object.keys(user.pronunciations).length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {Object.entries(user.pronunciations).map(([word, pron]) => (
+                            <div key={word} className="flex items-center justify-between bg-dark p-4 rounded-xl border border-surface2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-text font-bold truncate">{word}</span>
+                                <span className="text-terracotta text-xs font-medium truncate">Dibaca: {pron}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleTestPronunciation(word, pron)}
+                                  disabled={testLoading}
+                                  className="text-text-muted hover:text-terracotta transition-colors p-2 hover:bg-surface2 rounded-lg cursor-pointer border-none bg-transparent"
+                                  title="Tes suara"
+                                >
+                                  <Play className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePronunciation(word, null)}
+                                  className="text-text-muted hover:text-red-500 transition-colors p-2 hover:bg-surface2 rounded-lg cursor-pointer border-none bg-transparent"
+                                  title="Hapus"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-4">
+                          <div className="w-16 h-16 bg-surface2 rounded-full flex items-center justify-center mb-4">
+                            <BookOpen className="w-8 h-8 text-text-muted" />
+                          </div>
+                          <h4 className="font-bold text-text mb-1">Belum ada aturan</h4>
+                          <p className="text-sm text-text-muted max-w-xs">
+                            Coba tambahkan kata yang sering salah diucapkan oleh AI agar hasilnya lebih sempurna.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Content Packs */}
         <section
