@@ -5,7 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
-import { authAdmin } from './src/lib/firebaseAdmin.js';
+import { authAdmin, dbAdmin } from './src/lib/firebaseAdmin.js';
 import { rateLimit } from 'express-rate-limit';
 
 import { PLANS } from './src/lib/plans.js';
@@ -15,89 +15,31 @@ dotenv.config();
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
-// --- FILE-BACKED DB ---
-// Vercel only allows writes to /tmp; use ./data for local dev
-const dataFolder = process.env.VERCEL
-  ? path.join('/tmp', 'data')
-  : path.join(process.cwd(), 'data');
-try {
-  if (!fs.existsSync(dataFolder)) {
-    fs.mkdirSync(dataFolder, { recursive: true });
-  }
-} catch (e) {
-  console.warn('[Server] Could not create data folder:', e.message);
-}
-const usersFile = path.join(dataFolder, 'users.json');
-const voiceConfigFile = path.join(dataFolder, 'voice_config.json');
-
 const otps = new Map(); // Store temporary OTPs { phone: { otp, expiresAt } }
 
 let voiceConfig = {
-  tiers: {
-    'Standard': 1,
-    'Wavenet': 1,
-    'Neural2': 4,
-    'Studio': 40,
-    'Chirp': 8
-  },
-  limits: {
-    free_request_chars: 500,
-    paid_request_chars: 5000,
-    free_cooldown_sec: 15,
-    paid_cooldown_sec: 2
-  }
+  tiers: { 'Standard': 1, 'Wavenet': 1, 'Neural2': 4, 'Studio': 40, 'Chirp': 8 },
+  limits: { free_request_chars: 500, paid_request_chars: 5000, free_cooldown_sec: 15, paid_cooldown_sec: 2 }
 };
 
-if (fs.existsSync(voiceConfigFile)) {
+async function loadVoiceConfig() {
+  if (!dbAdmin) return;
   try {
-    const savedConfig = JSON.parse(fs.readFileSync(voiceConfigFile, 'utf8'));
-    voiceConfig = {
-      ...voiceConfig,
-      ...savedConfig,
-      limits: { ...voiceConfig.limits, ...(savedConfig.limits || {}) }
-    };
-  } catch(e) {
-    console.error("Error reading voice_config.json", e);
-  }
+    const doc = await dbAdmin.collection('config').doc('voice').get();
+    if (doc.exists) voiceConfig = { ...voiceConfig, ...doc.data() };
+  } catch (e) { console.error("Error loading voice config:", e); }
 }
-
-function saveVoiceConfig() {
+async function saveVoiceConfig() {
+  if (!dbAdmin) return;
   try {
-    fs.writeFileSync(voiceConfigFile, JSON.stringify(voiceConfig, null, 2));
-  } catch (e) {
-    console.warn('[Server] Could not save voice config:', e.message);
-  }
+    await dbAdmin.collection('config').doc('voice').set(voiceConfig);
+  } catch (e) { console.error("Error saving voice config:", e); }
 }
+loadVoiceConfig();
 
-let users = new Map();
-if (fs.existsSync(usersFile)) {
-  try {
-    const data = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
-    users = new Map(data);
-  } catch(e) {
-    console.error("Error reading users.json", e);
-  }
-}
-
-function saveUsers() {
-  try {
-    fs.writeFileSync(usersFile, JSON.stringify(Array.from(users.entries()), null, 2));
-  } catch (e) {
-    console.warn('[Server] Could not save users:', e.message);
-  }
-}
-
-function generateId() {
-  return crypto.randomBytes(8).toString('hex');
-}
 function generateRefCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
-
-// Ensure an admin user exists for exports
-users.set('admin', {
-  id: 'admin', name: 'Admin', email: 'admin@shinerva.id', password: 'admin', tier: 'ENTERPRISE', valid_referrals: 0, has_received_referral_bonus: false, signup_bonus_chars: 10000, monthly_chars: 1000000, earned_chars: 0, used_chars: 0, generation_count: 0, email_subscribed: true, whatsapp_opted_in: false
-});
 
 const app = express();
 app.use(cors());
@@ -107,113 +49,57 @@ app.use(express.urlencoded({ extended: true }));
 const apiRouter = express.Router();
 
 const authenticate = async (req, res, next) => {
-    if (!authAdmin) {
-      console.error("[Firebase Admin] Auth is not initialized. Check server environment variables.");
+    if (!authAdmin || !dbAdmin) {
+      console.error("[Firebase Admin] Auth or DB not initialized.");
       return res.status(503).json({ error: 'Sistem autentikasi sementara tidak tersedia.' });
     }
 
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Auth token missing' });
-    }
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ error: 'Auth token missing' });
 
     const idToken = authHeader.split('Bearer ')[1];
-    if (!idToken || idToken === 'null' || idToken === 'undefined') {
-      return res.status(401).json({ error: 'Invalid token format' });
-    }
-
     try {
       const decodedToken = await authAdmin.verifyIdToken(idToken);
       const uid = decodedToken.uid;
       const email = decodedToken.email;
       
-      if (!email) {
-        return res.status(401).json({ error: 'Token does not contain email' });
-      }
+      const userRef = dbAdmin.collection('users').doc(uid);
+      const userDoc = await userRef.get();
+      let user = userDoc.exists ? userDoc.data() : null;
 
-      // Sync with local users map
-      let user = users.get(uid);
-      
-      // Migration: If not found by UID, try finding by email
       if (!user) {
-        for (const [id, u] of users.entries()) {
-          if (u.email === email) {
-            user = u;
-            user.id = uid; 
-            users.set(uid, user);
-            users.delete(id);
-            break;
-          }
+        // Try finding by email for migration
+        const snapshot = await dbAdmin.collection('users').where('email', '==', email).limit(1).get();
+        if (!snapshot.empty) {
+          user = snapshot.docs[0].data();
+          user.id = uid; 
+          await userRef.set(user, { merge: true });
+        } else {
+          // New User Creation
+          user = {
+            id: uid,
+            email: email,
+            name: decodedToken.name || email.split('@')[0],
+            tier: 'FREE',
+            signup_date: Date.now(),
+            monthly_chars: 10000,
+            earned_chars: 0,
+            used_chars: 0,
+            generation_count: 0,
+            referral_code: generateRefCode(),
+            pronunciations: {},
+            history: []
+          };
+          await userRef.set(user);
         }
-      }
-
-      // If still not found, it's a completely new Firebase user
-      if (!user) {
-        const refCode = req.headers['x-ref-code'] || '';
-        let referredBy = null;
-        if (refCode) {
-          for (const [rid, ru] of users.entries()) {
-            if (ru.referral_code === refCode) {
-              referredBy = rid;
-              break;
-            }
-          }
-        }
-
-        user = {
-          id: uid,
-          name: decodedToken.name || email.split('@')[0],
-          email: email,
-          password: 'firebase-managed',
-          whatsapp: '',
-          whatsapp_opted_in: false,
-          email_subscribed: true,
-          tier: 'FREE',
-          signup_date: Date.now(),
-          last_generation_at: 0,
-          referral_code: generateRefCode(),
-          referred_by: referredBy,
-          valid_referrals: 0,
-          has_received_referral_bonus: false,
-          social_bonus_status: 'none',
-          social_url: '',
-          signup_bonus_chars: 10000, 
-          monthly_chars: 10000,     
-          earned_chars: referredBy ? 5000 : 0,
-          used_chars: 0,
-          generation_count: 0,
-          pronunciations: {},
-          history: []
-        };
-        users.set(uid, user);
-        saveUsers();
-        console.log(`[Server] New user created via Firebase: ${email} (${uid})`);
-      }
-
-      // Monthly Credits Reset Check
-      const now = new Date();
-      const lastCheck = user.last_reset_check ? new Date(user.last_reset_check) : new Date(user.signup_date);
-      if (now.getMonth() !== lastCheck.getMonth() || now.getFullYear() !== lastCheck.getFullYear()) {
-         // Reset monthly allowance based on tier
-         const tierLimits = {
-           'FREE': 10000,
-           'STARTER': 50000,
-           'KREATOR': 150000,
-           'PRODUKTIF': 400000,
-           'BISNIS': 1500000,
-           'ENTERPRISE': 5000000
-         };
-         user.monthly_chars = tierLimits[user.tier] || 10000;
-         user.last_reset_check = Date.now();
-         saveUsers();
       }
 
       req.user = user;
+      req.userRef = userRef;
       next();
     } catch (error) {
       console.error('Error verifying Firebase ID token:', error.message);
-      const status = error.code === 'auth/id-token-expired' ? 401 : 403;
-      res.status(status).json({ error: 'Token invalid or expired', code: error.code });
+      res.status(401).json({ error: 'Token invalid or expired' });
     }
   };
 
@@ -242,115 +128,21 @@ const authenticate = async (req, res, next) => {
     res.json({ success: true, message: 'OTP telah dikirim ke WhatsApp Anda (mock: check console)' });
   });
 
-  apiRouter.post('/auth/otp/verify', (req, res) => {
-    const { whatsapp, otp } = req.body;
-    if (!whatsapp || !otp) return res.status(400).json({ error: 'WhatsApp dan OTP diperlukan' });
-    
-    const record = otps.get(whatsapp);
-    if (!record || record.otp !== otp || Date.now() > record.expiresAt) {
-      return res.status(400).json({ error: 'OTP tidak valid atau expired' });
-    }
-    
-    // Clear OTP
-    otps.delete(whatsapp);
-    
-    // Find exist or create
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.whatsapp === whatsapp) {
-        foundUser = u;
-        break;
-      }
-    }
-    
-    if (!foundUser) {
-      const id = generateId();
-      foundUser = {
-        id,
-        name: 'User ' + whatsapp.slice(-4),
-        email: whatsapp + '@shinerva.id', // temp email
-        password: generateId(),
-        whatsapp: whatsapp,
-        whatsapp_opted_in: true,
-        email_subscribed: true,
-        tier: 'FREE',
-        signup_date: Date.now(),
-        referral_code: generateRefCode(),
-        referred_by: null,
-        valid_referrals: 0,
-        has_received_referral_bonus: false,
-        social_bonus_status: 'none',
-        social_url: '',
-        signup_bonus_chars: 5000, // less bonus for OTP maybe? default is 5000 according to UI 
-        monthly_chars: 10000,
-        earned_chars: 0,
-        used_chars: 0,
-        generation_count: 0,
-        pronunciations: {},
-        history: []
-      };
-      users.set(id, foundUser);
-    }
-    
-    saveUsers();
-    res.json({ success: true, message: 'Login successful', user: foundUser });
-  });
+    // Legacy OTP login logic is deprecated, forwarding to Firestore-based logic if hit
+    apiRouter.post('/auth/otp/verify', async (req, res) => {
+      res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' });
+    });
 
-  apiRouter.post('/auth/google', (req, res) => {
-    const { email, name, googleId } = req.body;
-    
-    // Find or create
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.email === email) {
-        foundUser = u;
-        break;
-      }
-    }
-    
-    if (!foundUser) {
-      // Create new user (similar to signup)
-      foundUser = {
-        id: generateId(),
-        name,
-        email,
-        password: 'google-auth-' + generateId(), // Dummy password
-        whatsapp: '',
-        whatsapp_opted_in: false,
-        email_subscribed: true,
-        tier: 'FREE',
-        signup_date: Date.now(),
-        referral_code: generateRefCode(),
-        referred_by: null,
-        valid_referrals: 0,
-        has_received_referral_bonus: false,
-        social_bonus_status: 'none',
-        social_url: '',
-        signup_bonus_chars: 5000,
-        monthly_chars: 0,
-        earned_chars: 0,
-        used_chars: 0,
-        generation_count: 0,
-        pronunciations: {},
-        history: []
-      };
-      users.set(foundUser.id, foundUser);
-      saveUsers();
-    }
-    
-    res.json({ success: true, message: 'Login successful', user: foundUser });
-  });
+    apiRouter.post('/auth/google', (req, res) => {
+      res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' });
+    });
 
-  apiRouter.get('/user/referrals', authenticate, (req, res) => {
+  apiRouter.get('/user/referrals', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     
     // Count how many people have used this user's referral code
-    let inviteCount = 0;
-    for (const [id, u] of users.entries()) {
-      if (u.referred_by === req.user.id) {
-        inviteCount++;
-      }
-    }
+    const snapshot = await dbAdmin.collection('users').where('referred_by', '==', req.user.id).get();
+    const inviteCount = snapshot.size;
 
     res.json({
       referral_code: req.user.referral_code,
@@ -412,7 +204,7 @@ const authenticate = async (req, res, next) => {
       req.user.pronunciations[word] = pronunciation;
     }
     
-    saveUsers();
+    await req.userRef.set(user, { merge: true });
     res.json({ success: true, pronunciations: req.user.pronunciations });
   });
 
@@ -430,7 +222,7 @@ const authenticate = async (req, res, next) => {
     }
     req.user.social_bonus_status = 'pending';
     req.user.social_url = url;
-    saveUsers();
+    await req.userRef.set(req.user, { merge: true });
     res.json({ success: true, message: 'Pengajuan berhasil. Menunggu verifikasi admin.', user: req.user });
   });
 
@@ -440,19 +232,21 @@ const authenticate = async (req, res, next) => {
     if (whatsapp !== undefined) req.user.whatsapp = whatsapp;
     if (whatsapp_opted_in !== undefined) req.user.whatsapp_opted_in = whatsapp_opted_in;
     if (email_subscribed !== undefined) req.user.email_subscribed = email_subscribed;
-    saveUsers();
+    await req.userRef.set(req.user, { merge: true });
     res.json({ success: true, user: req.user });
   });
 
   // --- ADMIN EXPORTS ---
-  apiRouter.get('/admin/export/email', authenticate, (req, res) => {
+  apiRouter.get('/admin/export/email', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     let csv = "Name,Email,Tier,Signup Date,Total Characters Used\n";
-    for (const [id, u] of users.entries()) {
+    const snapshot = await dbAdmin.collection('users').get();
+    snapshot.forEach(doc => {
+      const u = doc.data();
       if (u.email_subscribed) {
         csv += `"${u.name}","${u.email}","${u.tier}","${new Date(u.signup_date).toISOString()}","${u.used_chars}"\n`;
       }
-    }
+    });
     res.header('Content-Type', 'text/csv');
     res.attachment('email_list.csv');
     res.send(csv);
@@ -534,28 +328,25 @@ const authenticate = async (req, res, next) => {
           // Better: include user UID in orderId prefix or use metadata.
           
           const parts = orderId.split('-');
-          // If we use ORDER-UID-TIMESTAMP
           const uid = parts[1];
-          const user = users.get(uid);
+          const userRef = dbAdmin.collection('users').doc(uid);
+          const userDoc = await userRef.get();
 
-          if (user) {
-            const planId = statusResponse.item_details ? statusResponse.item_details[0].id : null;
-            // Fallback: If not in notification, we might need to store pending orders
-            // For now, let's look at gross_amount to match plan
+          if (userDoc.exists) {
+            const user = userDoc.data();
             const amount = parseInt(statusResponse.gross_amount);
-            
             const matchedPlan = Object.values(PLANS).find(p => p.price === amount || p.yearlyPrice === amount);
             
             if (matchedPlan) {
               if (matchedPlan.type === 'topup') {
-                user.earned_chars += matchedPlan.credits;
+                user.earned_chars = (user.earned_chars || 0) + matchedPlan.credits;
               } else {
                 user.tier = matchedPlan.tier;
                 user.monthly_chars = matchedPlan.credits;
               }
               user.last_payment_at = Date.now();
               user.last_order_id = orderId;
-              saveUsers();
+              await userRef.set(user, { merge: true });
               console.log(`User ${user.email} upgraded to ${matchedPlan.tier} / received ${matchedPlan.credits} credits`);
             }
           }
@@ -568,27 +359,32 @@ const authenticate = async (req, res, next) => {
     }
   });
 
-  apiRouter.get('/admin/export/whatsapp', authenticate, (req, res) => {
+  apiRouter.get('/admin/export/whatsapp', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     let csv = "Name,WhatsApp,Tier,Signup Date,Total Characters Used\n";
-    for (const [id, u] of users.entries()) {
+    const snapshot = await dbAdmin.collection('users').get();
+    snapshot.forEach(doc => {
+      const u = doc.data();
       if (u.whatsapp_opted_in && u.whatsapp) {
         csv += `"${u.name}","${u.whatsapp}","${u.tier}","${new Date(u.signup_date).toISOString()}","${u.used_chars}"\n`;
       }
-    }
+    });
     res.header('Content-Type', 'text/csv');
     res.attachment('whatsapp_list.csv');
     res.send(csv);
   });
   
-  apiRouter.post('/admin/social-approvals/:id/approve', authenticate, (req, res) => {
+  apiRouter.post('/admin/social-approvals/:id/approve', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     const targetId = req.params.id;
-    const targetUser = users.get(targetId);
-    if (!targetUser) return res.status(404).json({error: 'User not found'});
+    const targetRef = dbAdmin.collection('users').doc(targetId);
+    const targetDoc = await targetRef.get();
+    if (!targetDoc.exists) return res.status(404).json({error: 'User not found'});
+    const targetUser = targetDoc.data();
     if (targetUser.social_bonus_status === 'pending') {
        targetUser.social_bonus_status = 'approved';
-       targetUser.earned_chars += 30000;
+       targetUser.earned_chars = (targetUser.earned_chars || 0) + 30000;
+       await targetRef.set(targetUser, { merge: true });
        res.json({ success: true });
     } else {
        res.status(400).json({ error: 'Status is not pending' });
@@ -845,19 +641,23 @@ const authenticate = async (req, res, next) => {
       // Referral system hook
       if (user.generation_count === 1 && user.referred_by && !user.has_triggered_ref) {
         user.has_triggered_ref = true;
-        const referrer = users.get(user.referred_by);
-        if (referrer && referrer.valid_referrals < 2) {
-          referrer.valid_referrals += 1;
-          user.earned_chars += 5000;
-          
-          if (referrer.valid_referrals >= 2 && !referrer.has_received_referral_bonus) {
-            referrer.has_received_referral_bonus = true;
-            referrer.earned_chars += 20000;
+        const referrerRef = dbAdmin.collection('users').doc(user.referred_by);
+        const referrerDoc = await referrerRef.get();
+        if (referrerDoc.exists) {
+          const referrer = referrerDoc.data();
+          if (referrer.valid_referrals < 2) {
+             const updates = { valid_referrals: (referrer.valid_referrals || 0) + 1 };
+             user.earned_chars += 5000;
+             if ((referrer.valid_referrals || 0) + 1 >= 2 && !referrer.has_received_referral_bonus) {
+               updates.has_received_referral_bonus = true;
+               updates.earned_chars = (referrer.earned_chars || 0) + 20000;
+             }
+             await referrerRef.update(updates);
           }
         }
       }
 
-      saveUsers();
+      await req.userRef.set(user, { merge: true });
       res.json({ ...data, isTeaser: false });
     } catch (error) {
       console.error('TTS proxy error:', error);
@@ -932,7 +732,7 @@ app.get("/api/debug-env", (req, res) => {
   });
 });
 
-setupFrontend();
+// setupFrontend is called once below
 
 // Only listen when running standalone (not on Vercel)
 if (!process.env.VERCEL) {
