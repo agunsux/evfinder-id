@@ -340,17 +340,43 @@ const App = () => {
           "x-ref-code": refCode || ""
         },
       });
-      const data = await checkResponse(res);
-      if (data.user) setUser(data.user);
-      return data;
-    } catch (e) {
-      console.error("syncAuthProfile failed, rolling back:", e);
-      try { await logout(); } catch (_) {}
-      setUser(null);
-      if (e.status === 503) {
-        throw new Error('Server auth belum siap. Pastikan konfigurasi Firebase Admin di server sudah benar.');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) setUser(data.user);
+        return data;
+      } else {
+        // Backend unreachable or error - keep user logged in with Firebase data
+        console.warn(`[Auth] Backend sync failed (${res.status}), using Firebase profile data`);
+        const fbUser = auth.currentUser;
+        setUser(prev => prev || {
+          email: fbUser.email,
+          name: fbUser.displayName || fbUser.email?.split('@')[0],
+          uid: fbUser.uid,
+          tier: 'FREE',
+          generation_count: 0,
+          used_chars: 0,
+          monthly_chars: 10000,
+          signup_bonus_chars: 10000,
+          earned_chars: 0,
+        });
       }
-      throw e;
+    } catch (e) {
+      // Network error - keep user logged in with Firebase data
+      console.warn("[Auth] syncAuthProfile network error, using Firebase profile:", e.message);
+      const fbUser = auth.currentUser;
+      if (fbUser) {
+        setUser(prev => prev || {
+          email: fbUser.email,
+          name: fbUser.displayName || fbUser.email?.split('@')[0],
+          uid: fbUser.uid,
+          tier: 'FREE',
+          generation_count: 0,
+          used_chars: 0,
+          monthly_chars: 10000,
+          signup_bonus_chars: 10000,
+          earned_chars: 0,
+        });
+      }
     }
   };
 
