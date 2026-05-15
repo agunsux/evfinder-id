@@ -232,6 +232,21 @@ const App = () => {
       return;
     }
 
+    // Handle Google Redirect Result
+    const handleRedirect = async () => {
+      try {
+        const { getRedirectResult } = await import('firebase/auth');
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          await syncAuthProfile();
+          toast.success("Login Google berhasil!");
+        }
+      } catch (err) {
+        console.error("Redirect result error:", err);
+      }
+    };
+    handleRedirect();
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("[Auth] Firebase state changed:", firebaseUser?.email || "No User");
       if (firebaseUser) {

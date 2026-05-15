@@ -714,9 +714,13 @@ apiRouter.get("/health", (req, res) => {
   });
 });
 
-// Mount the router at both /api and / to handle Vercel rewrites gracefully
-app.use('/api', apiRouter);
-app.use('/', apiRouter);
+// Mount the router at both /api and / and ensure path compatibility
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api')) {
+    req.url = req.url.replace('/api', '') || '/';
+  }
+  next();
+}, apiRouter);
 
 setupFrontend();
 

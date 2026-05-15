@@ -1,5 +1,14 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { initializeApp, getApps } from "firebase/app";
+import { 
+  getAuth, 
+  setPersistence, 
+  browserLocalPersistence, 
+  GoogleAuthProvider, 
+  signInWithRedirect, 
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const clean = (val) => {
@@ -76,5 +85,12 @@ try {
   initError = error.message;
 }
 
-export { app, auth, db, initError };
+export const loginWithGoogle = () => {
+  const provider = new GoogleAuthProvider();
+  return signInWithRedirect(auth, provider);
+};
+export const checkRedirectResult = () => getRedirectResult(auth);
+export const logout = () => signOut(auth);
+
+export { app, auth, db, initError, onAuthStateChanged };
 

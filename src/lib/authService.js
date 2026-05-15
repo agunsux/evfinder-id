@@ -3,7 +3,8 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   sendPasswordResetEmail, 
-  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   sendEmailVerification,
@@ -67,7 +68,10 @@ export const logout = () =>
   handleAuthOperation(() => signOut(auth));
 
 export const loginWithGoogle = () => 
-  handleAuthOperation(() => signInWithPopup(auth, googleProvider));
+  handleAuthOperation(() => signInWithRedirect(auth, googleProvider));
+
+export const getGoogleRedirectResult = () =>
+  handleAuthOperation(() => getRedirectResult(auth));
 
 export const resetPassword = (email) => 
   handleAuthOperation(() => sendPasswordResetEmail(auth, email));
