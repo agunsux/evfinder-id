@@ -51,14 +51,27 @@ const handleAuthOperation = async (operation) => {
   }
 };
 
-export const login = (email, password) => 
-  handleAuthOperation(() => signInWithEmailAndPassword(auth, email, password));
+export const login = async (email, password) => {
+  const userCredential = await handleAuthOperation(() => signInWithEmailAndPassword(auth, email, password));
+  
+  if (userCredential.user && !userCredential.user.emailVerified) {
+    // If not verified, sign out immediately and throw error
+    await signOut(auth);
+    throw new Error("Email belum diverifikasi. Silakan cek inbox Anda untuk mengaktifkan akun.");
+  }
+  
+  return userCredential;
+};
 
 export const signup = async (email, password, name) => {
   return handleAuthOperation(async () => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    if (name && userCredential.user) {
-      await updateProfile(userCredential.user, { displayName: name });
+    if (userCredential.user) {
+      if (name) {
+        await updateProfile(userCredential.user, { displayName: name });
+      }
+      // Automatically send verification email
+      await sendEmailVerification(userCredential.user);
     }
     return userCredential;
   });

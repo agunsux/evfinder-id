@@ -857,19 +857,18 @@ const App = () => {
 
         await signup(authData.email, authData.password, authData.name);
 
-        // Sync with backend — validates and creates user profile
-        // Rolls back Firebase session if backend rejects
-        await syncAuthProfile(authData.refCode);
-
-        // Send verification email
+        // Sync with backend while still logged in (to create profile)
         try {
-          await verifyEmail();
-        } catch (vErr) {
-          console.warn("Could not send initial verification email:", vErr);
+          await syncAuthProfile(authData.refCode);
+        } catch (sErr) {
+          console.warn("Sync failed during signup:", sErr);
         }
 
+        // Force logout to enforce verification before first "real" login
+        await logout();
+
         setIsAuthOpen(false);
-        toast.success("Pendaftaran berhasil!");
+        toast.success("Pendaftaran berhasil! Silakan cek inbox Anda untuk verifikasi email sebelum login.", { duration: 6000 });
       } else if (authMode === "login") {
         await login(authData.email, authData.password);
         // Sync with backend — ensures user profile exists server-side

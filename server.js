@@ -62,6 +62,17 @@ const authenticate = async (req, res, next) => {
       const decodedToken = await authAdmin.verifyIdToken(idToken);
       const uid = decodedToken.uid;
       const email = decodedToken.email;
+      const emailVerified = decodedToken.email_verified;
+
+      // Allow bypass for certain providers (like Google) if they are usually pre-verified,
+      // but Firebase usually sets email_verified to true for Google.
+      // We block if explicitly false.
+      if (!emailVerified) {
+        return res.status(403).json({ 
+          error: 'Email belum diverifikasi.', 
+          message: 'Silakan verifikasi email Anda untuk mengakses layanan ini.' 
+        });
+      }
       
       const userRef = dbAdmin.collection('users').doc(uid);
       const userDoc = await userRef.get();
