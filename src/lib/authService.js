@@ -117,27 +117,45 @@ export const verifyEmail = () => {
 
 // New Backend-based email triggers (via Hostinger SMTP)
 export const resendVerificationEmail = async (email) => {
-  const response = await fetch('/api/auth/resend-verification', {
+  const base = import.meta.env.VITE_BACKEND_URL || '';
+  const response = await fetch(`${base}/api/auth/resend-verification`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email })
   });
   if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || "Gagal mengirim email verifikasi.");
+    let errMsg = 'Gagal mengirim email verifikasi.';
+    const ct = response.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      const data = await response.json();
+      errMsg = data.error || errMsg;
+    } else {
+      const txt = await response.text();
+      errMsg = txt || errMsg;
+    }
+    throw new Error(errMsg);
   }
   return await response.json();
 };
 
 export const forgotPassword = async (email) => {
-  const response = await fetch('/api/auth/forgot-password', {
+  const base = import.meta.env.VITE_BACKEND_URL || '';
+  const response = await fetch(`${base}/api/auth/forgot-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email })
   });
   if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || "Gagal mengirim email reset password.");
+    let errMsg = 'Gagal mengirim email reset password.';
+    const ct = response.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      const data = await response.json();
+      errMsg = data.error || errMsg;
+    } else {
+      const txt = await response.text();
+      errMsg = txt || errMsg;
+    }
+    throw new Error(errMsg);
   }
   return await response.json();
 };

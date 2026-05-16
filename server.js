@@ -187,7 +187,7 @@ const authenticate = async (req, res, next) => {
   });
 
   apiRouter.post('/auth/forgot-password', async (req, res) => {
-    const { email } = req.body;
+  console.log('[API] Forgot password request received for:', email);
     if (!email) return res.status(400).json({ error: 'Email diperlukan' });
     
     try {
