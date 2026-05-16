@@ -84,12 +84,17 @@ export const signup = async (email, password, name) => {
       if (name) {
         await updateProfile(userCredential.user, { displayName: name });
       }
-      // Automatically send verification email via Backend (Hostinger SMTP)
+      // Send verification email via Firebase first, then optionally via backend as a fallback copy
+      try {
+        await sendEmailVerification(userCredential.user);
+      } catch (e) {
+        console.warn("Firebase verification email failed, attempting backend fallback:", e);
+      }
+      // Attempt to send a second copy via backend (non‑critical)
       try {
         await resendVerificationEmail(email);
       } catch (e) {
-        console.warn("Initial verification email via backend failed, falling back to Firebase:", e);
-        await sendEmailVerification(userCredential.user);
+        console.warn("Backend verification email also failed:", e);
       }
     }
     return userCredential;
@@ -105,8 +110,16 @@ export const loginWithGoogle = () =>
 export const getGoogleRedirectResult = () =>
   handleAuthOperation(() => getRedirectResult(auth));
 
-export const resetPassword = (email) => 
-  forgotPassword(email);
+export const resetPassword = async (email) => {
+  // Try backend first
+  try {
+    return await forgotPassword(email);
+  } catch (backendErr) {
+    console.warn('Backend password reset failed, falling back to Firebase:', backendErr);
+    // Firebase fallback
+    return handleAuthOperation(() => sendPasswordResetEmail(auth, email));
+  }
+};
 
 export const verifyEmail = () => {
   if (auth.currentUser) {
@@ -117,7 +130,7 @@ export const verifyEmail = () => {
 
 // New Backend-based email triggers (via Hostinger SMTP)
 export const resendVerificationEmail = async (email) => {
-  const base = import.meta.env.VITE_BACKEND_URL || '';
+  const base = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : '');
   const response = await fetch(`${base}/api/auth/resend-verification`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
