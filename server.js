@@ -293,7 +293,7 @@ const authenticate = async (req, res, next) => {
     }
   });
 
-  apiRouter.post('/user/pronunciations', authenticate, (req, res) => {
+  apiRouter.post('/user/pronunciations', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { word, pronunciation } = req.body;
     if (!word) return res.status(400).json({ error: 'Word is required' });
@@ -306,11 +306,11 @@ const authenticate = async (req, res, next) => {
       req.user.pronunciations[word] = pronunciation;
     }
     
-    await req.userRef.set(user, { merge: true });
+    await req.userRef.set(req.user, { merge: true });
     res.json({ success: true, pronunciations: req.user.pronunciations });
   });
 
-  apiRouter.post('/user/social-share', authenticate, (req, res) => {
+  apiRouter.post('/user/social-share', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { url } = req.body;
     
