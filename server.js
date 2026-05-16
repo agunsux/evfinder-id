@@ -1,11 +1,4 @@
-import dotenv from 'dotenv';
-const envRes = dotenv.config();
-if (envRes.error) {
-  console.error("[Dotenv] Error loading .env file:", envRes.error);
-} else {
-  console.log("[Dotenv] .env file loaded successfully");
-}
-
+import './src/lib/loadEnv.js';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
