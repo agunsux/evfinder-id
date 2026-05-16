@@ -1,17 +1,15 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
 import { authAdmin, dbAdmin } from './src/lib/firebaseAdmin.js';
 import { rateLimit } from 'express-rate-limit';
 import nodemailer from 'nodemailer';
-
-import { PLANS } from './src/lib/plans.js';
-
-dotenv.config();
 
 // --- SMTP CONFIG FOR EMAIL (HOSTINGER) ---
 const transporter = nodemailer.createTransport({
