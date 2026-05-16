@@ -328,7 +328,7 @@ const authenticate = async (req, res, next) => {
     res.json({ success: true, message: 'Pengajuan berhasil. Menunggu verifikasi admin.', user: req.user });
   });
 
-  apiRouter.post('/user/settings', authenticate, (req, res) => {
+  apiRouter.post('/user/settings', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { whatsapp, whatsapp_opted_in, email_subscribed } = req.body;
     if (whatsapp !== undefined) req.user.whatsapp = whatsapp;
