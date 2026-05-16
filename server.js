@@ -7,10 +7,42 @@ import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
 import { authAdmin, dbAdmin } from './src/lib/firebaseAdmin.js';
 import { rateLimit } from 'express-rate-limit';
+import nodemailer from 'nodemailer';
 
 import { PLANS } from './src/lib/plans.js';
 
 dotenv.config();
+
+// --- SMTP CONFIG FOR EMAIL (HOSTINGER) ---
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+  port: parseInt(process.env.SMTP_PORT || '465'),
+  secure: process.env.SMTP_PORT === '465',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+async function sendMail({ to, subject, html }) {
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("[SMTP] Credentials missing, skipping email to:", to);
+    return;
+  }
+  try {
+    const info = await transporter.sendMail({
+      from: `"${process.env.SMTP_FROM_NAME || 'SHINERVA AI'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
+      to,
+      subject,
+      html,
+    });
+    console.log("[SMTP] Email sent:", info.messageId);
+    return info;
+  } catch (error) {
+    console.error("[SMTP] Error sending email:", error);
+    throw error;
+  }
+}
 
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
@@ -122,6 +154,65 @@ const authenticate = async (req, res, next) => {
 
   apiRouter.post('/auth/login', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
   apiRouter.post('/auth/signup', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
+
+  // --- NEW CUSTOM AUTH ENDPOINTS (HOSTINGER SMTP) ---
+  
+  apiRouter.post('/auth/resend-verification', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email diperlukan' });
+    
+    try {
+      const user = await authAdmin.getUserByEmail(email);
+      if (user.emailVerified) return res.json({ message: 'Email sudah terverifikasi' });
+      
+      const link = await authAdmin.generateEmailVerificationLink(email);
+      
+      await sendMail({
+        to: email,
+        subject: 'Verifikasi Akun SHINERVA AI',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2>Halo!</h2>
+            <p>Terima kasih telah mendaftar di <b>SHINERVA AI</b>. Silakan klik tombol di bawah untuk memverifikasi akun Anda:</p>
+            <a href="${link}" style="display: inline-block; padding: 12px 24px; background-color: #E07A5F; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Verifikasi Sekarang</a>
+            <p style="margin-top: 20px; font-size: 12px; color: #666;">Jika tombol tidak berfungsi, salin dan tempel link berikut di browser Anda:<br>${link}</p>
+          </div>
+        `
+      });
+      
+      res.json({ success: true, message: 'Email verifikasi telah dikirim via Hostinger SMTP.' });
+    } catch (error) {
+      console.error("[Auth] Resend error:", error);
+      res.status(500).json({ error: 'Gagal mengirim email. Pastikan email terdaftar.' });
+    }
+  });
+
+  apiRouter.post('/auth/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email diperlukan' });
+    
+    try {
+      const link = await authAdmin.generatePasswordResetLink(email);
+      
+      await sendMail({
+        to: email,
+        subject: 'Reset Password SHINERVA AI',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; color: #333;">
+            <h2>Reset Password</h2>
+            <p>Anda menerima email ini karena ada permintaan reset password untuk akun Anda. Silakan klik tombol di bawah untuk melanjutkan:</p>
+            <a href="${link}" style="display: inline-block; padding: 12px 24px; background-color: #E07A5F; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+            <p style="margin-top: 20px; font-size: 12px; color: #666;">Link ini berlaku selama 1 jam. Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.</p>
+          </div>
+        `
+      });
+      
+      res.json({ success: true, message: 'Link reset password telah dikirim ke email Anda.' });
+    } catch (error) {
+      console.error("[Auth] Forgot password error:", error);
+      res.status(500).json({ error: 'Gagal mengirim email reset password.' });
+    }
+  });
 
   apiRouter.post('/auth/otp/request', (req, res) => {
     const { whatsapp } = req.body;

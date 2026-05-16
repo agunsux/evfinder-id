@@ -26,28 +26,40 @@ const handleAuthOperation = async (operation) => {
     const errorCode = error.code;
     
     // Map common Firebase errors to user-friendly messages
+    const customError = new Error();
+    customError.code = errorCode;
+    
     switch (errorCode) {
       case 'auth/invalid-email':
-        throw new Error("Format email tidak valid.");
+        customError.message = "Format email tidak valid.";
+        break;
       case 'auth/user-disabled':
-        throw new Error("Akun ini telah dinonaktifkan.");
+        customError.message = "Akun ini telah dinonaktifkan.";
+        break;
       case 'auth/user-not-found':
       case 'auth/wrong-password':
       case 'auth/invalid-credential':
-        throw new Error("Email atau kata sandi salah.");
+        customError.message = "Email atau kata sandi salah.";
+        break;
       case 'auth/email-already-in-use':
-        throw new Error("Email sudah terdaftar. Silakan login atau gunakan email lain.");
+        customError.message = "Email sudah terdaftar. Silakan login atau gunakan email lain.";
+        break;
       case 'auth/weak-password':
-        throw new Error("Kata sandi terlalu lemah. Gunakan minimal 6 karakter.");
+        customError.message = "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.";
+        break;
       case 'auth/popup-closed-by-user':
-        throw new Error("Proses login Google dibatalkan.");
+        customError.message = "Proses login Google dibatalkan.";
+        break;
       case 'auth/too-many-requests':
-        throw new Error("Terlalu banyak percobaan gagal. Silakan tunggu sebentar.");
+        customError.message = "Terlalu banyak percobaan gagal. Silakan tunggu sebentar.";
+        break;
       case 'auth/network-request-failed':
-        throw new Error("Kesalahan jaringan. Periksa koneksi internet Anda.");
+        customError.message = "Kesalahan jaringan. Periksa koneksi internet Anda.";
+        break;
       default:
-        throw new Error(error.message || "Terjadi kesalahan pada sistem autentikasi.");
+        customError.message = error.message || "Terjadi kesalahan pada sistem autentikasi.";
     }
+    throw customError;
   }
 };
 
@@ -55,9 +67,11 @@ export const login = async (email, password) => {
   const userCredential = await handleAuthOperation(() => signInWithEmailAndPassword(auth, email, password));
   
   if (userCredential.user && !userCredential.user.emailVerified) {
-    // If not verified, sign out immediately and throw error
+    // If not verified, sign out immediately and throw specific error code
     await signOut(auth);
-    throw new Error("Email belum diverifikasi. Silakan cek inbox Anda untuk mengaktifkan akun.");
+    const error = new Error("Email belum diverifikasi. Silakan cek inbox Anda untuk mengaktifkan akun.");
+    error.code = 'auth/email-not-verified';
+    throw error;
   }
   
   return userCredential;
@@ -70,8 +84,13 @@ export const signup = async (email, password, name) => {
       if (name) {
         await updateProfile(userCredential.user, { displayName: name });
       }
-      // Automatically send verification email
-      await sendEmailVerification(userCredential.user);
+      // Automatically send verification email via Backend (Hostinger SMTP)
+      try {
+        await resendVerificationEmail(email);
+      } catch (e) {
+        console.warn("Initial verification email via backend failed, falling back to Firebase:", e);
+        await sendEmailVerification(userCredential.user);
+      }
     }
     return userCredential;
   });
@@ -87,11 +106,38 @@ export const getGoogleRedirectResult = () =>
   handleAuthOperation(() => getRedirectResult(auth));
 
 export const resetPassword = (email) => 
-  handleAuthOperation(() => sendPasswordResetEmail(auth, email));
+  forgotPassword(email);
 
 export const verifyEmail = () => {
   if (auth.currentUser) {
     return handleAuthOperation(() => sendEmailVerification(auth.currentUser));
   }
   throw new Error("Tidak ada pengguna yang sedang login.");
+};
+
+// New Backend-based email triggers (via Hostinger SMTP)
+export const resendVerificationEmail = async (email) => {
+  const response = await fetch('/api/auth/resend-verification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || "Gagal mengirim email verifikasi.");
+  }
+  return await response.json();
+};
+
+export const forgotPassword = async (email) => {
+  const response = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || "Gagal mengirim email reset password.");
+  }
+  return await response.json();
 };

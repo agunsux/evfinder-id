@@ -193,6 +193,7 @@ const App = () => {
   const [purchaseLoading, setPurchaseLoading] = useState(null); // planId or null
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+  const [authErrorCode, setAuthErrorCode] = useState("");
 
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [socialUrl, setSocialUrl] = useState("");
@@ -902,6 +903,7 @@ const App = () => {
         }
       }
     } catch (err) {
+      setAuthErrorCode(err.code || "");
       toast.error(err.message || "Gagal autentikasi.");
     } finally {
       setAuthLoading(false);
@@ -912,6 +914,7 @@ const App = () => {
     setAuthMode(mode);
     setOtpSent(false);
     setOtpCode("");
+    setAuthErrorCode("");
     setAuthData({
       name: "",
       email: "",
@@ -953,10 +956,15 @@ const App = () => {
   };
 
   const handleResendVerification = async () => {
+    if (!authData.email) {
+      toast.error("Email diperlukan untuk mengirim ulang verifikasi.");
+      return;
+    }
     setAuthLoading(true);
     try {
-      await verifyEmail();
-      toast.success('Email verifikasi telah dikirim ulang. Silakan cek kotak masuk atau folder spam Anda.');
+      await resendVerificationEmail(authData.email);
+      toast.success('Email verifikasi telah dikirim ulang via Hostinger SMTP. Silakan cek inbox Anda.');
+      setAuthErrorCode(""); // Clear error once sent
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -2634,6 +2642,20 @@ const App = () => {
                   "Daftar Gratis"
                 )}
               </button>
+
+              {authErrorCode === 'auth/email-not-verified' && (
+                <div className="bg-terracotta/10 border border-terracotta/20 rounded-xl p-4 text-center mt-4">
+                  <p className="text-xs text-terracotta font-medium mb-2">Email belum terverifikasi.</p>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={authLoading}
+                    className="text-sm text-text hover:underline font-bold bg-transparent border-none cursor-pointer"
+                  >
+                    Kirim Ulang Email Verifikasi
+                  </button>
+                </div>
+              )}
 
               <div className="flex flex-col gap-2 mt-4">
                 {authMode === "login" && (
