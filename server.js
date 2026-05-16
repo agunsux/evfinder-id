@@ -19,6 +19,14 @@ const transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASS,
   },
 });
+// Verify SMTP connection on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('[SMTP] Verification failed:', error);
+  } else {
+    console.log('[SMTP] Server is ready to take messages');
+  }
+});
 
 async function sendMail({ to, subject, html }) {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -817,6 +825,7 @@ apiRouter.get("/health", (req, res) => {
 });
 
 // Mount the router
+// Mount the router BEFORE frontend middleware
 app.use('/api', apiRouter);
 app.use('/', apiRouter);
 
