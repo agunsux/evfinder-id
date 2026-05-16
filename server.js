@@ -36,10 +36,11 @@ async function sendMail({ to, subject, html }) {
       subject,
       html,
     });
-    console.log("[SMTP] Email sent:", info.messageId);
+    console.log("[SMTP] Email sent successfully to:", to, "ID:", info.messageId);
     return info;
   } catch (error) {
-    console.error("[SMTP] Error sending email:", error);
+    console.error("[SMTP] CRITICAL Error sending email to:", to);
+    console.error("[SMTP] Error Details:", error.message);
     throw error;
   }
 }
@@ -99,7 +100,9 @@ const authenticate = async (req, res, next) => {
       // Allow bypass for certain providers (like Google) if they are usually pre-verified,
       // but Firebase usually sets email_verified to true for Google.
       // We block if explicitly false.
-      if (!emailVerified) {
+      // Check verification. 
+      // Note: Google login usually provides email_verified: true automatically.
+      if (emailVerified === false) { 
         return res.status(403).json({ 
           error: 'Email belum diverifikasi.', 
           message: 'Silakan verifikasi email Anda untuk mengakses layanan ini.' 

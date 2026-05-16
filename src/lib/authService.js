@@ -69,7 +69,7 @@ export const login = async (email, password) => {
   if (userCredential.user && !userCredential.user.emailVerified) {
     // If not verified, sign out immediately and throw specific error code
     await signOut(auth);
-    const error = new Error("Email belum diverifikasi. Silakan cek inbox Anda untuk mengaktifkan akun.");
+    const error = new Error("Akun Anda belum diverifikasi. Silakan cek email masuk (termasuk folder spam) untuk memverifikasi akun Anda.");
     error.code = 'auth/email-not-verified';
     throw error;
   }
