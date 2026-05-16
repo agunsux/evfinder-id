@@ -1,5 +1,10 @@
 import dotenv from 'dotenv';
-dotenv.config();
+const envRes = dotenv.config();
+if (envRes.error) {
+  console.error("[Dotenv] Error loading .env file:", envRes.error);
+} else {
+  console.log("[Dotenv] .env file loaded successfully");
+}
 
 import express from 'express';
 import fs from 'fs';
