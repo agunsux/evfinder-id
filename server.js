@@ -815,13 +815,9 @@ apiRouter.get("/health", (req, res) => {
   });
 });
 
-// Mount the router at both /api and / and ensure path compatibility
-app.use((req, res, next) => {
-  if (req.url.startsWith('/api')) {
-    req.url = req.url.replace('/api', '') || '/';
-  }
-  next();
-}, apiRouter);
+// Mount the router
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 setupFrontend();
 
