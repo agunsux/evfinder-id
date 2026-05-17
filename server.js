@@ -10,27 +10,36 @@ import { rateLimit } from 'express-rate-limit';
 import nodemailer from 'nodemailer';
 
 // --- SMTP CONFIG FOR EMAIL (HOSTINGER) ---
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.hostinger.com',
-  port: parseInt(process.env.SMTP_PORT || '465'),
-  secure: process.env.SMTP_PORT === '465',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-// Verify SMTP connection on startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('[SMTP] Verification failed:', error);
-  } else {
-    console.log('[SMTP] Server is ready to take messages');
-  }
-});
+const ENABLE_SMTP = process.env.ENABLE_SMTP ? process.env.ENABLE_SMTP.toLowerCase() === 'true' : true;
+let transporter = null;
+if (ENABLE_SMTP) {
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: process.env.SMTP_PORT === '465',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+  // Verify SMTP connection on startup
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('[SMTP] Verification failed:', error);
+    } else {
+      console.log('[SMTP] Server is ready to take messages');
+    }
+  });
+}
 
 async function sendMail({ to, subject, html }) {
+  // If SMTP is disabled, just log and skip sending
+  if (!transporter) {
+    console.warn('[SMTP] Disabled - email not sent to', to);
+    return;
+  }
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn("[SMTP] Credentials missing, skipping email to:", to);
+    console.warn('[SMTP] Credentials missing, skipping email to:', to);
     return;
   }
   try {
@@ -40,11 +49,11 @@ async function sendMail({ to, subject, html }) {
       subject,
       html,
     });
-    console.log("[SMTP] Email sent successfully to:", to, "ID:", info.messageId);
+    console.log('[SMTP] Email sent successfully to:', to, 'ID:', info.messageId);
     return info;
   } catch (error) {
-    console.error("[SMTP] CRITICAL Error sending email to:", to);
-    console.error("[SMTP] Error Details:", error.message);
+    console.error('[SMTP] CRITICAL Error sending email to:', to);
+    console.error('[SMTP] Error Details:', error.message);
     throw error;
   }
 }
@@ -76,6 +85,10 @@ loadVoiceConfig();
 
 function generateRefCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+function generateId() {
+  return crypto.randomBytes(8).toString('hex');
 }
 
 const app = express();
@@ -626,8 +639,8 @@ const authenticate = async (req, res, next) => {
 
       // Check Quota
       const charCost = text.length;
-      const totalAvailable = user.monthly_chars + user.signup_bonus_chars + user.earned_chars;
-      let remaining = totalAvailable - user.used_chars;
+      const totalAvailable = (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0);
+      let remaining = totalAvailable - (user.used_chars || 0);
       
       // Voice Authorization - SMART VOICE ROUTING
       let actualVoice = voice || 'id-ID-Standard-A';
