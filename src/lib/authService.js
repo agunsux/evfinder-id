@@ -62,11 +62,9 @@ export const login = (email, password) =>
 // Helper to get current origin or a safe fallback
 const getAuthRedirectUrl = (path = '/') => {
   if (typeof window !== 'undefined') {
-    // If we are on a custom domain, use it. Otherwise use the current origin.
-    const origin = window.location.hostname === 'localhost' ? window.location.origin : 'https://shinerva.id';
-    return origin + path;
+    return window.location.origin + path;
   }
-  return 'https://shinerva.id' + path; // Fallback
+  return 'https://shinerva.id' + path; // Fallback for non-browser environments
 };
 
 const getActionCodeSettings = () => ({

@@ -8,6 +8,7 @@ import midtransClient from 'midtrans-client';
 import { authAdmin } from './src/lib/firebaseAdmin.js';
 import { rateLimit } from 'express-rate-limit';
 import { GoogleGenAI, Modality } from "@google/genai";
+import { invokeTtsProvider } from './src/lib/ttsProviders.js';
 
 import { PLANS } from './src/lib/plans.js';
 
@@ -895,7 +896,26 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       }
 
       let finalAudioContent = "";
-      if (isGeminiVoice) {
+      const requestProvider = clean(req.body.provider || process.env.TTS_PROVIDER || "").toLowerCase();
+      const providerOverride = requestProvider || 'google';
+      const supportedProviders = ['google', 'openai', 'antigravity'];
+      if (!supportedProviders.includes(providerOverride)) {
+        throw new Error(`Unsupported TTS provider: ${providerOverride}. Supported providers: ${supportedProviders.join(', ')}`);
+      }
+      const useExternalProvider = ['openai', 'antigravity'].includes(providerOverride);
+
+      if (useExternalProvider) {
+        const result = await invokeTtsProvider({
+          provider: providerOverride,
+          text: processedText,
+          voice: actualVoice,
+          speed,
+          pitch,
+          volume,
+          isSample,
+        });
+        finalAudioContent = result.audioContent;
+      } else if (isGeminiVoice) {
         const response = await genAI.models.generateContent({
           model: "gemini-3.1-flash-tts-preview",
           contents: [{ parts: [{ text: processedText }] }],
@@ -981,6 +1001,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
 
   app.post(['/api/tts', '/api/tts/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
   app.post(['/api/generate-voice', '/api/generate-voice/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
+  app.post(['/api/external-tts', '/api/external-tts/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
 
   // --- FINAL API SAFETY NET ---
   // Catch-all 404 for API routes to distinguish from frontend 404
@@ -988,7 +1009,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
     console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
     res.status(404).json({ 
       error: `API Endpoint ${req.method} ${req.originalUrl} tidak ditemukan di server Shinerva.`,
-      availableEndpoints: ['/api/tts', '/api/user/me', '/api/auth/sync', '/api/health']
+      availableEndpoints: ['/api/tts', '/api/external-tts', '/api/user/me', '/api/auth/sync', '/api/health']
     });
   });
 

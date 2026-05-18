@@ -587,29 +587,8 @@ const App = () => {
     }
 
     fetchHistory();
-    // Watch for auth changes
-    let unsubscribe = () => {};
-    if (auth) {
-      try {
-        unsubscribe = auth.onAuthStateChanged(async (u) => {
-          if (u) {
-            await refreshUser();
-          } else {
-            setUser(null);
-          }
-          setIsAuthInitializing(false);
-        }, (error) => {
-          console.error("Auth state change error:", error);
-          setIsAuthInitializing(false);
-        });
-      } catch (e) {
-        console.error("onAuthStateChanged setup failed:", e);
-        setIsAuthInitializing(false);
-      }
-    } else {
-      setIsAuthInitializing(false);
-    }
-    return () => unsubscribe();
+    // Auth state listener is setup in the main init effect above.
+    return;
   }, []);
 
   useEffect(() => {
@@ -697,8 +676,20 @@ const App = () => {
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
       if (data.audioContent) {
-        const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
-        audio.play();
+        const mimeType = 'audio/mpeg';
+        try {
+          const blob = base64ToBlob(data.audioContent, mimeType);
+          const url = URL.createObjectURL(blob);
+          // Revoke previous blob URL if present
+          if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+          setAudioUrl(url);
+          setIsTeaser(true);
+          setIsAudioVisible(true);
+        } catch (e) {
+          console.error('Failed to prepare audio blob for test pronunciation', e);
+          const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
+          audio.play().catch(err => console.warn('Fallback audio.play() failed', err));
+        }
       }
     } catch (err) {
       handleApiError(err, "Gagal mencoba suara.");
@@ -790,12 +781,37 @@ const App = () => {
 
   useEffect(() => {
     if (audioUrl && audioRef.current) {
-      audioRef.current.load();
-      audioRef.current.play()
-        .then(() => setIsPlaying(true))
-        .catch(e => {
-            console.warn("Auto-play blocked or failed:", e);
-            setIsPlaying(false);
+      const audioEl = audioRef.current;
+      audioEl.load();
+      // Try normal autoplay first
+      audioEl.muted = false;
+      audioEl.play()
+        .then(() => {
+          setIsPlaying(true);
+          // ensure unmuted after successful play
+          audioEl.muted = false;
+        })
+        .catch(async (e) => {
+          console.warn("Auto-play blocked or failed:", e);
+          setIsPlaying(false);
+          // Attempt muted autoplay (more likely to be allowed)
+          try {
+            audioEl.muted = true;
+            await audioEl.play();
+            // Unmute after starting playback
+            audioEl.muted = false;
+            setIsPlaying(true);
+            console.info('Muted autoplay succeeded');
+          } catch (e2) {
+            console.warn('Muted autoplay also failed:', e2);
+            audioEl.muted = false;
+            // Notify user to press Play (user gesture required)
+            try {
+              toast.error('Autoplay diblokir oleh browser. Tekan tombol Play untuk memutar audio.');
+            } catch (toastErr) {
+              /* ignore if toast unavailable */
+            }
+          }
         });
     }
   }, [audioUrl]);
@@ -828,11 +844,18 @@ const App = () => {
       if (data.audioContent) {
         const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
         const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
-        const blob = base64ToBlob(data.audioContent, mimeType);
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.play();
-        toast.success(`Berhasil memutar contoh suara ${voice}`);
+        try {
+          const blob = base64ToBlob(data.audioContent, mimeType);
+          const url = URL.createObjectURL(blob);
+          if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+          setAudioUrl(url);
+          setIsTeaser(true);
+          setIsAudioVisible(true);
+          toast.success(`Berhasil memutar contoh suara ${voice}`);
+        } catch (e) {
+          console.error('Preview audio preparation failed', e);
+          toast.error('Gagal mempersiapkan audio preview.');
+        }
       }
     } catch (err) {
       console.error("Preview error:", err);
@@ -1109,15 +1132,16 @@ const App = () => {
       const isNetwork = err.message && (err.message.includes("Kesalahan jaringan") || err.message.includes("network-request-failed") || err.message.includes("network_error") || err.message.includes("iframe"));
       
       if (isInternal || isNetwork) {
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://shinerva.id';
         toast.error(
           <div className="flex flex-col gap-2">
             <p className="font-bold">Gagal terhubung ke Google</p>
-            <p className="text-xs">Ini karena pembatasan browser atau domain belum diizinkan. Silakan buka aplikasi di tab baru (<b>https://shinerva.id</b>) untuk login yang aman.</p>
+            <p className="text-xs">Ini karena pembatasan browser atau domain belum diizinkan. Silakan buka aplikasi di tab baru (<b>{origin}</b>) untuk login yang aman.</p>
             <button 
-              onClick={() => window.open('https://shinerva.id', '_blank')}
+              onClick={() => window.open(origin, '_blank')}
               className="bg-white text-black text-[10px] font-black py-1.5 px-3 rounded-lg hover:bg-gray-100 transition-all border-none cursor-pointer self-start"
             >
-              Buka Shinerva.id &rarr;
+              Buka {origin} &rarr;
             </button>
           </div>,
           { duration: 10000 }
