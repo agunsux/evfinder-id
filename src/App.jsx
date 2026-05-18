@@ -115,9 +115,9 @@ const FAQS = [
       "Sangat bisa! Suara kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Untuk paket Kreator ke atas, Anda mendapatkan hak komersial penuh.",
   },
   {
-    question: "Apa perbedaan teknologi Standard dan Neural2?",
+    question: "Apa perbedaan teknologi Basic dan Pulse?",
     answer:
-      "Standard adalah teknologi TTS dasar, sementara Neural2 menggunakan pemrosesan saraf terbaru yang menghasilkan intonasi, jeda, dan emosi yang jauh lebih mirip manusia asli.",
+      "Basic adalah teknologi TTS standar untuk kebutuhan harian, sementara Pulse menggunakan pemrosesan saraf ekspresif yang menghasilkan intonasi, jeda, dan emosi yang sangat mendalam untuk narasi konten kreatif.",
   },
   {
     question: "Bagaimana cara menghubungi bantuan?",
@@ -127,13 +127,13 @@ const FAQS = [
 ];
 
 const VOICES = {
-  "Standard (Free)": [
+  "Basic (Free)": [
     { 
       id: "id-ID-Standard-A", 
       name: "Ratna (Wanita)", 
       type: "Standard", 
       tier: "FREE", 
-      desc: "Suara dasar yang jernih dan stabil.",
+      desc: "Fast, lightweight voice generation for everyday content.",
       useCase: "Podcast & Edukasi"
     },
     { 
@@ -141,110 +141,110 @@ const VOICES = {
       name: "Bambang (Pria)", 
       type: "Standard", 
       tier: "FREE",
-      desc: "Suara pria yang bersih dan berwibawa.",
+      desc: "Practical voice generation for simple announcements.",
       useCase: "Berita & Pengumuman"
     },
   ],
-  "Neural2 (Starter/Kreator)": [
+  "Pulse (Starter/Kreator)": [
     { 
       id: "id-ID-Neural2-A", 
-      name: "Siti (Sangat Realistis)", 
+      name: "Siti (Emotionally Expressive)", 
       type: "Neural2", 
       premium: true, 
       tier: "STARTER",
-      desc: "Suara AI generasi terbaru dengan intonasi manusiawi.",
+      desc: "Emotionally expressive voices built for creators.",
       useCase: "Narasi YouTube & Storytelling"
     },
     { 
       id: "id-ID-Neural2-D", 
-      name: "Agus (Sangat Realistis)", 
+      name: "Agus (Dynamic Narration)", 
       type: "Neural2", 
       premium: true, 
       tier: "STARTER",
-      desc: "Intonasi yang ekspresif dan sangat alami.",
+      desc: "Dynamic and engaging storytelling with creator-focused pacing.",
       useCase: "Video Pendek & Komedi"
     },
   ],
-  "WaveNet (Produktif)": [
+  "Flow (Produktif)": [
     { 
       id: "id-ID-Wavenet-A", 
-      name: "Lestari (Wavenet)", 
+      name: "Lestari (Smooth Flow)", 
       type: "Wavenet", 
       premium: true, 
       tier: "PRODUKTIF",
-      desc: "Teknologi DeepMind untuk kejernihan suara maksimal.",
+      desc: "Smooth cinematic narration with natural pacing.",
       useCase: "Audiobook & Meditasi"
     },
     { 
       id: "id-ID-Wavenet-B", 
-      name: "Joko (Wavenet)", 
+      name: "Joko (Immersive Flow)", 
       type: "Wavenet", 
       premium: true, 
       tier: "PRODUKTIF",
-      desc: "Suara berat dan dramatis dengan teknologi Wavenet.",
+      desc: "Deep and dramatic voices for immersive storytelling.",
       useCase: "Misteri & Dokumenter"
     },
     { 
       id: "id-ID-Wavenet-C", 
-      name: "Putri (Wavenet)", 
+      name: "Putri (Elegant Flow)", 
       type: "Wavenet", 
       premium: true, 
       tier: "PRODUKTIF",
-      desc: "Suara wanita yang elegan dan profesional.",
+      desc: "Sleek and professional voices for cinematic delivery.",
       useCase: "Iklan & Presentasi"
     },
   ],
-  "Studio Premium (Bisnis)": [
+  "Aura Premium (Bisnis)": [
     { 
       id: "id-ID-Studio-A", 
-      name: "Eko (Iklan TV)", 
+      name: "Eko (Flagship Aura)", 
       type: "Studio", 
       premium: true, 
       glow: true, 
       tier: "BISNIS",
-      desc: "Kualitas audio flagship seperti rekaman studio profesional.",
+      desc: "Our flagship ultra-human AI voice experience.",
       useCase: "Iklan High-End & Branding"
     },
     { 
       id: "id-ID-Studio-D", 
-      name: "Maya (Berita)", 
+      name: "Maya (Human-Like Aura)", 
       type: "Studio", 
       premium: true, 
       glow: true, 
       tier: "BISNIS",
-      desc: "Suara jernih dengan artikulasi sempurna.",
+      desc: "Ultra-natural, emotionally layered cinematic creator voice.",
       useCase: "Berita & Konten Formal"
     },
   ],
-  "Gemini AI Pro (Enterprise)": [
+  "Aura Cinema (Enterprise)": [
     { 
       id: "Puck", 
-      name: "Puck (Deep & Dramatic)", 
+      name: "Puck (Viral Quality)", 
       type: "Gemini", 
       premium: true, 
       glow: true, 
       tier: "ENTERPRISE",
-      desc: "Suara AI Gemini yang sangat dalam dan sinematik.",
+      desc: "Viral-quality narration with cinematic depth.",
       useCase: "Film & Narasi Epik"
     },
     { 
       id: "Charon", 
-      name: "Charon (Mysterious & Calm)", 
+      name: "Charon (Atmospheric Aura)", 
       type: "Gemini", 
       premium: true, 
       glow: true, 
       tier: "ENTERPRISE",
-      desc: "Elegan, tenang, dan penuh misteri.",
+      desc: "Emotionally layered and atmospheric human-like delivery.",
       useCase: "Storytelling & Dokumenter"
     },
     { 
       id: "Kore", 
-      name: "Kore (Friendly & Bright)", 
+      name: "Kore (Radiant Aura)", 
       type: "Gemini", 
       premium: true, 
       glow: true, 
       tier: "ENTERPRISE",
-      desc: "Ceria, ramah, dan sangat memikat.",
+      desc: "Bright, engaging, and ultra-natural presence.",
       useCase: "Konten Anak & Marketing"
     },
     { 
@@ -325,6 +325,9 @@ const App = () => {
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [purchaseLoading, setPurchaseLoading] = useState(null);
+  const [isReferralOpen, setIsReferralOpen] = useState(false);
+  const [lastViewedReferrals, setLastViewedReferrals] = useState(0);
 
   const [isPronunciationOpen, setIsPronunciationOpen] = useState(false);
   const [isVoiceDropdownOpen, setIsVoiceDropdownOpen] = useState(false);
@@ -1249,10 +1252,10 @@ const App = () => {
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a
-                href="#studio"
+                href="#aura"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Studio
+                Aura
               </a>
               <a
                 href="#packs"
@@ -1552,9 +1555,9 @@ const App = () => {
           </div>
         </section>
 
-        {/* Studio Section */}
+        {/* Aura Section */}
         <section
-          id="studio"
+          id="aura"
           className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
         >
           {user && (
@@ -1776,7 +1779,7 @@ const App = () => {
                                               </span>
                                               {isStudio && (
                                                 <span className="text-[8px] font-black bg-terracotta text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(231,76,60,0.5)]">
-                                                  STUDIO
+                                                  AURA
                                                 </span>
                                               )}
                                             </div>
@@ -1886,7 +1889,7 @@ const App = () => {
                     {(!user || user.tier === 'FREE') && (
                       <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20 animate-pulse">
                         <Gift className="w-3 h-3" />
-                        <span className="font-bold">Buka suara Wavenet, Neural2 & Studio Premium dengan paket Starter! <a href="#pricing" className="underline">Upgrade Sekarang</a></span>
+                        <span className="font-bold">Buka fitur suara Flow, Pulse & Aura Flagship dengan paket starter! <a href="#pricing" className="underline">Upgrade Sekarang</a></span>
                       </div>
                     )}
                   </div>
@@ -2455,7 +2458,7 @@ const App = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Tier 1 (Standard/WaveNet)
+                  Tier 1 (Basic / Flow)
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
@@ -2494,7 +2497,7 @@ const App = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Neural2 Suara Manusiawi
+                  Pulse: Suara Ekspresif & Manusiawi
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
@@ -2540,8 +2543,7 @@ const App = () => {
                   Kredit
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Tier 1,
-                  2, 3 (Chirp HD)
+                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Basic, Flow, Pulse & Aura
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-white flex-shrink-0" /> Support
@@ -2627,7 +2629,7 @@ const App = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Akses Studio Voice
+                  Akses Eksklusif Aura Flagship
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" /> WA
@@ -2720,10 +2722,10 @@ const App = () => {
                 <ul className="space-y-4 text-text-muted text-sm">
                   <li>
                     <a
-                      href="#studio"
+                      href="#aura"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Studio
+                      Aura
                     </a>
                   </li>
                   <li>
@@ -2902,9 +2904,9 @@ const App = () => {
               <div className="w-20 h-20 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle className="w-10 h-10 text-terracotta" />
               </div>
-              <h3 className="text-2xl font-black text-text mb-4">Peringatan Suara Studio</h3>
+              <h3 className="text-2xl font-black text-text mb-4">Aktivasi Aura Narration</h3>
               <p className="text-text-muted mb-8 leading-relaxed">
-                Anda menggunakan <span className="text-text font-bold">Suara Studio</span>. Operasi ini akan memotong <span className="text-terracotta font-black text-lg">40x Kredit</span>. Lanjutkan?
+                Anda akan menggunakan <span className="text-text font-bold">Suara Aura Flagship</span>. Operasi ini membutuhkan <span className="text-terracotta font-black text-lg">40x Kredit</span> karena kualitas pemrosesan yang sangat tinggi. Lanjutkan?
               </p>
               <div className="flex flex-col gap-3">
                 <button
