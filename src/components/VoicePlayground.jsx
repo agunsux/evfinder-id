@@ -137,7 +137,7 @@ const VoicePlayground = ({ onUpgrade }) => {
         {/* Content Area */}
         <div className="flex-1 p-8 bg-dark/20">
           {/* Categories Tab */}
-          <div className="flex flex-wrap gap-2 mb-8">
+          <div className="flex flex-wrap gap-2 mb-4">
             {activeTier.categories.map((cat, idx) => (
               <button
                 key={cat.slug}
@@ -152,6 +152,17 @@ const VoicePlayground = ({ onUpgrade }) => {
               </button>
             ))}
           </div>
+
+          <motion.div 
+            key={`${activeTier.tier}-${activeCategory.slug}`}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="mb-8 p-4 bg-surface2/20 border-l-2 border-terracotta rounded-r-xl"
+          >
+            <p className="text-gray-400 text-xs font-medium flex items-center gap-2">
+              <ShieldCheck className="w-3 h-3 text-terracotta" /> {activeCategory.description}
+            </p>
+          </motion.div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <AnimatePresence mode="wait">
@@ -178,7 +189,19 @@ const VoicePlayground = ({ onUpgrade }) => {
                         <Headphones className="w-5 h-5" />
                       </div>
                       <div>
-                        <h4 className="text-white font-black text-sm">{sample.title}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-white font-black text-sm">{sample.title}</h4>
+                          {activeCategory.slug === 'mystery' && (
+                            <span className="flex items-center gap-1 text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 font-black uppercase tracking-tighter">
+                              <Ghost className="w-2 h-2" /> Dramatic
+                            </span>
+                          )}
+                          {activeCategory.slug === 'conversational' && (
+                            <span className="flex items-center gap-1 text-[8px] bg-terracotta/20 text-terracotta px-1.5 py-0.5 rounded border border-terracotta/30 font-black uppercase tracking-tighter">
+                              <Sparkles className="w-2 h-2" /> Human-Like
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Voice: {sample.voiceId.split('-').pop()}</p>
                       </div>
                     </div>
