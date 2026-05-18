@@ -62,18 +62,18 @@ export const login = (email, password) =>
 // Helper to get current origin or a safe fallback
 const getAuthRedirectUrl = (path = '/') => {
   if (typeof window !== 'undefined') {
-    // If we are on a custom domain, use it. Otherwise use the current origin.
-    const origin = window.location.hostname === 'localhost' ? window.location.origin : 'https://shinerva.id';
-    return origin + path;
+    // Dynamically use the current origin instead of hardcoding
+    return window.location.origin + path;
   }
-  return 'https://shinerva.id' + path; // Fallback
+  // Use a safer fallback that won't break verification links if triggered server-side (rare)
+  return 'https://shinerva.id' + path; 
 };
 
 const getActionCodeSettings = () => ({
   // The URL to redirect back to after finishing the action.
   url: getAuthRedirectUrl(),
-  // Must be true for email link sign-in.
-  handleCodeInApp: true,
+  // Set to false to use the default Firebase hosted page for verification
+  handleCodeInApp: false,
 });
 
 export const signup = async (email, password, name) => {
@@ -84,9 +84,17 @@ export const signup = async (email, password, name) => {
     }
     // Automatically send verification email on signup
     try {
-      await sendEmailVerification(userCredential.user, getActionCodeSettings());
+      // Small delay to ensure account is fully ready in Firebase
+      setTimeout(async () => {
+        try {
+          await sendEmailVerification(userCredential.user, getActionCodeSettings());
+          console.log("[Auth] Verification email sent automatically.");
+        } catch (e) {
+          console.warn("[Auth] Automatic verification email failed:", e.message);
+        }
+      }, 1000);
     } catch (verifErr) {
-      console.warn("[Auth] Verification email failed to send:", verifErr);
+      console.warn("[Auth] Verification email trigger failed:", verifErr);
     }
     return userCredential;
   });

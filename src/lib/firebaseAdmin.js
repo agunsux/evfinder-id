@@ -1,19 +1,32 @@
 import admin from 'firebase-admin';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const clean = (val) => {
+  if (val === null || val === undefined) return "";
+  let res = String(val).trim();
+  if (res === "null" || res === "undefined" || res === "") return "";
+  if ((res.startsWith('"') && res.endsWith('"')) || (res.startsWith("'") && res.endsWith("'"))) {
+    res = res.substring(1, res.length - 1).trim();
+  }
+  return res.replace(/[\u200B-\u200D\ufeff\u00a0\u0000-\u001F\u007F-\u009F]/g, "");
+};
 
 // --- Environment and Config Setup ---
-const projectId = process.env.FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+const projectId = clean(process.env.FIREBASE_PROJECT_ID);
+const clientEmail = clean(process.env.FIREBASE_CLIENT_EMAIL);
 const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-const correctProjectId = "practical-gecko-476621-q4";
-
-if (!projectId || projectId !== correctProjectId) {
-  console.error(`[Firebase Admin] CRITICAL: Project ID mismatch or missing. Expected ${correctProjectId}, got ${projectId}`);
-}
+// Log initialization info (sans secrets)
+console.log(`[Firebase Admin] Environment Check:`);
+console.log(` - PROJECT_ID: ${projectId ? "FOUND (" + projectId.length + " chars)" : "MISSING"}`);
+console.log(` - CLIENT_EMAIL: ${clientEmail ? "FOUND (" + clientEmail.length + " chars)" : "MISSING"}`);
+console.log(` - PRIVATE_KEY: ${rawPrivateKey ? "FOUND (" + rawPrivateKey.length + " chars)" : "MISSING"}`);
 
 // Function to safely format private key
 const formatPrivateKey = (key) => {
-  if (!key || typeof key !== 'string' || key === 'undefined' || key === 'null') return null;
+  if (!key || typeof key !== 'string' || key === 'undefined' || key === 'null' || key.trim() === "") return null;
   
   let formatted = key.trim();
   
@@ -61,7 +74,11 @@ if (projectId && clientEmail && privateKey) {
     console.error(`[Firebase Admin] Initialization failed: ${error.message}`);
   }
 } else {
-  console.error("[Firebase Admin] MISSING CREDENTIALS: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, or FIREBASE_PRIVATE_KEY");
+  const missing = [];
+  if (!projectId) missing.push("FIREBASE_PROJECT_ID");
+  if (!clientEmail) missing.push("FIREBASE_CLIENT_EMAIL");
+  if (!privateKey) missing.push("FIREBASE_PRIVATE_KEY");
+  console.error(`[Firebase Admin] MISSING CREDENTIALS: ${missing.join(", ")}`);
 }
 
 export const authAdmin = app ? admin.auth(app) : null;

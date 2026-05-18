@@ -578,6 +578,21 @@ const App = () => {
 
   useEffect(() => {
     fetchVoiceConfig();
+    
+    // Diagnostic check on mount
+    const checkDiag = async () => {
+      try {
+        const res = await fetch("/api/auth/diag");
+        const data = await res.json();
+        console.log("[System] Diagnostics:", data);
+        if (!data.firebaseAdminInitialized && !user) {
+          console.error("[System] Firebase Admin is not initialized on server. Auth might fail.");
+        }
+      } catch (e) {
+        console.warn("[System] Could not fetch diagnostics:", e);
+      }
+    };
+    checkDiag();
   }, [user]);
 
   useEffect(() => {
@@ -1147,6 +1162,7 @@ const App = () => {
     setAuthLoading(true);
     try {
       if (authMode === "signup") {
+        // Automatically send verification email on signup
         const userCredential = await signup(authData.email, authData.password, authData.name);
         
         // Pass referral code to backend during the first user sync
@@ -1161,7 +1177,7 @@ const App = () => {
         const syncRes = await fetch("/api/auth/sync", options);
         await checkResponse(syncRes, 0, options);
         
-        // Set user state immediately so UI updates before refreshUser returns
+        // Set user state immediately
         setUser({
           email: userCredential.user.email,
           uid: userCredential.user.uid,
@@ -1178,17 +1194,10 @@ const App = () => {
           social_bonus_status: "none"
         });
 
-        // Send verification email
-        try {
-          await verifyEmail();
-        } catch (vErr) {
-          console.warn("Could not send initial verification email:", vErr);
-        }
-
         setIsAuthOpen(false);
-        toast.success("Pendaftaran berhasil!");
+        toast.success("Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi.");
         
-        // Final refresh to get full profile from backend
+        // Final refresh
         await refreshUser();
       } else if (authMode === "login") {
         const userCredential = await login(authData.email, authData.password);
@@ -3229,6 +3238,33 @@ const App = () => {
                   : "Daftar sekarang dan dapatkan bonus 5.000 karakter gratis."}
               </p>
             </div>
+            
+            {initError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-6 flex items-start gap-3 animate-in fade-in zoom-in duration-300">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-red-500">Kesalahan Konfigurasi</p>
+                  <p className="text-xs text-red-400/80 mt-1 leading-relaxed">
+                    {initError}
+                  </p>
+                  <p className="text-[10px] text-red-400/50 mt-2">
+                    Pastikan environment variables (VITE_FIREBASE_*) sudah terpasang dengan benar di Settings.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!isConfigValid && !initError && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-amber-500">Konfigurasi Tidak Lengkap</p>
+                  <p className="text-xs text-amber-400/80 mt-1">
+                    Beberapa variabel Firebase mungkin belum dikonfigurasi. Login mungkin tidak akan berfungsi.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <form key={authMode} onSubmit={authMode === 'forgot-password' ? handleResetPassword : submitAuth} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               {authMode === "whatsapp" && (
@@ -3491,6 +3527,18 @@ const App = () => {
                     </span>
                   </>
                 )}
+              </div>
+
+              <div className="pt-4 border-t border-surface2 mt-4 text-center">
+                <a 
+                  href="/api/auth/diag" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-text-muted hover:text-terracotta transition-colors flex items-center justify-center gap-1 opacity-50 hover:opacity-100 no-underline"
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  Masalah login? Cek Status Sistem (Pakar)
+                </a>
               </div>
             </form>
           </div>

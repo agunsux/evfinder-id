@@ -955,6 +955,20 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
   };
 
   // --- DEBUG & HEALTH ---
+  app.get("/api/auth/diag", (req, res) => {
+    const diag = {
+      firebaseAdminInitialized: !!authAdmin,
+      projectId: process.env.FIREBASE_PROJECT_ID || "(missing)",
+      hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
+      hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+      nodeVersion: process.version,
+      env: process.env.NODE_ENV,
+      timestamp: new Date().toISOString()
+    };
+    console.log("[Diag] Auth diagnostics requested:", diag);
+    res.json(diag);
+  });
+
   app.get("/api/health", (req, res) => {
     res.json({ 
       status: "ok",
