@@ -676,18 +676,18 @@ const App = () => {
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
       if (data.audioContent) {
-        const mimeType = 'audio/mpeg';
+        const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
+        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
         try {
           const blob = base64ToBlob(data.audioContent, mimeType);
           const url = URL.createObjectURL(blob);
-          // Revoke previous blob URL if present
           if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
           setAudioUrl(url);
           setIsTeaser(true);
           setIsAudioVisible(true);
         } catch (e) {
           console.error('Failed to prepare audio blob for test pronunciation', e);
-          const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
+          const audio = new Audio(`data:${mimeType};base64,${data.audioContent}`);
           audio.play().catch(err => console.warn('Fallback audio.play() failed', err));
         }
       }
@@ -1017,13 +1017,17 @@ const App = () => {
   };
 
   const togglePlay = () => {
-    if (audioUrl) {
+    if (audioUrl && audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play();
+        audioRef.current.play().catch((err) => {
+          console.warn('Audio playback failed:', err);
+        });
       }
       setIsPlaying(!isPlaying);
+    } else if (audioUrl) {
+      console.warn('Audio URL exists but audio element is not mounted yet.');
     } else {
       // Manage fallback synth state
       if (window.speechSynthesis.speaking) {
