@@ -1,24 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Toaster, toast } from 'react-hot-toast';
+import { MAX_CHARS } from "./constants";
+import ShinervaLogo from "./components/ShinervaLogo";
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
 import { auth, isConfigValid, initError } from './lib/firebase';
 import { 
-  login, 
-  signup, 
   logout, 
-  loginWithGoogle, 
-  resetPassword, 
-  verifyEmail 
+  loginWithGoogle 
 } from './lib/authService';
-import { 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  sendPasswordResetEmail, 
-  sendEmailVerification, 
-  signOut,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
+import {
   onAuthStateChanged
 } from 'firebase/auth';
 import {
@@ -53,7 +44,6 @@ import {
 
 import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
-import ReferralDashboard from "./components/ReferralDashboard";
 import VoicePlayground from "./components/VoicePlayground";
 
 const PACKS = [
@@ -289,6 +279,7 @@ const getVoiceDisplayName = (id) => {
   return id.split("-").slice(-2).join("-");
 };
 
+
 const formatDuration = (seconds) => {
   if (seconds === undefined || seconds === null) return "-";
   if (seconds === 0) return "< 1s";
@@ -298,8 +289,6 @@ const formatDuration = (seconds) => {
   return `${mins}m ${secs}s`;
 };
 
-import { MAX_CHARS } from "./constants";
-import ShinervaLogo from "./components/ShinervaLogo";
 
 const App = () => {
   const [text, setText] = useState("");
@@ -332,19 +321,10 @@ const App = () => {
   const [authData, setAuthData] = useState({
     name: "",
     email: "",
-    password: "",
-    whatsapp: "",
-    refCode: "",
   });
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [authLoading, setAuthLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [purchaseLoading, setPurchaseLoading] = useState(null); // planId or null
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-
-  const [showSocialModal, setShowSocialModal] = useState(false);
-  const [socialUrl, setSocialUrl] = useState("");
 
   const [isPronunciationOpen, setIsPronunciationOpen] = useState(false);
   const [isVoiceDropdownOpen, setIsVoiceDropdownOpen] = useState(false);
@@ -355,10 +335,6 @@ const App = () => {
   const [testLoading, setTestLoading] = useState(false);
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isReferralOpen, setIsReferralOpen] = useState(false);
-  const [lastViewedReferrals, setLastViewedReferrals] = useState(() => 
-    parseInt(localStorage.getItem("lastViewedReferrals") || "0")
-  );
   const [hasSeenWelcome, setHasSeenWelcome] = useState(localStorage.getItem("hasSeenWelcome") === "true");
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -586,7 +562,10 @@ const App = () => {
         const data = await res.json();
         console.log("[System] Diagnostics:", data);
         if (!data.firebaseAdminInitialized && !user) {
-          console.error("[System] Firebase Admin is not initialized on server. Auth might fail.");
+          console.error("[System] Firebase Admin is not initialized on server. Auth might fail.", data.initError);
+          setInitError(`Sistem Backend (Admin) tidak terinisialisasi: ${data.initError || "Kesalahan tidak diketahui"}. Ini biasanya karena Environment Variables di Settings belum lengkap.`);
+        } else {
+          setInitError(null);
         }
       } catch (e) {
         console.warn("[System] Could not fetch diagnostics:", e);
@@ -1109,8 +1088,7 @@ const App = () => {
         const options = {
           method: "POST",
           headers: { 
-            "Authorization": `Bearer ${idToken}`,
-            "x-ref-code": authData.refCode || ""
+            "Authorization": `Bearer ${idToken}`
           },
         };
         const syncRes = await fetch("/api/auth/sync", options);
@@ -1122,201 +1100,16 @@ const App = () => {
         }
       } catch (syncErr) {
         console.error("[Auth] Background sync error:", syncErr);
-        // Don't toast error here, refreshUser might fix it
       }
 
-      // Final refresh to ensure we have the absolute latest state
       await refreshUser();
-      
       setIsAuthOpen(false);
       toast.success("Login Google berhasil!");
     } catch (err) {
       console.error("[Auth] Google sign-in error:", err);
-      const isInternal = err.message && (err.message.includes("internal-error") || err.message.includes("internal error"));
-      const isNetwork = err.message && (err.message.includes("Kesalahan jaringan") || err.message.includes("network-request-failed") || err.message.includes("network_error") || err.message.includes("iframe"));
-      
-      if (isInternal || isNetwork) {
-        toast.error(
-          <div className="flex flex-col gap-2">
-            <p className="font-bold">Gagal terhubung ke Google</p>
-            <p className="text-xs">Ini karena pembatasan browser atau domain belum diizinkan. Silakan buka aplikasi di tab baru (<b>https://shinerva.id</b>) untuk login yang aman.</p>
-            <button 
-              onClick={() => window.open('https://shinerva.id', '_blank')}
-              className="bg-white text-black text-[10px] font-black py-1.5 px-3 rounded-lg hover:bg-gray-100 transition-all border-none cursor-pointer self-start"
-            >
-              Buka Shinerva.id &rarr;
-            </button>
-          </div>,
-          { duration: 10000 }
-        );
-      } else {
-        toast.error(err.message);
-      }
+      toast.error(err.message || "Gagal masuk dengan Google.");
     } finally {
       setGoogleLoading(false);
-    }
-  };
-
-  const submitAuth = async (e) => {
-    e.preventDefault();
-    setAuthLoading(true);
-    try {
-      if (authMode === "signup") {
-        // Automatically send verification email on signup
-        const userCredential = await signup(authData.email, authData.password, authData.name);
-        
-        // Pass referral code to backend during the first user sync
-        const idToken = await userCredential.user.getIdToken(true);
-        const options = {
-          method: "POST",
-          headers: { 
-            "Authorization": `Bearer ${idToken}`,
-            "x-ref-code": authData.refCode || ""
-          },
-        };
-        const syncRes = await fetch("/api/auth/sync", options);
-        await checkResponse(syncRes, 0, options);
-        
-        // Set user state immediately
-        setUser({
-          email: userCredential.user.email,
-          uid: userCredential.user.uid,
-          emailVerified: userCredential.user.emailVerified,
-          tier: 'FREE',
-          generation_count: 0,
-          used_chars: 0,
-          monthly_chars: 10000,
-          signup_bonus_chars: 10000,
-          earned_chars: 0,
-          valid_referrals: 0,
-          has_received_referral_bonus: false,
-          referral_code: "",
-          social_bonus_status: "none"
-        });
-
-        setIsAuthOpen(false);
-        toast.success("Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi.");
-        
-        // Final refresh
-        await refreshUser();
-      } else if (authMode === "login") {
-        const userCredential = await login(authData.email, authData.password);
-        
-        // Set user state immediately
-        setUser({
-          email: userCredential.user.email,
-          uid: userCredential.user.uid,
-          emailVerified: userCredential.user.emailVerified,
-          tier: 'FREE',
-          generation_count: 0,
-          used_chars: 0,
-          monthly_chars: 10000,
-          signup_bonus_chars: 10000,
-          earned_chars: 0,
-          valid_referrals: 0,
-          has_received_referral_bonus: false,
-          referral_code: "",
-          social_bonus_status: "none"
-        });
-
-        setIsAuthOpen(false);
-        toast.success("Berhasil masuk!");
-        
-        await refreshUser();
-      } else if (authMode === "whatsapp") {
-        if (!otpSent) {
-          const options = {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ whatsapp: authData.whatsapp }),
-          };
-          const res = await fetch("/api/auth/otp/request", options);
-          const data = await checkResponse(res, 0, options);
-          if (data.success) {
-            setOtpSent(true);
-            toast.success("OTP telah dikirim ke WhatsApp Anda.");
-          }
-        } else {
-          const options = {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ whatsapp: authData.whatsapp, otp: otpCode }),
-          };
-          const res = await fetch("/api/auth/otp/verify", options);
-          const data = await checkResponse(res, 0, options);
-          if (data.success) {
-            setUser(data.user);
-            setIsAuthOpen(false);
-            toast.success("Login berhasil!");
-          }
-        }
-      }
-    } catch (err) {
-      toast.error(err.message || "Gagal autentikasi.");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const switchAuthMode = (mode) => {
-    setAuthMode(mode);
-    setOtpSent(false);
-    setOtpCode("");
-    setAuthData({
-      name: "",
-      email: "",
-      password: "",
-      whatsapp: "",
-      refCode: "",
-    });
-  };
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    if (!authData.email) {
-      toast.error('Masukkan email Anda');
-      return;
-    }
-    setAuthLoading(true);
-    try {
-      await resetPassword(authData.email);
-      toast.success('Email reset password telah dikirim. Harap cek inbox Anda.');
-      switchAuthMode('login');
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleResendVerification = async () => {
-    setAuthLoading(true);
-    try {
-      await verifyEmail();
-      toast.success('Email verifikasi telah dikirim ulang. Silakan cek kotak masuk atau folder spam Anda.');
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleRefreshVerificationStatus = async () => {
-    if (auth?.currentUser) {
-      setAuthLoading(true);
-      try {
-        await auth.currentUser.reload();
-        if (auth.currentUser.emailVerified) {
-          toast.success("Email berhasil diverifikasi!");
-          await refreshUser();
-        } else {
-          toast.error("Email belum diverifikasi. Silakan cek inbox Anda.");
-        }
-      } catch (err) {
-        toast.error("Gagal memperbarui status verifikasi.");
-      } finally {
-        setAuthLoading(false);
-      }
     }
   };
 
@@ -1327,41 +1120,6 @@ const App = () => {
       toast.success('Berhasil keluar.');
     } catch (err) {
       toast.error(err.message);
-    }
-  };
-
-  const handleSocialSubmit = async (e) => {
-    e.preventDefault();
-    if (!socialUrl) return;
-    if (!auth?.currentUser) {
-      toast.error("Harap login terlebih dahulu.");
-      return;
-    }
-    setAuthLoading(true);
-    try {
-      const idToken = await auth?.currentUser?.getIdToken();
-      if (!idToken) throw new Error("Gagal mendapatkan token autentikasi.");
-      const options = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${idToken}`
-        },
-        body: JSON.stringify({ url: socialUrl }),
-      };
-      const res = await fetch("/api/user/social-share", options);
-      const data = await checkResponse(res, 0, options);
-      if (data.success) {
-        toast.success("Tautan berhasil dikirim. Menunggu verifikasi admin!");
-        setShowSocialModal(false);
-        refreshUser();
-      } else {
-        toast.error(data.error);
-      }
-    } catch (err) {
-      handleApiError(err, "Gagal mengirim data.");
-    } finally {
-      setAuthLoading(false);
     }
   };
 
@@ -3192,28 +2950,9 @@ const App = () => {
         </div>
       )}
 
-      {/* Referral Dashboard Modal */}
-      {isReferralOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/90 backdrop-blur-md"
-            onClick={() => setIsReferralOpen(false)}
-          ></div>
-          <div className="bg-dark border border-surface2 rounded-[2rem] w-full max-w-5xl relative z-10 shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
-            <div className="p-6 md:p-10">
-              <button
-                onClick={() => setIsReferralOpen(false)}
-                className="absolute top-6 right-6 text-text-muted hover:text-text cursor-pointer bg-surface2/50 hover:bg-surface2 p-2 rounded-full transition-all border-none"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <ReferralDashboard user={user} auth={auth} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Referral Dashboard Modal - Removed for MVP */}
 
-      {/* Auth Modal */}
+      {/* Auth Modal - Simplified for MVP (Google Login Only) */}
       {isAuthOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
           <div
@@ -3230,375 +2969,90 @@ const App = () => {
             <div className="text-center mb-8">
               <ShinervaLogo className="w-16 h-16 mx-auto mb-4 text-terracotta" />
               <h2 className="text-2xl font-black text-text">
-                {authMode === "login" ? "Masuk ke SHINERVA" : authMode === "whatsapp" ? "Masuk dengan WhatsApp" : "Daftar Akun Baru"}
+                Masuk ke SHINERVA
               </h2>
-              <p className="text-text-muted text-sm mt-2">
-                {authMode === "login" || authMode === "whatsapp"
-                  ? "Selamat datang kembali!"
-                  : "Daftar sekarang dan dapatkan bonus 5.000 karakter gratis."}
+              <p className="text-text-muted text-sm mt-2 font-medium">
+                Daftar sekarang dan dapatkan bonus 10.000 karakter gratis untuk mencoba suara AI kami.
               </p>
             </div>
             
             {initError && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-6 flex items-start gap-3 animate-in fade-in zoom-in duration-300">
                 <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-red-500">Kesalahan Konfigurasi</p>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-red-500">Masalah Koneksi Backend</p>
                   <p className="text-xs text-red-400/80 mt-1 leading-relaxed">
-                    {initError}
-                  </p>
-                  <p className="text-[10px] text-red-400/50 mt-2">
-                    Pastikan environment variables (VITE_FIREBASE_*) sudah terpasang dengan benar di Settings.
+                    Sistem sedang dalam pemeliharaan atau konfigurasi belum lengkap. Google Login mungkin tidak berfungsi untuk sementara.
                   </p>
                 </div>
               </div>
             )}
 
-            {!isConfigValid && !initError && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-amber-500">Konfigurasi Tidak Lengkap</p>
-                  <p className="text-xs text-amber-400/80 mt-1">
-                    Beberapa variabel Firebase mungkin belum dikonfigurasi. Login mungkin tidak akan berfungsi.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <form key={authMode} onSubmit={authMode === 'forgot-password' ? handleResetPassword : submitAuth} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {authMode === "whatsapp" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
-                      Nomor WhatsApp
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      disabled={otpSent}
-                      value={authData.whatsapp}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, whatsapp: e.target.value })
-                      }
-                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                      placeholder="08..."
-                    />
-                  </div>
-                  {otpSent && (
-                    <div>
-                      <label className="block text-sm font-bold text-gray-400 mb-2">
-                        Kode OTP
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value)}
-                        className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta tracking-widest text-center text-xl"
-                        placeholder="••••"
-                        maxLength={4}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-              {authMode === "forgot-password" && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="bg-surface2/50 p-4 rounded-xl border border-surface2 mb-4">
-                    <p className="text-xs text-text-muted">
-                      Masukkan email Anda yang terdaftar. Kami akan mengirimkan tautan untuk mengatur ulang password Anda.
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
-                      Alamat Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={authData.email}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, email: e.target.value })
-                      }
-                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta transition-all"
-                      placeholder="anda@email.com"
-                    />
-                  </div>
-                </div>
-              )}
-              {authMode !== "whatsapp" && authMode !== "forgot-password" && (
-                <>
-                  {authMode === "signup" && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-400 mb-2">
-                          Nama Lengkap
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={authData.name}
-                          onChange={(e) =>
-                            setAuthData({ ...authData, name: e.target.value })
-                          }
-                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                          placeholder="John Doe"
-                        />
-                      </div>
-                    </>
-                  )}
-                  <div>
-                    <label className="block text-sm font-bold text-gray-400 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={authData.email}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, email: e.target.value })
-                      }
-                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                      placeholder="anda@email.com"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="block text-sm font-bold text-gray-400">
-                        Password
-                      </label>
-                      {authMode === "login" && (
-                        <button
-                          type="button"
-                          onClick={() => switchAuthMode("forgot-password")}
-                          className="text-xs text-terracotta hover:text-white font-bold cursor-pointer bg-transparent border-none p-0"
-                        >
-                          Lupa Password?
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="password"
-                      required
-                      value={authData.password}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, password: e.target.value })
-                      }
-                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  {authMode === "signup" && (
-                    <>
-                      <div className="pt-2 border-t border-surface2 mt-4">
-                        <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
-                          Nomor WhatsApp{" "}
-                          <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
-                            Opsional
-                          </span>
-                        </label>
-                        <p className="text-xs text-gray-500 mb-2">
-                          Untuk tips konten & promo eksklusif. Kami tidak akan spam.
-                        </p>
-                        <input
-                          type="tel"
-                          value={authData.whatsapp}
-                          onChange={(e) =>
-                            setAuthData({ ...authData, whatsapp: e.target.value })
-                          }
-                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                          placeholder="08..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
-                          Kode Referral{" "}
-                          <span className="text-xs bg-surface2 px-2 py-0.5 rounded text-gray-500">
-                            Opsional
-                          </span>
-                        </label>
-                        <p className="text-xs text-gray-500 mb-2">
-                          Punya kode undangan teman?
-                        </p>
-                        <input
-                          type="text"
-                          value={authData.refCode}
-                          onChange={(e) =>
-                            setAuthData({
-                              ...authData,
-                              refCode: e.target.value.toUpperCase(),
-                            })
-                          }
-                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta uppercase"
-                          placeholder="KODE"
-                        />
-                      </div>
-                      <div className="bg-terracotta/10 border border-terracotta/20 rounded-xl p-3 flex gap-3 mt-4">
-                        <Gift className="w-5 h-5 text-terracotta flex-shrink-0" />
-                        <p className="text-xs text-terracotta font-medium">
-                          Selamat datang! Kamu dapat 10.000 karakter gratis untuk
-                          memulai (~6 menit audio).
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-
+            <div className="space-y-4">
               <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full bg-terracotta hover:bg-trdark text-white py-3 my-2 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center"
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                className="w-full bg-white text-black hover:bg-gray-100 py-4 rounded-2xl font-black transition-all border-none cursor-pointer flex justify-center items-center gap-3 text-lg shadow-xl shadow-white/5 active:scale-95"
               >
-                {authLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : authMode === "login" ? (
-                  "Masuk"
-                ) : authMode === "whatsapp" ? (
-                  otpSent ? "Verifikasi OTP" : "Kirim OTP"
-                ) : authMode === "forgot-password" ? (
-                  "Kirim Email Reset"
+                {googleLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
                 ) : (
-                  "Daftar Gratis"
+                  <>
+                    <svg className="w-6 h-6" viewBox="0 0 24 24">
+                      <path
+                        fill="currentColor"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      />
+                    </svg>
+                    Masuk dengan Google
+                  </>
                 )}
               </button>
 
-              <div className="flex flex-col gap-2 mt-4">
-                {authMode === "login" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleGoogleSignIn}
-                      disabled={googleLoading}
-                      className="w-full bg-white text-black hover:bg-gray-200 py-3 my-2 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center gap-2"
-                    >
-                      {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Masuk dengan Google</>}
-                    </button>
-                    
-                    {/* Environment Hint for iframe */}
-                    {window.self !== window.top && (
-                      <div className="bg-surface2/30 border border-surface2 p-3 rounded-xl mb-2">
-                        <p className="text-[10px] text-text-muted text-center leading-tight">
-                          Gagal login via Google di dalam preview? 
-                          <button 
-                            onClick={() => window.open(window.location.href, '_blank')}
-                            className="text-terracotta hover:underline ml-1 font-bold cursor-pointer bg-transparent border-none p-0 inline text-[10px]"
-                          >
-                             Buka di Tab Baru &rarr;
-                          </button>
-                        </p>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => switchAuthMode("whatsapp")}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white py-3 my-2 rounded-xl font-bold transition-colors border-none cursor-pointer flex justify-center items-center"
-                    >
-                      Masuk dengan WhatsApp OTP
-                    </button>
-                  </>
-                )}
+              <div className="bg-terracotta/10 border border-terracotta/20 rounded-2xl p-4 flex gap-4 mt-8">
+                <Gift className="w-6 h-6 text-terracotta flex-shrink-0" />
+                <p className="text-xs text-terracotta font-bold leading-relaxed">
+                  Bonus pengguna baru: 10.000 karakter gratis otomatis ditambahkan setelah login pertama kali.
+                </p>
               </div>
 
-              <div className="text-center text-sm text-gray-400 mt-4">
-                {authMode === 'forgot-password' ? (
-                  <span
-                    onClick={() => switchAuthMode("login")}
-                    className="text-terracotta hover:text-white font-bold cursor-pointer"
+              {/* Environment Hint for iframe */}
+              {window.self !== window.top && (
+                <p className="text-[10px] text-text-muted text-center leading-tight mt-4 opacity-70">
+                  Mengalami kendala login di dalam preview? 
+                  <button 
+                    onClick={() => window.open(window.location.href, '_blank')}
+                    className="text-terracotta hover:underline ml-1 font-bold cursor-pointer bg-transparent border-none p-0 inline text-[10px]"
                   >
-                    &larr; Kembali ke Login
-                  </span>
-                ) : (
-                  <>
-                    <span>
-                      {authMode === "login" || authMode === "whatsapp"
-                        ? "Belum punya akun? "
-                        : "Sudah punya akun? "}
-                    </span>
-                    <span
-                      onClick={() =>
-                        switchAuthMode(authMode === "signup" ? "login" : "signup")
-                      }
-                      className="text-terracotta hover:text-white font-bold cursor-pointer"
-                    >
-                      {authMode === "login" || authMode === "whatsapp" ? "Daftar sekarang" : "Masuk dengan Email"}
-                    </span>
-                  </>
-                )}
-              </div>
+                      Buka di Tab Baru &rarr;
+                  </button>
+                </p>
+              )}
+            </div>
 
-              <div className="pt-4 border-t border-surface2 mt-4 text-center">
-                <a 
-                  href="/api/auth/diag" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-[10px] text-text-muted hover:text-terracotta transition-colors flex items-center justify-center gap-1 opacity-50 hover:opacity-100 no-underline"
-                >
-                  <AlertTriangle className="w-3 h-3" />
-                  Masalah login? Cek Status Sistem (Pakar)
-                </a>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Social Bonus Modal */}
-      {showSocialModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setShowSocialModal(false)}
-          ></div>
-          <div className="bg-surface border border-surface2 p-6 md:p-8 rounded-3xl w-full max-w-lg relative z-10 shadow-2xl">
-            <button
-              onClick={() => setShowSocialModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-terracotta/10 flex items-center justify-center mx-auto mb-4 border border-terracotta/20">
-                <Share2 className="w-8 h-8 text-terracotta" />
-              </div>
-              <h2 className="text-2xl font-black text-white">
-                Klaim Extra 30.000 Kredit!
-              </h2>
-              <p className="text-gray-400 text-sm mt-3 leading-relaxed">
-                Dapatkan bonus karakter untuk membuat konten lebih banyak! <br/>
-                1. Bagikan hasil audio ke <b>TikTok / Reels / Shorts</b>.<br/>
-                2. Tag akun kami <b>@shinerva.id</b>.<br/>
-                3. Pastikan post tidak di-private.<br/>
-                4. Masukkan link postingan di bawah.
+            <div className="pt-6 border-t border-surface2 mt-8 text-center">
+              <p className="text-[10px] text-text-muted uppercase tracking-[0.15em] font-black opacity-40">
+                Safe & Secure Autentikasi by Firebase
               </p>
             </div>
-            <form onSubmit={handleSocialSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-400 mb-2">
-                  Link Postingan (TikTok/IG/FB/X)
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={socialUrl}
-                  onChange={(e) => setSocialUrl(e.target.value)}
-                  className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta outline-none transition-all placeholder:text-gray-600"
-                  placeholder="https://tiktok.com/@username/video/..."
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="w-full bg-terracotta hover:bg-trdark text-white py-4 mt-2 rounded-xl font-black cursor-pointer border-none flex justify-center items-center transition-all disabled:opacity-75 disabled:cursor-not-allowed shadow-lg shadow-terracotta/10"
-              >
-                {authLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Link Postingan"}
-              </button>
-            </form>
           </div>
         </div>
       )}
+
+      {/* Social Bonus Modal - Disabled for MVP */}
 
       {/* Pronunciation Guide Modal */}
       {isPronunciationOpen && (

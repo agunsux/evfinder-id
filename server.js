@@ -1,17 +1,28 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
-import { authAdmin } from './src/lib/firebaseAdmin.js';
+import { authAdmin, initErrorMsg } from './src/lib/firebaseAdmin.js';
+
+// --- Startup Check ---
+if (!authAdmin) {
+  console.error("==============================================================");
+  console.error("FATAL: FIREBASE ADMIN INITIALIZATION FAILED CRITICALLY");
+  console.error(initErrorMsg);
+  console.error("The server will not start without valid Firebase credentials.");
+  console.error("Please check your FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL,");
+  console.error("and FIREBASE_PRIVATE_KEY secrets.");
+  console.error("==============================================================");
+  process.exit(1);
+}
 import { rateLimit } from 'express-rate-limit';
 import { GoogleGenAI, Modality } from "@google/genai";
-
 import { PLANS } from './src/lib/plans.js';
-
-dotenv.config();
 
 const clean = (val) => {
   if (val === null || val === undefined) return "";
@@ -44,8 +55,6 @@ if (!fs.existsSync(dataFolder)) {
 }
 const usersFile = path.join(dataFolder, 'users.json');
 const voiceConfigFile = path.join(dataFolder, 'voice_config.json');
-
-const otps = new Map(); // Store temporary OTPs { phone: { otp, expiresAt } }
 
 let voiceConfig = {
   tiers: {
@@ -152,6 +161,9 @@ async function createServer() {
     }
 
     try {
+      if (!authAdmin) {
+        return res.status(503).json({ error: 'Firebase Admin not initialized on server. Please set service account secrets.', detail: initErrorMsg });
+      }
       const decodedToken = await authAdmin.verifyIdToken(idToken);
       const uid = decodedToken.uid;
       const email = decodedToken.email;
@@ -278,125 +290,10 @@ async function createServer() {
   });
 
   // Legacy manual auth routes are disabled in favor of Firebase Auth
-  app.post('/api/auth/login', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
-  app.post('/api/auth/signup', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
-
-  app.post('/api/auth/otp/request', (req, res) => {
-    const { whatsapp } = req.body;
-    if (!whatsapp) return res.status(400).json({ error: 'Nomor WhatsApp diperlukan' });
-    
-    // Generate a 4 digit OTP for mockup
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    console.log(`[OTP] WhatsApp: ${whatsapp} -> Kode OTP: ${otp}`);
-    
-    otps.set(whatsapp, {
-      otp,
-      expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
-    });
-    
-    res.json({ success: true, message: 'OTP telah dikirim ke WhatsApp Anda (mock: check console)' });
-  });
-
-  app.post('/api/auth/otp/verify', (req, res) => {
-    const { whatsapp, otp } = req.body;
-    if (!whatsapp || !otp) return res.status(400).json({ error: 'WhatsApp dan OTP diperlukan' });
-    
-    const record = otps.get(whatsapp);
-    if (!record || record.otp !== otp || Date.now() > record.expiresAt) {
-      return res.status(400).json({ error: 'OTP tidak valid atau expired' });
-    }
-    
-    // Clear OTP
-    otps.delete(whatsapp);
-    
-    // Find exist or create
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.whatsapp === whatsapp) {
-        foundUser = u;
-        break;
-      }
-    }
-    
-    if (!foundUser) {
-      const id = generateId();
-      foundUser = {
-        id,
-        name: 'User ' + whatsapp.slice(-4),
-        email: whatsapp + '@gmail.com', // temp email
-        password: generateId(),
-        whatsapp: whatsapp,
-        whatsapp_opted_in: true,
-        email_subscribed: true,
-        tier: 'FREE',
-        signup_date: Date.now(),
-        referral_code: generateRefCode(),
-        referred_by: null,
-        valid_referrals: 0,
-        has_received_referral_bonus: false,
-        social_bonus_status: 'none',
-        social_url: '',
-        has_claimed_free_quota: true,
-        signup_bonus_chars: 10000,
-        monthly_chars: 10000,
-        earned_chars: 0,
-        used_chars: 0,
-        generation_count: 0,
-        pronunciations: {},
-        history: []
-      };
-      users.set(id, foundUser);
-    }
-    
-    saveUsers();
-    res.json({ success: true, message: 'Login successful', user: foundUser });
-  });
-
-  app.post('/api/auth/google', (req, res) => {
-    const { email, name, googleId } = req.body;
-    
-    // Find or create
-    let foundUser = null;
-    for (const [id, u] of users.entries()) {
-      if (u.email === email) {
-        foundUser = u;
-        break;
-      }
-    }
-    
-    if (!foundUser) {
-      // Create new user (similar to signup)
-      foundUser = {
-        id: generateId(),
-        name,
-        email,
-        password: 'google-auth-' + generateId(), // Dummy password
-        whatsapp: '',
-        whatsapp_opted_in: false,
-        email_subscribed: true,
-        tier: 'FREE',
-        signup_date: Date.now(),
-        referral_code: generateRefCode(),
-        referred_by: null,
-        valid_referrals: 0,
-        has_received_referral_bonus: false,
-        social_bonus_status: 'none',
-        social_url: '',
-        has_claimed_free_quota: true,
-        signup_bonus_chars: 10000,
-        monthly_chars: 0,
-        earned_chars: 0,
-        used_chars: 0,
-        generation_count: 0,
-        pronunciations: {},
-        history: []
-      };
-      users.set(foundUser.id, foundUser);
-      saveUsers();
-    }
-    
-    res.json({ success: true, message: 'Login successful', user: foundUser });
-  });
+  app.all('/api/auth/login', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
+  app.all('/api/auth/signup', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
+  app.all('/api/auth/otp/*', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Google Login.' }));
+  app.all('/api/auth/google', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use client-side Firebase Google Auth.' }));
 
   app.get('/api/user/me', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
@@ -405,21 +302,12 @@ async function createServer() {
 
   app.get('/api/user/referrals', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-    
-    // Count how many people have used this user's referral code
-    let inviteCount = 0;
-    for (const [id, u] of users.entries()) {
-      if (u.referred_by === req.user.id) {
-        inviteCount++;
-      }
-    }
-
     res.json({
       referral_code: req.user.referral_code,
-      invite_count: inviteCount,
+      invite_count: 0,
       valid_referrals: req.user.valid_referrals,
-      bonus_earned: req.user.has_received_referral_bonus ? 20000 : 0,
-      has_received_bonus: req.user.has_received_referral_bonus
+      bonus_earned: 0,
+      has_received_bonus: false
     });
   });
 
@@ -471,24 +359,6 @@ async function createServer() {
     
     saveUsers();
     res.json({ success: true, pronunciations: req.user.pronunciations });
-  });
-
-  app.post('/api/user/social-share', authenticate, (req, res) => {
-    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-    const { url } = req.body;
-    
-    // Basic verification: check if it's a valid social media URL
-    if (!url || !/(tiktok|instagram|facebook|twitter|x)\.com/.test(url)) {
-      return res.status(400).json({ error: 'Harap masukkan URL postingan yang valid dari TikTok, Instagram, Facebook, atau X/Twitter.' });
-    }
-
-    if (req.user.social_bonus_status !== 'none') {
-      return res.status(400).json({ error: 'Sudah pernah mengklaim bonus ini.' });
-    }
-    req.user.social_bonus_status = 'pending';
-    req.user.social_url = url;
-    saveUsers();
-    res.json({ success: true, message: 'Pengajuan berhasil. Menunggu verifikasi admin.', user: req.user });
   });
 
   app.post('/api/user/settings', authenticate, (req, res) => {
@@ -638,21 +508,6 @@ async function createServer() {
     res.send(csv);
   });
   
-  app.post('/api/admin/social-approvals/:id/approve', authenticate, (req, res) => {
-    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
-    const targetId = req.params.id;
-    const targetUser = users.get(targetId);
-    if (!targetUser) return res.status(404).json({error: 'User not found'});
-    if (targetUser.social_bonus_status === 'pending') {
-       targetUser.social_bonus_status = 'approved';
-       targetUser.earned_chars += 30000;
-       res.json({ success: true });
-    } else {
-       res.status(400).json({ error: 'Status is not pending' });
-    }
-  });
-
-
   // --- RATE LIMITERS ---
   const activeRequests = new Map();
   const getClientIp = (req) => req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -958,6 +813,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
   app.get("/api/auth/diag", (req, res) => {
     const diag = {
       firebaseAdminInitialized: !!authAdmin,
+      initError: initErrorMsg,
       projectId: process.env.FIREBASE_PROJECT_ID || "(missing)",
       hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
       hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
@@ -1002,16 +858,11 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
     console.warn(`[404] API Route not found: ${req.method} ${req.originalUrl}`);
     res.status(404).json({ 
       error: `API Endpoint ${req.method} ${req.originalUrl} tidak ditemukan di server Shinerva.`,
-      availableEndpoints: ['/api/tts', '/api/user/me', '/api/auth/sync', '/api/health']
+      availableEndpoints: ['/api/tts', '/api/user/me', '/api/auth/sync', '/api/health', '/api/auth/diag']
     });
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Server] Listening on http://0.0.0.0:${PORT} (Express and API ready)`);
-  });
-
   // --- VITE FRONTEND SERVING ---
-  
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -1042,6 +893,10 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[Server] Listening on http://0.0.0.0:${PORT} (Express, API, and Frontend ready)`);
+  });
 }
 
 createServer().catch(err => {
