@@ -78,27 +78,18 @@ export const login = async (email, password) => {
 };
 
 export const signup = async (email, password, name) => {
-  return handleAuthOperation(async () => {
+  try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    if (userCredential.user) {
-      if (name) {
-        await updateProfile(userCredential.user, { displayName: name });
-      }
-      // Send verification email via Firebase first, then optionally via backend as a fallback copy
-      try {
-        await sendEmailVerification(userCredential.user);
-      } catch (e) {
-        console.warn("Firebase verification email failed, attempting backend fallback:", e);
-      }
-      // Attempt to send a second copy via backend (non‑critical)
-      try {
-        await resendVerificationEmail(email);
-      } catch (e) {
-        console.warn("Backend verification email also failed:", e);
-      }
+    if (name) {
+      await updateProfile(userCredential.user, { displayName: name });
     }
-    return userCredential;
-  });
+    await sendEmailVerification(userCredential.user);
+    console.info('[Firebase‑Email] Verification email sent to', email);
+    return { success: true };
+  } catch (err) {
+    console.error('[Firebase‑Email] signup error:', err);
+    return { success: false, error: err.message };
+  }
 };
 
 export const logout = () => 
@@ -111,13 +102,13 @@ export const getGoogleRedirectResult = () =>
   handleAuthOperation(() => getRedirectResult(auth));
 
 export const resetPassword = async (email) => {
-  // Try backend first
   try {
-    return await forgotPassword(email);
-  } catch (backendErr) {
-    console.warn('Backend password reset failed, falling back to Firebase:', backendErr);
-    // Firebase fallback
-    return handleAuthOperation(() => sendPasswordResetEmail(auth, email));
+    await sendPasswordResetEmail(auth, email);
+    console.info('[Firebase‑Email] Password‑reset email sent to', email);
+    return { success: true };
+  } catch (err) {
+    console.error('[Firebase‑Email] resetPassword error:', err);
+    return { success: false, error: err.message };
   }
 };
 

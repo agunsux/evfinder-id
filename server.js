@@ -832,15 +832,26 @@ apiRouter.get("/health", (req, res) => {
     status: "ok",
     firebaseAdmin: !!authAdmin,
     projectId: process.env.FIREBASE_PROJECT_ID,
-    isCorrectProject: process.env.FIREBASE_PROJECT_ID === "practical-gecko-476621-q4",
-    hasClientConfig: fs.existsSync(path.resolve(process.cwd(), 'firebase-applet-config.json'))
+    isCorrectProject: process.env.FIREBASE_PROJECT_ID === "practical-gecko-476621-q4"
   });
 });
 
-// Mount the router
 // Mount the router BEFORE frontend middleware
 app.use('/api', apiRouter);
-app.use('/', apiRouter);
+
+// Fallback for unhandled API routes to ensure they always return JSON
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: `API route ${req.method} ${req.originalUrl} not found` });
+});
+
+// Global JSON error handler for /api routes
+app.use('/api', (err, req, res, next) => {
+  console.error('[API Error]:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Terjadi kesalahan pada server.',
+    details: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+  });
+});
 
 setupFrontend();
 

@@ -463,31 +463,6 @@ const App = () => {
       // Clean up URL without refreshing
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-
-    fetchHistory();
-    // Watch for auth changes
-    let unsubscribe = () => {};
-    if (auth) {
-      try {
-        unsubscribe = auth.onAuthStateChanged(async (u) => {
-          if (u) {
-            await refreshUser();
-          } else {
-            setUser(null);
-          }
-          setIsAuthInitializing(false);
-        }, (error) => {
-          console.error("Auth state change error:", error);
-          setIsAuthInitializing(false);
-        });
-      } catch (e) {
-        console.error("onAuthStateChanged setup failed:", e);
-        setIsAuthInitializing(false);
-      }
-    } else {
-      setIsAuthInitializing(false);
-    }
-    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -684,7 +659,10 @@ const App = () => {
         if (res.status === 429 && data.cooldownRemaining) {
           setCooldown(data.cooldownRemaining);
         }
-        throw new Error(data.error || "Failed to synthesize speech");
+        const errMsg = (data.error && typeof data.error === 'object' && data.error.message)
+          ? data.error.message
+          : (data.error || "Failed to synthesize speech");
+        throw new Error(errMsg);
       }
 
       if (data.audioContent) {
@@ -2267,7 +2245,7 @@ const App = () => {
                 Chat WhatsApp
               </a>
               <a
-                href="mailto:support@shinerva.id"
+                href="mailto:hello.shinerva@gmail.com"
                 className="bg-surface2 hover:bg-gray-700 text-white px-10 py-4 rounded-2xl font-black transition-all border border-gray-700 flex items-center gap-3"
               >
                 Email Support
@@ -2960,7 +2938,7 @@ const App = () => {
                           </td>
                           <td className="py-4">
                             <span className="text-text font-bold">
-                              {item.credits_used.toLocaleString("id-ID")}
+                              {Number(item.credits_used || 0).toLocaleString("id-ID")}
                             </span>
                           </td>
                           <td className="py-4">
