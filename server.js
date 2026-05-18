@@ -13,7 +13,7 @@ import { authAdmin, initErrorMsg } from './src/lib/firebaseAdmin.js';
 if (!authAdmin) {
   console.warn("==============================================================");
   console.warn("WARNING: FIREBASE ADMIN INITIALIZATION FAILED");
-  console.warn(initErrorMsg);
+  if (initErrorMsg) console.warn(`Reason: ${initErrorMsg}`);
   console.warn("Authentication and database features will be LIMITED.");
   console.warn("Please check your FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL,");
   console.warn("and FIREBASE_PRIVATE_KEY secrets in AI Studio Settings.");

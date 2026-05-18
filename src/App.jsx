@@ -4,7 +4,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
-import { auth, isConfigValid, initError } from './lib/firebase';
+import { auth, isConfigValid, initError as clientInitError } from './lib/firebase';
 import { 
   logout, 
   loginWithGoogle 
@@ -299,7 +299,8 @@ const App = () => {
   const [status, setStatus] = useState("idle"); // idle, loading, success
   const [isAudioVisible, setIsAudioVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [notification, setNotification] = useState(null); // Added notification state
+  const [notification, setNotification] = useState(null);
+  const [initError, setInitError] = useState(clientInitError);
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login"); // login, signup
@@ -563,10 +564,9 @@ const App = () => {
       try {
         const res = await fetch("/api/auth/diag");
         const data = await res.json();
-        console.log("[System] Diagnostics:", data);
         if (!data.firebaseAdminInitialized && !user) {
-          console.error("[System] Firebase Admin is not initialized on server. Auth might fail.", data.initError);
-          setInitError(`Sistem Backend (Admin) tidak terinisialisasi: ${data.initError || "Kesalahan tidak diketahui"}. Ini biasanya karena Environment Variables di Settings belum lengkap.`);
+          console.warn("[System] Firebase Admin is not initialized on server.", data.initError || "");
+          setInitError(data.initError || "Backend initialization incomplete.");
         } else {
           setInitError(null);
         }
@@ -1193,7 +1193,7 @@ const App = () => {
         </p>
         <div className="bg-surface2 p-4 rounded-xl border border-surface2 text-left w-full max-w-md">
           <h3 className="text-xs font-black text-terracotta uppercase mb-2">Pesan Kesalahan:</h3>
-          <p className="text-xs font-mono text-text-muted break-all mb-4">{initError || "Firebase configuration missing or project mismatch."}</p>
+          <p className="text-xs font-mono text-text-muted break-all mb-4">{initError || clientInitError || "Firebase configuration missing or project mismatch."}</p>
           
           <div className="mt-4 p-3 bg-black/20 rounded border border-white/5 font-mono text-[10px] space-y-1">
             <div className="flex justify-between"><span className="text-gray-500">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
