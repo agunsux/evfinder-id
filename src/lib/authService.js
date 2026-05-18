@@ -4,7 +4,6 @@ import {
   createUserWithEmailAndPassword, 
   sendPasswordResetEmail, 
   signInWithPopup, 
-  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   sendEmailVerification,
@@ -26,70 +25,71 @@ const handleAuthOperation = async (operation) => {
     const errorCode = error.code;
     
     // Map common Firebase errors to user-friendly messages
-    const customError = new Error();
-    customError.code = errorCode;
-    
     switch (errorCode) {
       case 'auth/invalid-email':
-        customError.message = "Format email tidak valid.";
-        break;
+        throw new Error("Format email tidak valid.");
       case 'auth/user-disabled':
-        customError.message = "Akun ini telah dinonaktifkan.";
-        break;
+        throw new Error("Akun ini telah dinonaktifkan.");
       case 'auth/user-not-found':
       case 'auth/wrong-password':
       case 'auth/invalid-credential':
-        customError.message = "Email atau kata sandi salah.";
-        break;
+        throw new Error("Email atau kata sandi salah.");
       case 'auth/email-already-in-use':
-        customError.message = "Email sudah terdaftar. Silakan login atau gunakan email lain.";
-        break;
+        throw new Error("Email sudah terdaftar. Silakan login atau gunakan email lain.");
       case 'auth/weak-password':
-        customError.message = "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.";
-        break;
+        throw new Error("Kata sandi terlalu lemah. Gunakan minimal 6 karakter.");
       case 'auth/popup-closed-by-user':
-        customError.message = "Proses login Google dibatalkan.";
-        break;
+        throw new Error("Proses login Google dibatalkan atau jendela popup ditutup.");
       case 'auth/too-many-requests':
-        customError.message = "Terlalu banyak percobaan gagal. Silakan tunggu sebentar.";
-        break;
+        throw new Error("Terlalu banyak percobaan gagal. Silakan tunggu sebentar.");
+      case 'auth/operation-not-allowed':
+        throw new Error("Metode login ini belum diaktifkan di konfigurasi sistem.");
       case 'auth/network-request-failed':
-        customError.message = "Kesalahan jaringan. Periksa koneksi internet Anda.";
-        break;
+        throw new Error("Kesalahan jaringan (Firebase). Pastikan browser Anda mengizinkan cookie pihak ketiga atau coba buka di tab baru.");
+      case 'auth/internal-error':
+        throw new Error("Terjadi kesalahan internal Firebase. Ini biasanya karena domain belum diizinkan (whitelisted) atau browser memblokir popup. Silakan coba buka di tab baru (klik ikon panah di pojok kanan atas).");
+      case 'auth/unauthorized-domain':
+        throw new Error("Domain aplikasi ini belum terdaftar di Firebase Console. Silakan buka di tab baru atau hubungi pengembang.");
       default:
-        customError.message = error.message || "Terjadi kesalahan pada sistem autentikasi.";
+        throw new Error(error.message || "Terjadi kesalahan pada sistem autentikasi.");
     }
-    throw customError;
   }
 };
 
-export const login = async (email, password) => {
-  const userCredential = await handleAuthOperation(() => signInWithEmailAndPassword(auth, email, password));
-  
-  if (userCredential.user && !userCredential.user.emailVerified) {
-    // If not verified, sign out immediately and throw specific error code
-    await signOut(auth);
-    const error = new Error("Akun Anda belum diverifikasi. Silakan cek email masuk (termasuk folder spam) untuk memverifikasi akun Anda.");
-    error.code = 'auth/email-not-verified';
-    throw error;
+export const login = (email, password) => 
+  handleAuthOperation(() => signInWithEmailAndPassword(auth, email, password));
+
+// Helper to get current origin or a safe fallback
+const getAuthRedirectUrl = (path = '/') => {
+  if (typeof window !== 'undefined') {
+    // If we are on a custom domain, use it. Otherwise use the current origin.
+    const origin = window.location.hostname === 'localhost' ? window.location.origin : 'https://shinerva.id';
+    return origin + path;
   }
-  
-  return userCredential;
+  return 'https://shinerva.id' + path; // Fallback
 };
+
+const getActionCodeSettings = () => ({
+  // The URL to redirect back to after finishing the action.
+  url: getAuthRedirectUrl(),
+  // Must be true for email link sign-in.
+  handleCodeInApp: true,
+});
 
 export const signup = async (email, password, name) => {
-  try {
+  return handleAuthOperation(async () => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    if (name) {
+    if (name && userCredential.user) {
       await updateProfile(userCredential.user, { displayName: name });
     }
-    await sendEmailVerification(userCredential.user);
-    console.info('[Firebase‑Email] Verification email sent to', email);
-    return { success: true };
-  } catch (err) {
-    console.error('[Firebase‑Email] signup error:', err);
-    return { success: false, error: err.message };
-  }
+    // Automatically send verification email on signup
+    try {
+      await sendEmailVerification(userCredential.user, getActionCodeSettings());
+    } catch (verifErr) {
+      console.warn("[Auth] Verification email failed to send:", verifErr);
+    }
+    return userCredential;
+  });
 };
 
 export const logout = () => 
@@ -98,68 +98,13 @@ export const logout = () =>
 export const loginWithGoogle = () => 
   handleAuthOperation(() => signInWithPopup(auth, googleProvider));
 
-export const getGoogleRedirectResult = () =>
-  handleAuthOperation(() => getRedirectResult(auth));
-
-export const resetPassword = async (email) => {
-  try {
-    await sendPasswordResetEmail(auth, email);
-    console.info('[Firebase‑Email] Password‑reset email sent to', email);
-    return { success: true };
-  } catch (err) {
-    console.error('[Firebase‑Email] resetPassword error:', err);
-    return { success: false, error: err.message };
-  }
+export const resetPassword = (email) => {
+  return handleAuthOperation(() => sendPasswordResetEmail(auth, email, getActionCodeSettings()));
 };
 
 export const verifyEmail = () => {
   if (auth.currentUser) {
-    return handleAuthOperation(() => sendEmailVerification(auth.currentUser));
+    return handleAuthOperation(() => sendEmailVerification(auth.currentUser, getActionCodeSettings()));
   }
   throw new Error("Tidak ada pengguna yang sedang login.");
-};
-
-// New Backend-based email triggers (via Hostinger SMTP)
-export const resendVerificationEmail = async (email) => {
-  const base = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-  const response = await fetch(`${base}/api/auth/resend-verification`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email })
-  });
-  if (!response.ok) {
-    let errMsg = 'Gagal mengirim email verifikasi.';
-    const ct = response.headers.get('content-type') || '';
-    if (ct.includes('application/json')) {
-      const data = await response.json();
-      errMsg = data.error || errMsg;
-    } else {
-      const txt = await response.text();
-      errMsg = txt || errMsg;
-    }
-    throw new Error(errMsg);
-  }
-  return await response.json();
-};
-
-export const forgotPassword = async (email) => {
-  const base = import.meta.env.VITE_BACKEND_URL || '';
-  const response = await fetch(`${base}/api/auth/forgot-password`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email })
-  });
-  if (!response.ok) {
-    let errMsg = 'Gagal mengirim email reset password.';
-    const ct = response.headers.get('content-type') || '';
-    if (ct.includes('application/json')) {
-      const data = await response.json();
-      errMsg = data.error || errMsg;
-    } else {
-      const txt = await response.text();
-      errMsg = txt || errMsg;
-    }
-    throw new Error(errMsg);
-  }
-  return await response.json();
 };

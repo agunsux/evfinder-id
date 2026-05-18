@@ -24,10 +24,7 @@ export default function ReferralDashboard({ user, auth }) {
   }, [user?.id]);
 
   const fetchStats = async () => {
-    if (!auth?.currentUser) {
-      setLoading(false);
-      return;
-    }
+    if (!auth?.currentUser) return;
     try {
       const idToken = await auth.currentUser.getIdToken();
       const res = await fetch('/api/user/referrals', {
@@ -123,7 +120,7 @@ export default function ReferralDashboard({ user, auth }) {
         <StatCard 
           icon={<Award className="text-terracotta" />} 
           label="Bonus Didapat" 
-          value={`${Number(stats?.bonus_earned || 0).toLocaleString()} Chars`} 
+          value={`${(stats?.bonus_earned || 0).toLocaleString()} Chars`} 
           description="Kredit tambahan gratis"
           highlight
         />

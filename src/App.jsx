@@ -35,6 +35,10 @@ import {
   Check,
   Share2,
   UserPlus,
+  UserCircle,
+  User,
+  LogOut,
+  Settings,
   Gift,
   BookOpen,
   Trash2,
@@ -43,9 +47,12 @@ import {
   Moon,
   History,
   AlertTriangle,
+  AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 
 import { PLANS } from "./lib/plans";
+import { globalPhonetics } from "./lib/phonetics";
 import ReferralDashboard from "./components/ReferralDashboard";
 
 const PACKS = [
@@ -146,6 +153,31 @@ const VOICES = {
     { id: "id-ID-Studio-A", name: "Eko (Iklan TV)", type: "Studio", premium: true, glow: true, tier: "BISNIS" },
     { id: "id-ID-Studio-D", name: "Maya (Berita)", type: "Studio", premium: true, glow: true, tier: "BISNIS" },
   ],
+  "Gemini AI Pro (Enterprise)": [
+    { id: "Puck", name: "Puck (Deep & Dramatic)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
+    { id: "Charon", name: "Charon (Mysterious & Calm)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
+    { id: "Kore", name: "Kore (Friendly & Bright)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
+    { id: "Fenrir", name: "Fenrir (Rugged & Bold)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
+    { id: "Zephyr", name: "Zephyr (Soft & Airy)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
+  ],
+};
+
+const getVoiceDisplayName = (id) => {
+  if (!id) return "-";
+  for (const category in VOICES) {
+    const voice = VOICES[category].find(v => v.id === id);
+    if (voice) return voice.name.split(" (")[0]; // Just the name part
+  }
+  return id.split("-").slice(-2).join("-");
+};
+
+const formatDuration = (seconds) => {
+  if (seconds === undefined || seconds === null) return "-";
+  if (seconds === 0) return "< 1s";
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
 };
 
 import { MAX_CHARS } from "./constants";
@@ -183,7 +215,6 @@ const App = () => {
     name: "",
     email: "",
     password: "",
-    confirmPassword: "",
     whatsapp: "",
     refCode: "",
   });
@@ -193,23 +224,28 @@ const App = () => {
   const [purchaseLoading, setPurchaseLoading] = useState(null); // planId or null
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
-  const [authErrorCode, setAuthErrorCode] = useState("");
 
   const [showSocialModal, setShowSocialModal] = useState(false);
   const [socialUrl, setSocialUrl] = useState("");
 
   const [isPronunciationOpen, setIsPronunciationOpen] = useState(false);
   const [newWord, setNewWord] = useState("");
+  const [phoneticSuggestions, setPhoneticSuggestions] = useState([]);
   const [newPronunciation, setNewPronunciation] = useState("");
   const [testLoading, setTestLoading] = useState(false);
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isReferralOpen, setIsReferralOpen] = useState(false);
+  const [lastViewedReferrals, setLastViewedReferrals] = useState(() => 
+    parseInt(localStorage.getItem("lastViewedReferrals") || "0")
+  );
   const [hasSeenWelcome, setHasSeenWelcome] = useState(localStorage.getItem("hasSeenWelcome") === "true");
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const [isVoiceMgmtOpen, setIsVoiceMgmtOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [voiceConfig, setVoiceConfig] = useState({ tiers: {}, limits: {} });
   const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
 
@@ -219,10 +255,41 @@ const App = () => {
 
   const currentMultiplier = (voiceConfig.tiers && voiceConfig.tiers[getVoiceType(voice)]) || 1;
   const estimatedCost = text.length * currentMultiplier;
-  const remainingCredits = getRemainingCredits();
-  const isCappedByQuota = remainingCredits > 0 && estimatedCost > remainingCredits;
-  const isCappedByRequest = text.length > currentMaxRequestChars;
-  const isNearLimit = text.length > currentMaxRequestChars * 0.9 || (remainingCredits > 0 && estimatedCost > remainingCredits * 0.9);
+   const remainingCredits = getRemainingCredits();
+   const isCappedByQuota = estimatedCost > remainingCredits;
+
+  const base64ToBlob = (base64, mime) => {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+      const slice = byteCharacters.slice(offset, offset + 512);
+      const byteNumbers = new Array(slice.length);
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    return new Blob(byteArrays, { type: mime });
+  };
+   const isCappedByRequest = text.length > currentMaxRequestChars;
+   const isNearLimit = (text.length > 0) && (text.length > currentMaxRequestChars * 0.9 || (remainingCredits > 0 && estimatedCost > remainingCredits * 0.9) || (remainingCredits < 500));
+
+  // Proactive notification for near-limit
+  useEffect(() => {
+    if (user && isNearLimit && text.length > 0) {
+      const timer = setTimeout(() => {
+        if (isCappedByRequest) {
+           toast.error("Naskah Anda melebihi batas maksimum!");
+        } else if (isCappedByQuota) {
+           toast.error("Kredit Anda tidak mencukupi untuk naskah ini!");
+        } else {
+           toast.warning("Hampir mencapai batas kuota!");
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isNearLimit, isCappedByRequest, isCappedByQuota]);
 
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
   const [billingCycle, setBillingCycle] = useState("monthly"); // monthly, yearly
@@ -233,21 +300,6 @@ const App = () => {
       return;
     }
 
-    // Handle Google Redirect Result
-    const handleRedirect = async () => {
-      try {
-        const { getRedirectResult } = await import('firebase/auth');
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          await syncAuthProfile();
-          toast.success("Login Google berhasil!");
-        }
-      } catch (err) {
-        console.error("Redirect result error:", err);
-      }
-    };
-    handleRedirect();
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       console.log("[Auth] Firebase state changed:", firebaseUser?.email || "No User");
       if (firebaseUser) {
@@ -255,13 +307,15 @@ const App = () => {
         setUser(prev => prev || { 
           email: firebaseUser.email, 
           uid: firebaseUser.uid,
+          emailVerified: firebaseUser.emailVerified,
           tier: 'FREE',
           generation_count: 0,
           used_chars: 0,
-          monthly_chars: 0,
-          signup_bonus_chars: 0,
+          monthly_chars: 10000,
+          signup_bonus_chars: 10000,
           earned_chars: 0,
           valid_referrals: 0,
+          has_received_referral_bonus: false,
           referral_code: "",
           social_bonus_status: "none"
         });
@@ -269,17 +323,16 @@ const App = () => {
         // Sync with backend to get full profile
         try {
           const idToken = await firebaseUser.getIdToken(true);
-          const res = await fetch("/api/user/me", {
+          const options = {
             headers: { 
               "Authorization": `Bearer ${idToken}`
             },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.user) {
-              console.log("[Auth] Profile synced from backend:", data.user.email);
-              setUser(data.user);
-            }
+          };
+          const res = await fetch("/api/user/me", options);
+          const data = await checkResponse(res, 0, options);
+          if (data.user) {
+            console.log("[Auth] Profile synced from backend:", data.user.email, "Verified:", data.user.emailVerified);
+            setUser(data.user);
           }
         } catch (e) {
           console.warn("[Auth] Failed to sync profile:", e);
@@ -313,12 +366,13 @@ const App = () => {
     }
     try {
       const idToken = await auth.currentUser.getIdToken(true);
-      const res = await fetch("/api/user/me", {
+      const options = {
         headers: { 
           "Authorization": `Bearer ${idToken}`
         },
-      });
-      const data = await checkResponse(res);
+      };
+      const res = await fetch("/api/user/me", options);
+      const data = await checkResponse(res, 0, options);
       if (data.user) {
         console.log("[Auth] User refreshed:", data.user.email);
         setUser(data.user);
@@ -328,70 +382,18 @@ const App = () => {
     }
   };
 
-  // Validated backend sync — used after auth actions to ensure backend profile exists
-  // Rolls back Firebase session if backend rejects
-  const syncAuthProfile = async (refCode = '') => {
-    if (!auth?.currentUser) throw new Error('No authenticated user');
-    try {
-      const idToken = await auth.currentUser.getIdToken(true);
-      const res = await fetch("/api/auth/sync", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${idToken}`,
-          "x-ref-code": refCode || ""
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) setUser(data.user);
-        return data;
-      } else {
-        // Backend unreachable or error - keep user logged in with Firebase data
-        console.warn(`[Auth] Backend sync failed (${res.status}), using Firebase profile data`);
-        const fbUser = auth.currentUser;
-        setUser(prev => prev || {
-          email: fbUser.email,
-          name: fbUser.displayName || fbUser.email?.split('@')[0],
-          uid: fbUser.uid,
-          tier: 'FREE',
-          generation_count: 0,
-          used_chars: 0,
-          monthly_chars: 10000,
-          signup_bonus_chars: 10000,
-          earned_chars: 0,
-        });
-      }
-    } catch (e) {
-      // Network error - keep user logged in with Firebase data
-      console.warn("[Auth] syncAuthProfile network error, using Firebase profile:", e.message);
-      const fbUser = auth.currentUser;
-      if (fbUser) {
-        setUser(prev => prev || {
-          email: fbUser.email,
-          name: fbUser.displayName || fbUser.email?.split('@')[0],
-          uid: fbUser.uid,
-          tier: 'FREE',
-          generation_count: 0,
-          used_chars: 0,
-          monthly_chars: 10000,
-          signup_bonus_chars: 10000,
-          earned_chars: 0,
-        });
-      }
-    }
-  };
-
   const fetchHistory = async () => {
     if (!auth?.currentUser) return;
     setHistoryLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const res = await fetch("/api/user/history", {
+      const options = {
         headers: { 
           "Authorization": `Bearer ${idToken}`
         },
-      });
-      const data = await checkResponse(res);
+      };
+      const res = await fetch("/api/user/history", options);
+      const data = await checkResponse(res, 0, options);
       if (data.history) setHistory(data.history);
     } catch (e) {
       handleApiError(e, "Gagal memuat riwayat.");
@@ -405,12 +407,13 @@ const App = () => {
     setVoiceConfigLoading(true);
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const res = await fetch("/api/admin/voice-config", {
+      const options = {
         headers: { 
           "Authorization": `Bearer ${idToken}`
         },
-      });
-      const data = await checkResponse(res);
+      };
+      const res = await fetch("/api/admin/voice-config", options);
+      const data = await checkResponse(res, 0, options);
       if (data.tiers) setVoiceConfig(data);
     } catch (e) {
       // Ignored for non-admin users or unauthorized attempts
@@ -424,15 +427,16 @@ const App = () => {
     if (!auth?.currentUser || user?.tier !== "ENTERPRISE") return;
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const res = await fetch("/api/admin/voice-config", {
+      const options = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
         body: JSON.stringify({ tiers: newTiers, limits: newLimits }),
-      });
-      const data = await checkResponse(res);
+      };
+      const res = await fetch("/api/admin/voice-config", options);
+      const data = await checkResponse(res, 0, options);
       if (data.success) {
         setVoiceConfig(data.voiceConfig);
         alert("Konfigurasi berhasil disimpan!");
@@ -463,6 +467,31 @@ const App = () => {
       // Clean up URL without refreshing
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+
+    fetchHistory();
+    // Watch for auth changes
+    let unsubscribe = () => {};
+    if (auth) {
+      try {
+        unsubscribe = auth.onAuthStateChanged(async (u) => {
+          if (u) {
+            await refreshUser();
+          } else {
+            setUser(null);
+          }
+          setIsAuthInitializing(false);
+        }, (error) => {
+          console.error("Auth state change error:", error);
+          setIsAuthInitializing(false);
+        });
+      } catch (e) {
+        console.error("onAuthStateChanged setup failed:", e);
+        setIsAuthInitializing(false);
+      }
+    } else {
+      setIsAuthInitializing(false);
+    }
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -471,6 +500,27 @@ const App = () => {
     }
   }, [isHistoryOpen]);
 
+  const handleWordChange = (val) => {
+    setNewWord(val);
+    if (val.trim().length > 0) {
+      const input = val.toLowerCase();
+      const matches = Object.keys(globalPhonetics)
+        .filter(k => k.toLowerCase().includes(input))
+        .sort((a, b) => {
+          // Priority to exact match or starts with
+          const aStarts = a.toLowerCase().startsWith(input);
+          const bStarts = b.toLowerCase().startsWith(input);
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+          return a.length - b.length;
+        })
+        .slice(0, 6);
+      setPhoneticSuggestions(matches);
+    } else {
+      setPhoneticSuggestions([]);
+    }
+  };
+
   const handleUpdatePronunciation = async (word, pronunciation) => {
     if (!auth?.currentUser) {
       alert("Harap login terlebih dahulu untuk menggunakan fitur ini.");
@@ -478,15 +528,16 @@ const App = () => {
     }
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const res = await fetch("/api/user/pronunciations", {
+      const options = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
         body: JSON.stringify({ word, pronunciation }),
-      });
-      const data = await checkResponse(res);
+      };
+      const res = await fetch("/api/user/pronunciations", options);
+      const data = await checkResponse(res, 0, options);
       if (data.success) {
         setUser({ ...user, pronunciations: data.pronunciations });
         if (pronunciation !== null) {
@@ -511,7 +562,7 @@ const App = () => {
       const idToken = await auth.currentUser.getIdToken();
       // Use a distinct phrase to test the pronunciation
       const testText = `Begini cara baca ${word}: ${pronunciation}`;
-      const res = await fetch("/api/tts", {
+      const options = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -524,11 +575,11 @@ const App = () => {
           pitch: 0, 
           volume: 0 
         }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal tes suara");
+      };
+      const res = await fetch("/api/tts", options);
+      const data = await checkResponse(res, 0, options);
       if (data.audioContent) {
-        const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+        const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
         audio.play();
       }
     } catch (err) {
@@ -543,7 +594,9 @@ const App = () => {
   const audioRef = useRef(null);
   const textAreaRef = useRef(null);
   const [audioUrl, setAudioUrl] = useState("");
+  const [generatedInfo, setGeneratedInfo] = useState(null);
   const [isTeaser, setIsTeaser] = useState(false);
+  const [isStudioWarningOpen, setIsStudioWarningOpen] = useState(false);
   const [isVerificationDismissed, setIsVerificationDismissed] = useState(false);
 
   const updateProgress = () => {
@@ -617,6 +670,64 @@ const App = () => {
     return () => clearInterval(cooldownTimerRef.current);
   }, [cooldown]);
 
+  useEffect(() => {
+    if (audioUrl && audioRef.current) {
+      audioRef.current.load();
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch(e => {
+            console.warn("Auto-play blocked or failed:", e);
+            setIsPlaying(false);
+        });
+    }
+  }, [audioUrl]);
+
+  const handlePreviewVoice = async () => {
+    if (!user) {
+      toast.error("Silakan login untuk mencoba suara.");
+      return;
+    }
+    
+    setTestLoading(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          voice,
+          speed,
+          pitch,
+          volume,
+          isSample: true
+        })
+      };
+      const res = await fetch("/api/tts", options);
+      const data = await checkResponse(res, 0, options);
+      if (data.audioContent) {
+        const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
+        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.play();
+        toast.success(`Berhasil memutar contoh suara ${voice}`);
+      }
+    } catch (err) {
+      console.error("Preview error:", err);
+      if (err.data && err.data.error) {
+        toast.error(`Gagal: ${err.data.error}`);
+      } else {
+        toast.error(err.message || "Gagal tes suara");
+      }
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!auth?.currentUser) {
       setNotification("anda belum sign up/log in");
@@ -629,20 +740,42 @@ const App = () => {
       return;
     }
 
+    if (isCappedByRequest) {
+      toast.error(`Naskah terlalu panjang! Batas maksimum untuk paket ${user.tier} adalah ${currentMaxRequestChars.toLocaleString("id-ID")} karakter.`);
+      return;
+    }
+
+    if (isCappedByQuota) {
+      toast.error(`Kredit tidak mencukupi! Anda butuh ${estimatedCost.toLocaleString("id-ID")} kredit, sisa kredit Anda adalah ${remainingCredits.toLocaleString("id-ID")}.`);
+      return;
+    }
+
     if (cooldown > 0) {
       alert(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
       return;
     }
 
+    const isStudio = voice.includes('Studio') || voice.includes('Chirp');
+    if (isStudio) {
+      setIsStudioWarningOpen(true);
+      return;
+    }
+
+    await proceedWithGenerate();
+  };
+
+  const proceedWithGenerate = async () => {
     setStatus("loading");
 
     try {
-      const idToken = await auth.currentUser.getIdToken();
-      const res = await fetch("/api/tts", {
+      if (!auth?.currentUser) throw new Error("Anda harus login untuk melakukan generasi.");
+      
+      const idTokenBuffer = await auth.currentUser.getIdToken(true);
+      const options = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${idToken}`
+          "Authorization": `Bearer ${idTokenBuffer}`
         },
         body: JSON.stringify({ 
           text, 
@@ -651,24 +784,31 @@ const App = () => {
           pitch: parseFloat(pitch), 
           volume: parseFloat(volume) 
         }),
-      });
+      };
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 429 && data.cooldownRemaining) {
-          setCooldown(data.cooldownRemaining);
-        }
-        const errMsg = (data.error && typeof data.error === 'object' && data.error.message)
-          ? data.error.message
-          : (data.error || "Failed to synthesize speech");
-        throw new Error(errMsg);
-      }
+      const res = await fetch("/api/tts", options);
+      const data = await checkResponse(res, 0, options);
 
       if (data.audioContent) {
-        const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
-        setAudioUrl(audioSrc);
+        console.log(`[TTS] Received audio content. Size: ${Math.round(data.audioContent.length / 1024)} KB`);
+        
+        const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
+        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        const url = URL.createObjectURL(blob);
+        
+        // Clean up previous blob URL to prevent memory leaks
+        if (audioUrl && audioUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(audioUrl);
+        }
+
+        setAudioUrl(url);
+        setGeneratedInfo({
+          duration: data.duration,
+          voice: data.voice
+        });
         setIsTeaser(data.isTeaser || false);
+        // setUser will trigger re-render, and useEffect will pick up audioUrl to play
         setStatus("success");
         setIsAudioVisible(true);
         
@@ -688,6 +828,9 @@ const App = () => {
       }
     } catch (err) {
       setStatus("idle");
+      if (err.status === 429 && err.data?.cooldownRemaining) {
+        setCooldown(err.data.cooldownRemaining);
+      }
       handleApiError(err, "Gagal menghasilkan suara.");
     }
   };
@@ -810,13 +953,60 @@ const App = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      await loginWithGoogle();
-      // Validate backend sync — rollback if server rejects
-      await syncAuthProfile();
+      console.log("[Auth] Starting Google sign-in...");
+      const userCredential = await loginWithGoogle();
+      console.log("[Auth] Google sign-in successful in Firebase:", userCredential.user.email);
+      
+      // Explicit sync with backend to ensure user is created/updated
+      try {
+        const idToken = await userCredential.user.getIdToken(true);
+        console.log("[Auth] Syncing Google user with backend...");
+        const options = {
+          method: "POST",
+          headers: { 
+            "Authorization": `Bearer ${idToken}`,
+            "x-ref-code": authData.refCode || ""
+          },
+        };
+        const syncRes = await fetch("/api/auth/sync", options);
+        
+        const syncData = await checkResponse(syncRes, 0, options);
+        if (syncData.user) {
+          console.log("[Auth] User synced & created/found:", syncData.user.email);
+          setUser(syncData.user);
+        }
+      } catch (syncErr) {
+        console.error("[Auth] Background sync error:", syncErr);
+        // Don't toast error here, refreshUser might fix it
+      }
+
+      // Final refresh to ensure we have the absolute latest state
+      await refreshUser();
+      
       setIsAuthOpen(false);
       toast.success("Login Google berhasil!");
     } catch (err) {
-      toast.error(err.message || "Gagal login dengan Google.");
+      console.error("[Auth] Google sign-in error:", err);
+      const isInternal = err.message && (err.message.includes("internal-error") || err.message.includes("internal error"));
+      const isNetwork = err.message && (err.message.includes("Kesalahan jaringan") || err.message.includes("network-request-failed") || err.message.includes("network_error") || err.message.includes("iframe"));
+      
+      if (isInternal || isNetwork) {
+        toast.error(
+          <div className="flex flex-col gap-2">
+            <p className="font-bold">Gagal terhubung ke Google</p>
+            <p className="text-xs">Ini karena pembatasan browser atau domain belum diizinkan. Silakan buka aplikasi di tab baru (<b>https://shinerva.id</b>) untuk login yang aman.</p>
+            <button 
+              onClick={() => window.open('https://shinerva.id', '_blank')}
+              className="bg-white text-black text-[10px] font-black py-1.5 px-3 rounded-lg hover:bg-gray-100 transition-all border-none cursor-pointer self-start"
+            >
+              Buka Shinerva.id &rarr;
+            </button>
+          </div>,
+          { duration: 10000 }
+        );
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -827,52 +1017,94 @@ const App = () => {
     setAuthLoading(true);
     try {
       if (authMode === "signup") {
-        if (!authData.password || authData.password.length < 8) {
-          throw new Error("Password minimal 8 karakter.");
-        }
-        if (authData.password !== authData.confirmPassword) {
-          throw new Error("Password tidak cocok.");
-        }
+        const userCredential = await signup(authData.email, authData.password, authData.name);
+        
+        // Pass referral code to backend during the first user sync
+        const idToken = await userCredential.user.getIdToken(true);
+        const options = {
+          method: "POST",
+          headers: { 
+            "Authorization": `Bearer ${idToken}`,
+            "x-ref-code": authData.refCode || ""
+          },
+        };
+        const syncRes = await fetch("/api/auth/sync", options);
+        await checkResponse(syncRes, 0, options);
+        
+        // Set user state immediately so UI updates before refreshUser returns
+        setUser({
+          email: userCredential.user.email,
+          uid: userCredential.user.uid,
+          emailVerified: userCredential.user.emailVerified,
+          tier: 'FREE',
+          generation_count: 0,
+          used_chars: 0,
+          monthly_chars: 10000,
+          signup_bonus_chars: 10000,
+          earned_chars: 0,
+          valid_referrals: 0,
+          has_received_referral_bonus: false,
+          referral_code: "",
+          social_bonus_status: "none"
+        });
 
-        await signup(authData.email, authData.password, authData.name);
-
-        // Sync with backend while still logged in (to create profile)
+        // Send verification email
         try {
-          await syncAuthProfile(authData.refCode);
-        } catch (sErr) {
-          console.warn("Sync failed during signup:", sErr);
+          await verifyEmail();
+        } catch (vErr) {
+          console.warn("Could not send initial verification email:", vErr);
         }
-
-        // Force logout to enforce verification before first "real" login
-        await logout();
 
         setIsAuthOpen(false);
-        toast.success("Pendaftaran berhasil! Silakan cek inbox Anda untuk verifikasi email sebelum login.", { duration: 6000 });
+        toast.success("Pendaftaran berhasil!");
+        
+        // Final refresh to get full profile from backend
+        await refreshUser();
       } else if (authMode === "login") {
-        await login(authData.email, authData.password);
-        // Sync with backend — ensures user profile exists server-side
-        await syncAuthProfile();
+        const userCredential = await login(authData.email, authData.password);
+        
+        // Set user state immediately
+        setUser({
+          email: userCredential.user.email,
+          uid: userCredential.user.uid,
+          emailVerified: userCredential.user.emailVerified,
+          tier: 'FREE',
+          generation_count: 0,
+          used_chars: 0,
+          monthly_chars: 10000,
+          signup_bonus_chars: 10000,
+          earned_chars: 0,
+          valid_referrals: 0,
+          has_received_referral_bonus: false,
+          referral_code: "",
+          social_bonus_status: "none"
+        });
+
         setIsAuthOpen(false);
         toast.success("Berhasil masuk!");
+        
+        await refreshUser();
       } else if (authMode === "whatsapp") {
         if (!otpSent) {
-          const res = await fetch("/api/auth/otp/request", {
+          const options = {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ whatsapp: authData.whatsapp }),
-          });
-          const data = await checkResponse(res);
+          };
+          const res = await fetch("/api/auth/otp/request", options);
+          const data = await checkResponse(res, 0, options);
           if (data.success) {
             setOtpSent(true);
             toast.success("OTP telah dikirim ke WhatsApp Anda.");
           }
         } else {
-          const res = await fetch("/api/auth/otp/verify", {
+          const options = {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ whatsapp: authData.whatsapp, otp: otpCode }),
-          });
-          const data = await checkResponse(res);
+          };
+          const res = await fetch("/api/auth/otp/verify", options);
+          const data = await checkResponse(res, 0, options);
           if (data.success) {
             setUser(data.user);
             setIsAuthOpen(false);
@@ -881,7 +1113,6 @@ const App = () => {
         }
       }
     } catch (err) {
-      setAuthErrorCode(err.code || "");
       toast.error(err.message || "Gagal autentikasi.");
     } finally {
       setAuthLoading(false);
@@ -892,27 +1123,13 @@ const App = () => {
     setAuthMode(mode);
     setOtpSent(false);
     setOtpCode("");
-    setAuthErrorCode("");
     setAuthData({
       name: "",
       email: "",
       password: "",
-      confirmPassword: "",
       whatsapp: "",
       refCode: "",
     });
-  };
-
-  const getFriendlyErrorMessage = (errorCodeOrMessage) => {
-    const error = errorCodeOrMessage.toLowerCase();
-    if (error.includes('auth/invalid-email')) return 'Format email tidak valid.';
-    if (error.includes('auth/user-not-found') || error.includes("tidak terdaftar")) return 'Email tidak terdaftar.';
-    if (error.includes('auth/wrong-password') || error.includes("salah")) return 'Password salah.';
-    if (error.includes('auth/too-many-requests')) return 'Terlalu banyak permintaan. Silakan coba lagi nanti.';
-    if (error.includes('auth/network-request-failed')) return 'Koneksi internet bermasalah.';
-    if (error.includes('auth/popup-closed-by-user')) return 'Proses login dibatalkan.';
-    if (error.includes('auth/email-already-in-use') || error.includes("already in use") || error.includes("sudah terdaftar")) return 'Email sudah terdaftar. Silakan login.';
-    return 'Terjadi kesalahan: ' + errorCodeOrMessage;
   };
 
   const handleResetPassword = async (e) => {
@@ -934,15 +1151,10 @@ const App = () => {
   };
 
   const handleResendVerification = async () => {
-    if (!authData.email) {
-      toast.error("Email diperlukan untuk mengirim ulang verifikasi.");
-      return;
-    }
     setAuthLoading(true);
     try {
-      await resendVerificationEmail(authData.email);
-      toast.success('Email verifikasi telah dikirim ulang via Hostinger SMTP. Silakan cek inbox Anda.');
-      setAuthErrorCode(""); // Clear error once sent
+      await verifyEmail();
+      toast.success('Email verifikasi telah dikirim ulang. Silakan cek kotak masuk atau folder spam Anda.');
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -990,15 +1202,16 @@ const App = () => {
     try {
       const idToken = await auth?.currentUser?.getIdToken();
       if (!idToken) throw new Error("Gagal mendapatkan token autentikasi.");
-      const res = await fetch("/api/user/social-share", {
+      const options = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`
         },
         body: JSON.stringify({ url: socialUrl }),
-      });
-      const data = await checkResponse(res);
+      };
+      const res = await fetch("/api/user/social-share", options);
+      const data = await checkResponse(res, 0, options);
       if (data.success) {
         toast.success("Tautan berhasil dikirim. Menunggu verifikasi admin!");
         setShowSocialModal(false);
@@ -1024,7 +1237,7 @@ const App = () => {
     setPurchaseLoading(planId);
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const res = await fetch("/api/payment/create", {
+      const options = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1034,9 +1247,10 @@ const App = () => {
           planId,
           billingCycle
         }),
-      });
+      };
+      const res = await fetch("/api/payment/create", options);
 
-      const data = await checkResponse(res);
+      const data = await checkResponse(res, 0, options);
       
       if (data.token) {
         // @ts-ignore
@@ -1115,6 +1329,14 @@ const App = () => {
     );
   }
 
+  const handleReferralClick = () => {
+    setIsReferralOpen(true);
+    if (user) {
+      setLastViewedReferrals(user.valid_referrals);
+      localStorage.setItem("lastViewedReferrals", user.valid_referrals.toString());
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Toaster position="top-right" />
@@ -1168,18 +1390,25 @@ const App = () => {
                     Aturan Pengucapan
                   </a>
                   <button
-                    onClick={() => setIsReferralOpen(true)}
-                    className="flex items-center gap-2 text-terracotta hover:text-trdark font-bold transition-all border-none bg-transparent cursor-pointer"
+                    onClick={handleReferralClick}
+                    className="flex items-center gap-2 text-terracotta hover:text-trdark font-bold transition-all border-none bg-transparent cursor-pointer relative"
                   >
-                    <Gift className="w-4 h-4" /> Bonus Referral
+                    <Gift className="w-4 h-4" /> 
+                    Bonus Referral
+                    {user && (user.valid_referrals > lastViewedReferrals || (user.valid_referrals === 1 && lastViewedReferrals === 0)) && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-terracotta opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-terracotta"></span>
+                      </span>
+                    )}
                   </button>
                 </>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={toggleTheme}
-                className="p-2.5 rounded-full hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text-muted hover:text-text"
+                className="p-2 sm:p-2.5 rounded-full hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text-muted hover:text-text shrink-0"
                 aria-label="Toggle Theme"
               >
                 {theme === "dark" ? (
@@ -1188,18 +1417,131 @@ const App = () => {
                   <Moon className="w-5 h-5" />
                 )}
               </button>
+
               {user ? (
-                <span onClick={handleLogout} className="font-bold text-terracotta cursor-pointer hover:underline" title="Klik untuk keluar">
-                  {user.email}
-                </span>
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-2 bg-surface2 hover:bg-surface3 border border-surface2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-all cursor-pointer group select-none"
+                  >
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-terracotta/20 flex items-center justify-center text-terracotta shrink-0">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                    <div className="hidden sm:flex flex-col items-start overflow-hidden">
+                      <span className="text-[11px] font-black text-text group-hover:text-terracotta transition-colors truncate max-w-[100px]">
+                        {user.name || user.email?.split("@")[0] || "User"}
+                      </span>
+                      <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">
+                        {user.tier || "FREE"}
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-text-muted transition-transform shrink-0 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div 
+                      className="absolute right-0 mt-3 w-64 bg-surface border border-surface2 rounded-2xl shadow-2xl overflow-hidden z-[70] animate-in fade-in slide-in-from-top-2 duration-200"
+                    >
+                      <div className="p-4 border-b border-surface2 bg-surface2/30">
+                        <div className="flex items-center justify-between mb-1">
+                           <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Akun Saya</p>
+                           <button onClick={() => setIsUserMenuOpen(false)} className="text-text-muted hover:text-text bg-transparent border-none cursor-pointer p-1">
+                             <X className="w-3 h-3" />
+                           </button>
+                        </div>
+                        <p className="text-xs font-bold text-text truncate">{user.email}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                           <span className="text-[9px] font-black bg-terracotta text-white px-2 py-0.5 rounded-md uppercase tracking-tight">
+                             {user.tier}
+                           </span>
+                           <span className="text-[10px] font-bold text-text-muted">
+                             {remainingCredits.toLocaleString("id-ID")} Karakter Tersisa
+                           </span>
+                        </div>
+                      </div>
+                      
+                      <div className="p-2">
+                        <button 
+                          onClick={() => {
+                            setIsProfileModalOpen(true);
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
+                        >
+                          <UserCircle className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
+                          <span className="text-sm font-bold">Profil Akun</span>
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                            setIsHistoryOpen(true);
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
+                        >
+                          <History className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
+                          <span className="text-sm font-bold">Riwayat Suara</span>
+                        </button>
+
+                        <button 
+                          onClick={() => {
+                            setIsReferralOpen(true);
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
+                        >
+                          <UserPlus className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
+                          <span className="text-sm font-bold">Referral & Bonus</span>
+                        </button>
+                        
+                        <button 
+                          onClick={() => {
+                             window.location.hash = "pricing";
+                             setIsUserMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
+                        >
+                          <Settings className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
+                          <span className="text-sm font-bold">Langganan & Paket</span>
+                        </button>
+
+                        {user.tier === 'ENTERPRISE' && (
+                          <button 
+                            onClick={() => {
+                              setIsVoiceMgmtOpen(true);
+                              setIsUserMenuOpen(false);
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
+                          >
+                            <Settings2 className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
+                            <span className="text-sm font-bold">Voice Dev Console</span>
+                          </button>
+                        )}
+                        
+                        <div className="h-px bg-surface2 my-2 mx-2"></div>
+                        
+                        <button 
+                          onClick={() => {
+                            handleLogout();
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 text-red-500 transition-colors border-none bg-transparent cursor-pointer group text-left"
+                        >
+                          <LogOut className="w-5 h-5" />
+                          <span className="text-sm font-bold">Keluar Sekarang</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <>
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
                       switchAuthMode("login");
                       setIsAuthOpen(true);
                     }}
-                    className="hidden md:block text-text-muted hover:text-text font-medium transition-colors border-none bg-transparent cursor-pointer"
+                    className="text-text-muted hover:text-text font-bold text-sm tracking-tight transition-colors border-none bg-transparent cursor-pointer px-3 py-2 rounded-lg hover:bg-surface2 hidden xs:block"
                   >
                     Masuk
                   </button>
@@ -1208,11 +1550,11 @@ const App = () => {
                       switchAuthMode("signup");
                       setIsAuthOpen(true);
                     }}
-                    className="bg-terracotta hover:bg-trdark text-white px-5 py-2.5 rounded-full font-bold transition-all transform hover:scale-105 shadow-lg shadow-terracotta/20 border-none cursor-pointer"
+                    className="bg-terracotta hover:bg-trdark text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-full font-bold text-[11px] sm:text-sm transition-all transform hover:scale-105 shadow-lg shadow-terracotta/20 border-none cursor-pointer whitespace-nowrap"
                   >
-                    Mulai Gratis (10rb Karakter)
+                    Mulai Gratis (10k Karakter)
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -1255,7 +1597,7 @@ const App = () => {
               </div>
               <div className="text-left">
                 <p className="font-bold text-sm">Verifikasi Email Anda</p>
-                <p className="text-xs text-white/80">Silakan verifikasi email Anda untuk memastikan keamanan akun dan dapatkan akses penuh ke semua fitur.</p>
+                <p className="text-xs text-white/80">Silakan verifikasi email Anda untuk memastikan keamanan akun. Cek folder Inbox/Spam di email {auth?.currentUser?.email}.</p>
               </div>
             </div>
             
@@ -1290,6 +1632,11 @@ const App = () => {
         {/* Hero Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-24 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-terracotta/10 rounded-full blur-[120px] -z-10"></div>
+          <div className="flex justify-center mb-6">
+            <span className="bg-terracotta/10 text-terracotta px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] border border-terracotta/20 animate-pulse">
+              Powered by RUNGU Engine
+            </span>
+          </div>
           <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-tight text-text">
             Ubah Teks Menjadi <br />
             <span className="gradient-text">Suara Manusiawi</span>
@@ -1448,11 +1795,6 @@ const App = () => {
                             Beban: {estimatedCost.toLocaleString("id-ID")} Kredit
                           </span>
                         )}
-                        <span
-                          className={`text-xs font-mono ${(isNearLimit || isCappedByRequest || isCappedByQuota) ? "text-terracotta" : "text-text-muted"}`}
-                        >
-                          {text.length} / {currentMaxRequestChars}
-                        </span>
                       </div>
                       {(isCappedByRequest || isCappedByQuota) && (
                         <span className="text-[10px] text-terracotta font-bold mt-1 animate-pulse">
@@ -1475,15 +1817,23 @@ const App = () => {
                   />
                   {user && (
                     <div className="mt-2 flex justify-between items-center text-[10px] font-bold">
-                      <div className="flex items-center gap-1 text-text-muted">
-                        <span>Sisa Kredit:</span>
-                        <span className={remainingCredits < 1000 ? "text-terracotta" : "text-text"}>
-                          {remainingCredits.toLocaleString("id-ID")}
-                        </span>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 text-text-muted">
+                          <span>Panjang Naskah:</span>
+                          <span className={`${isCappedByRequest ? "text-terracotta" : "text-text"} font-mono`}>
+                            {text.length.toLocaleString("id-ID")} / {currentMaxRequestChars.toLocaleString("id-ID")}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-text-muted border-l border-surface2/30 pl-4">
+                          <span>Sisa Kredit:</span>
+                          <span className={remainingCredits < 1000 ? "text-terracotta" : "text-text"}>
+                            {remainingCredits.toLocaleString("id-ID")}
+                          </span>
+                        </div>
                       </div>
                       {user.tier === 'FREE' && (
-                        <div className="text-terracotta">
-                          Kuota Harian: {Math.max(0, 20 - user.generation_count)} Sisa
+                        <div className="text-terracotta bg-terracotta/5 px-2 py-0.5 rounded border border-terracotta/10">
+                          Kuota Harian: {Math.max(0, 20 - user.generation_count)} / 20
                         </div>
                       )}
                     </div>
@@ -1495,35 +1845,50 @@ const App = () => {
                     <label className="block text-sm font-bold text-text-muted mb-2">
                       Suara Pilihan
                     </label>
-                    <div className="relative">
-                      <select
-                        value={voice}
-                        onChange={(e) => setVoice(e.target.value)}
-                        className="w-full bg-dark text-text appearance-none rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide"
-                      >
-                        {Object.entries(VOICES).map(([category, voiceList]) => (
-                          <optgroup key={category} label={category.toUpperCase()}>
-                            {voiceList.map((v) => {
-                              const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
-                              const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
-                              const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
-                              
-                              const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
-                              const isUserFree = userTierIndex < 1;
-                              const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
-                              
-                              return (
-                                <option key={v.id} value={v.id} disabled={isLocked}>
-                                  {isLocked ? "🔒 " : ""}{v.name} ({v.type} - {voiceConfig.tiers[v.type] || 1}x)
-                                </option>
-                              );
-                            })}
-                          </optgroup>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
-                        <ChevronDown className="w-4 h-4" />
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <select
+                          value={voice}
+                          onChange={(e) => setVoice(e.target.value)}
+                          className="w-full bg-dark text-text appearance-none rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide"
+                        >
+                          {Object.entries(VOICES).map(([category, voiceList]) => (
+                            <optgroup key={category} label={category.toUpperCase()}>
+                              {voiceList.map((v) => {
+                                const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
+                                const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
+                                const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
+                                
+                                const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
+                                const isUserFree = userTierIndex < 1;
+                                const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
+                                
+                                return (
+                                  <option key={v.id} value={v.id} disabled={isLocked}>
+                                    {isLocked ? "🔒 " : ""}{v.name} ({v.type} - {voiceConfig.tiers[v.type] || 1}x)
+                                  </option>
+                                );
+                              })}
+                            </optgroup>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                          <ChevronDown className="w-4 h-4" />
+                        </div>
                       </div>
+                      <button
+                        onClick={handlePreviewVoice}
+                        disabled={testLoading}
+                        className="bg-surface2 hover:bg-surface3 text-text px-4 rounded-xl flex items-center gap-2 transition-all disabled:opacity-50 border border-surface2"
+                        title="Tes Suara Ini"
+                      >
+                        {testLoading ? (
+                          <div className="w-4 h-4 border-2 border-terracotta border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <Play className="w-4 h-4 text-terracotta" />
+                        )}
+                        <span className="hidden sm:inline text-xs font-bold whitespace-nowrap">Tes Suara</span>
+                      </button>
                     </div>
                     {(!user || user.tier === 'FREE') && (
                       <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20 animate-pulse">
@@ -1623,7 +1988,52 @@ const App = () => {
                         Terapkan
                       </button>
                     </div>
-                    <div className="flex items-center justify-between">
+
+                    <div className="pt-2 border-t border-surface2">
+                      <span className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-3">
+                        Gaya Bicara (Expressive)
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => {
+                            const sel = window.getSelection().toString();
+                            insertAtCursor(`[semangat]${sel || "teks"}[/semangat]`);
+                          }}
+                          className="text-[10px] bg-terracotta/10 hover:bg-terracotta/20 text-terracotta font-bold py-2 rounded-lg border border-terracotta/20 transition-all cursor-pointer"
+                        >
+                          🔥 Semangat
+                        </button>
+                        <button
+                          onClick={() => {
+                            const sel = window.getSelection().toString();
+                            insertAtCursor(`[serius]${sel || "teks"}[/serius]`);
+                          }}
+                          className="text-[10px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold py-2 rounded-lg border border-blue-500/20 transition-all cursor-pointer"
+                        >
+                          💼 Serius
+                        </button>
+                        <button
+                          onClick={() => {
+                            const sel = window.getSelection().toString();
+                            insertAtCursor(`[bisik]${sel || "teks"}[/bisik]`);
+                          }}
+                          className="text-[10px] bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 font-bold py-2 rounded-lg border border-purple-500/20 transition-all cursor-pointer"
+                        >
+                          🤫 Bisik
+                        </button>
+                        <button
+                          onClick={() => {
+                            const sel = window.getSelection().toString();
+                            insertAtCursor(`[teriak]${sel || "teks"}[/teriak]`);
+                          }}
+                          className="text-[10px] bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-2 rounded-lg border border-red-500/20 transition-all cursor-pointer"
+                        >
+                          📢 Teriak
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-surface2">
                       <span className="text-sm text-gray-400">
                         Panduan Pengucapan
                       </span>
@@ -1645,6 +2055,15 @@ const App = () => {
                 </div>
 
                 <div className="flex-grow flex flex-col justify-end">
+                  <div className="bg-surface2/30 rounded-2xl p-4 border border-surface2 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">RUNGU ENGINE PRO</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-tight">
+                      Phonetic hardening, natural breathing, and deep prosody active. Optimasi Bahasa Indonesia v3.0.
+                    </p>
+                  </div>
                   {audioUrl && (
                     <audio
                       ref={audioRef}
@@ -1661,6 +2080,18 @@ const App = () => {
 
                   {isAudioVisible && (
                     <div className="bg-dark rounded-2xl p-6 border border-surface2 mb-4 shadow-xl">
+                      {generatedInfo && (
+                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-surface2/30">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">Suara Dipakai</span>
+                            <span className="text-xs text-text font-bold">{getVoiceDisplayName(generatedInfo.voice)}</span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">Estimasi Durasi</span>
+                            <span className="text-xs text-text font-bold">{formatDuration(generatedInfo.duration)}</span>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex items-center gap-4 mb-4">
                         <button
                           onClick={togglePlay}
@@ -1739,9 +2170,19 @@ const App = () => {
                       }`}
                   >
                     {status === "idle" && cooldown === 0 && (
-                      <>
-                        <Mic className="w-5 h-5" /> Hasilkan Suara Sekarang
-                      </>
+                      isCappedByRequest ? (
+                        <>
+                           <AlertTriangle className="w-5 h-5" /> Naskah Terlalu Panjang
+                        </>
+                      ) : isCappedByQuota ? (
+                        <>
+                           <AlertCircle className="w-5 h-5" /> Kredit Tidak Cukup
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-5 h-5" /> Hasilkan Suara Sekarang
+                        </>
+                      )
                     )}
                     {status === "idle" && cooldown > 0 && (
                       <>
@@ -2361,6 +2802,129 @@ const App = () => {
         </footer>
       </main>
 
+      {/* Profile Modal */}
+      {isProfileModalOpen && user && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/95 backdrop-blur-md"
+            onClick={() => setIsProfileModalOpen(false)}
+          ></div>
+          <div className="bg-dark border border-surface2 rounded-[2.5rem] w-full max-w-lg relative z-10 shadow-3xl overflow-hidden border-gradient animate-in zoom-in duration-300">
+             <div className="p-8 md:p-12">
+                <button
+                  onClick={() => setIsProfileModalOpen(false)}
+                  className="absolute top-8 right-8 text-text-muted hover:text-text cursor-pointer bg-surface2/50 hover:bg-surface2 p-2 rounded-full transition-all border-none"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+
+                <div className="text-center mb-10">
+                  <div className="w-24 h-24 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-terracotta/20 relative">
+                    <User className="w-12 h-12 text-terracotta" />
+                    <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-dark"></div>
+                  </div>
+                  <h2 className="text-3xl font-black text-white mb-2">{user.name || "Pengguna Shinerva"}</h2>
+                  <p className="text-text-muted font-medium">{user.email}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-10">
+                   <div className="bg-surface2/30 p-5 rounded-3xl border border-surface2">
+                      <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">Paket Saat Ini</p>
+                      <p className="text-2xl font-black text-terracotta">{user.tier}</p>
+                   </div>
+                   <div className="bg-surface2/30 p-5 rounded-3xl border border-surface2">
+                      <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">Sisa Karakter</p>
+                      <p className={`text-2xl font-black ${remainingCredits < 1000 ? "text-red-500" : "text-text"}`}>{remainingCredits.toLocaleString("id-ID")}</p>
+                      {remainingCredits < 1000 && (
+                        <p className="text-[10px] text-red-500 font-bold mt-1">Kredit Hampir Habis!</p>
+                      )}
+                   </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-dark/50 rounded-2xl border border-surface2">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-surface2 flex items-center justify-center">
+                         <ShieldCheck className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-text">Status Verifikasi</p>
+                        <p className="text-xs text-text-muted">{user.emailVerified ? "Email Terverifikasi" : "Belum Verifikasi"}</p>
+                      </div>
+                    </div>
+                    {user.emailVerified ? (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <button onClick={handleResendVerification} className="text-xs font-black text-terracotta hover:underline bg-transparent border-none cursor-pointer">Verifikasi Sekarang</button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark/50 rounded-2xl border border-surface2">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-surface2 flex items-center justify-center">
+                         <Gift className="w-5 h-5 text-terracotta" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-text">Referral Aktif</p>
+                        <p className="text-xs text-text-muted">{user.valid_referrals} teman terdaftar</p>
+                      </div>
+                    </div>
+                    <button onClick={() => {setIsReferralOpen(true); setIsProfileModalOpen(false);}} className="text-xs font-black text-terracotta hover:underline bg-transparent border-none cursor-pointer">Detail</button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setIsProfileModalOpen(false);
+                    window.location.hash = "pricing";
+                  }}
+                  className="w-full mt-10 bg-terracotta hover:bg-trdark text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-terracotta/20 border-none cursor-pointer"
+                >
+                  Upgrade Keanggotaan
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Studio Voice Warning Modal */}
+      {isStudioWarningOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            onClick={() => setIsStudioWarningOpen(false)}
+          ></div>
+          <div className="bg-dark border border-surface2 rounded-[2rem] w-full max-w-md relative z-10 shadow-2xl overflow-hidden">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertCircle className="w-10 h-10 text-terracotta" />
+              </div>
+              <h3 className="text-2xl font-black text-text mb-4">Peringatan Suara Studio</h3>
+              <p className="text-text-muted mb-8 leading-relaxed">
+                Anda menggunakan <span className="text-text font-bold">Suara Studio</span>. Operasi ini akan memotong <span className="text-terracotta font-black text-lg">40x Kredit</span>. Lanjutkan?
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setIsStudioWarningOpen(false);
+                    proceedWithGenerate();
+                  }}
+                  className="w-full bg-terracotta hover:bg-trdark text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-terracotta/20 border-none cursor-pointer"
+                >
+                  Ya, Lanjutkan
+                </button>
+                <button
+                  onClick={() => setIsStudioWarningOpen(false)}
+                  className="w-full bg-surface2/50 hover:bg-surface2 text-text font-bold py-4 rounded-xl transition-all border-none cursor-pointer"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Referral Dashboard Modal */}
       {isReferralOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
@@ -2404,7 +2968,7 @@ const App = () => {
               <p className="text-text-muted text-sm mt-2">
                 {authMode === "login" || authMode === "whatsapp"
                   ? "Selamat datang kembali!"
-                  : "Daftar sekarang dan dapatkan bonus 10.000 karakter gratis."}
+                  : "Daftar sekarang dan dapatkan bonus 5.000 karakter gratis."}
               </p>
             </div>
 
@@ -2533,21 +3097,6 @@ const App = () => {
                   </div>
                   {authMode === "signup" && (
                     <>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-400 mb-2">
-                          Konfirmasi Password
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          value={authData.confirmPassword}
-                          onChange={(e) =>
-                            setAuthData({ ...authData, confirmPassword: e.target.value })
-                          }
-                          className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta"
-                          placeholder="••••••••"
-                        />
-                      </div>
                       <div className="pt-2 border-t border-surface2 mt-4">
                         <label className="block text-sm font-bold text-gray-400 mb-1 flex items-center gap-2">
                           Nomor WhatsApp{" "}
@@ -2621,20 +3170,6 @@ const App = () => {
                 )}
               </button>
 
-              {authErrorCode === 'auth/email-not-verified' && (
-                <div className="bg-terracotta/10 border border-terracotta/20 rounded-xl p-4 text-center mt-4">
-                  <p className="text-xs text-terracotta font-medium mb-2">Email belum terverifikasi.</p>
-                  <button
-                    type="button"
-                    onClick={handleResendVerification}
-                    disabled={authLoading}
-                    className="text-sm text-text hover:underline font-bold bg-transparent border-none cursor-pointer"
-                  >
-                    Kirim Ulang Email Verifikasi
-                  </button>
-                </div>
-              )}
-
               <div className="flex flex-col gap-2 mt-4">
                 {authMode === "login" && (
                   <>
@@ -2646,6 +3181,22 @@ const App = () => {
                     >
                       {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Masuk dengan Google</>}
                     </button>
+                    
+                    {/* Environment Hint for iframe */}
+                    {window.self !== window.top && (
+                      <div className="bg-surface2/30 border border-surface2 p-3 rounded-xl mb-2">
+                        <p className="text-[10px] text-text-muted text-center leading-tight">
+                          Gagal login via Google di dalam preview? 
+                          <button 
+                            onClick={() => window.open(window.location.href, '_blank')}
+                            className="text-terracotta hover:underline ml-1 font-bold cursor-pointer bg-transparent border-none p-0 inline text-[10px]"
+                          >
+                             Buka di Tab Baru &rarr;
+                          </button>
+                        </p>
+                      </div>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => switchAuthMode("whatsapp")}
@@ -2795,13 +3346,38 @@ const App = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-400 mb-2">Kata Asli</label>
-                  <input
-                    type="text"
-                    value={newWord}
-                    onChange={(e) => setNewWord(e.target.value)}
-                    className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none"
-                    placeholder="Contoh: AI"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={newWord}
+                      onChange={(e) => handleWordChange(e.target.value)}
+                      className="w-full bg-dark text-gray-100 rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none"
+                      placeholder="Contoh: AI"
+                    />
+                    {phoneticSuggestions.length > 0 && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface border border-surface2 rounded-xl shadow-2xl z-20 overflow-hidden divide-y divide-surface2/30">
+                        <div className="px-3 py-2 bg-surface2/30 text-[10px] font-black text-terracotta uppercase tracking-widest flex items-center gap-2">
+                          <AlertCircle className="w-3 h-3" /> Saran Pengucapan
+                        </div>
+                        {phoneticSuggestions.map((key) => (
+                          <button
+                            key={key}
+                            onClick={() => {
+                              setNewWord(key);
+                              setNewPronunciation(globalPhonetics[key]);
+                              setPhoneticSuggestions([]);
+                            }}
+                            className="w-full text-left px-4 py-2.5 hover:bg-surface2 transition-colors flex items-center justify-between group cursor-pointer bg-transparent border-none"
+                          >
+                            <span className="text-sm text-white font-bold">{key}</span>
+                            <span className="text-[10px] text-gray-500 group-hover:text-terracotta transition-colors italic">
+                              Baca: {globalPhonetics[key]}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-400 mb-2">Cara Baca</label>
@@ -2914,8 +3490,9 @@ const App = () => {
                     <thead>
                       <tr className="border-b border-surface2 text-text-muted text-xs uppercase tracking-wider">
                         <th className="py-3 font-bold">Tanggal</th>
-                        <th className="py-3 font-bold">Karakter</th>
-                        <th className="py-3 font-bold">Suara</th>
+                        <th className="py-3 font-bold">Detail Suara</th>
+                        <th className="py-3 font-bold">Durasi</th>
+                        <th className="py-3 font-bold">Kredit</th>
                         <th className="py-3 font-bold">Status</th>
                       </tr>
                     </thead>
@@ -2923,7 +3500,7 @@ const App = () => {
                       {history.map((item) => (
                         <tr key={item.id} className="text-sm">
                           <td className="py-4">
-                            <div className="text-text font-medium">
+                            <div className="text-text font-medium text-xs">
                               {new Date(item.date).toLocaleDateString("id-ID", {
                                 day: "numeric",
                                 month: "short",
@@ -2937,21 +3514,29 @@ const App = () => {
                             </div>
                           </td>
                           <td className="py-4">
-                            <span className="text-text font-bold">
-                              {Number(item.credits_used || 0).toLocaleString("id-ID")}
-                            </span>
-                          </td>
-                          <td className="py-4">
-                            <div className="text-text-muted text-xs">
+                            <div className="text-text font-bold text-xs uppercase">
+                              {getVoiceDisplayName(item.voice)}
+                            </div>
+                            <div className="text-text-muted text-[10px]">
                               {item.voice.split("-").slice(-2).join("-")}
                             </div>
                             {item.is_teaser && (
-                              <span className="text-[10px] bg-terracotta/20 text-terracotta px-1.5 py-0.5 rounded">
+                              <span className="text-[10px] bg-terracotta/20 text-terracotta px-1.5 py-0.5 rounded italic">
                                 Preview
                               </span>
                             )}
                           </td>
-                          <td className="py-4 text-green-500 font-bold">
+                          <td className="py-4">
+                            <span className="text-text-muted text-xs">
+                              {formatDuration(item.duration)}
+                            </span>
+                          </td>
+                          <td className="py-4">
+                            <span className="text-text font-bold text-xs">
+                              {item.credits_used.toLocaleString("id-ID")}
+                            </span>
+                          </td>
+                          <td className="py-4 text-green-500 font-bold text-[10px] uppercase">
                             Berhasil
                           </td>
                         </tr>

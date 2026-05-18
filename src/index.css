@@ -8,6 +8,7 @@
   --color-surface2: var(--bg-surface2);
   --color-text: var(--text-main);
   --color-text-muted: var(--text-muted);
+  --breakpoint-xs: 400px;
 }
 
 :root {

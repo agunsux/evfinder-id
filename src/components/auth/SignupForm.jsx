@@ -35,7 +35,7 @@ const SignupForm = ({ onSuccess, onLoginClick }) => {
       await signup(email, password);
       onSuccess();
     } catch (err) {
-      setError('Gagal mendaftar. Email mungkin sudah terpakai.');
+      setError(err.message || 'Gagal mendaftar. Email mungkin sudah terpakai.');
     } finally {
       setLoading(false);
     }

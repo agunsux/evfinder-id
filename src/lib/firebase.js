@@ -1,14 +1,5 @@
-import { initializeApp, getApps } from "firebase/app";
-import { 
-  getAuth, 
-  setPersistence, 
-  browserLocalPersistence, 
-  GoogleAuthProvider, 
-  signInWithRedirect, 
-  getRedirectResult,
-  signOut,
-  onAuthStateChanged
-} from "firebase/auth";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const clean = (val) => {
@@ -33,7 +24,7 @@ const rawProjectId = clean(import.meta.env.VITE_FIREBASE_PROJECT_ID);
 const firebaseConfig = {
   // If the secret starts with '{', someone likely pasted a Service Account JSON by mistake.
   // We filter it out so the fallback takes over.
-  apiKey: (rawApiKey && !rawApiKey.startsWith("{")) ? rawApiKey : "AIzaSy_REMOVED_BY_GIT_FILTER",
+  apiKey: (rawApiKey && !rawApiKey.startsWith("{")) ? rawApiKey : "AIzaSyAGWJz9SS1nBlMjx7bb7i7lx9LaBJNYmMM",
   authDomain: clean(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN) || "practical-gecko-476621-q4.firebaseapp.com",
   projectId: rawProjectId || "practical-gecko-476621-q4",
   storageBucket: clean(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET) || "practical-gecko-476621-q4.firebasestorage.app",
@@ -71,9 +62,11 @@ try {
     }
     
     auth = getAuth(app);
-    // Explicitly set persistence to local
+    console.log("[Firebase] Auth initialized for domain:", firebaseConfig.authDomain);
+    
+    // Explicitly set persistence to local with gracefull fallback
     setPersistence(auth, browserLocalPersistence).catch(err => {
-      console.warn("[Firebase] Persistence error:", err.message);
+      console.warn("[Firebase] Local persistence failed, using default:", err.message);
     });
 
     db = getFirestore(app, firestoreDatabaseId === "(default)" ? undefined : firestoreDatabaseId);
@@ -85,12 +78,5 @@ try {
   initError = error.message;
 }
 
-export const loginWithGoogle = () => {
-  const provider = new GoogleAuthProvider();
-  return signInWithRedirect(auth, provider);
-};
-export const checkRedirectResult = () => getRedirectResult(auth);
-export const logout = () => signOut(auth);
-
-export { app, auth, db, initError, onAuthStateChanged };
+export { app, auth, db, initError };
 
