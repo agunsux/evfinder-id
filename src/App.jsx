@@ -54,6 +54,7 @@ import {
 import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
 import ReferralDashboard from "./components/ReferralDashboard";
+import VoicePlayground from "./components/VoicePlayground";
 
 const PACKS = [
   {
@@ -137,28 +138,145 @@ const FAQS = [
 
 const VOICES = {
   "Standard (Free)": [
-    { id: "id-ID-Standard-A", name: "Ratna (Wanita)", type: "Standard", tier: "FREE" },
-    { id: "id-ID-Standard-B", name: "Bambang (Pria)", type: "Standard", tier: "FREE" },
+    { 
+      id: "id-ID-Standard-A", 
+      name: "Ratna (Wanita)", 
+      type: "Standard", 
+      tier: "FREE", 
+      desc: "Suara dasar yang jernih dan stabil.",
+      useCase: "Podcast & Edukasi"
+    },
+    { 
+      id: "id-ID-Standard-B", 
+      name: "Bambang (Pria)", 
+      type: "Standard", 
+      tier: "FREE",
+      desc: "Suara pria yang bersih dan berwibawa.",
+      useCase: "Berita & Pengumuman"
+    },
   ],
   "Neural2 (Starter/Kreator)": [
-    { id: "id-ID-Neural2-A", name: "Siti (Sangat Realistis)", type: "Neural2", premium: true, tier: "STARTER" },
-    { id: "id-ID-Neural2-D", name: "Agus (Sangat Realistis)", type: "Neural2", premium: true, tier: "STARTER" },
+    { 
+      id: "id-ID-Neural2-A", 
+      name: "Siti (Sangat Realistis)", 
+      type: "Neural2", 
+      premium: true, 
+      tier: "STARTER",
+      desc: "Suara AI generasi terbaru dengan intonasi manusiawi.",
+      useCase: "Narasi YouTube & Storytelling"
+    },
+    { 
+      id: "id-ID-Neural2-D", 
+      name: "Agus (Sangat Realistis)", 
+      type: "Neural2", 
+      premium: true, 
+      tier: "STARTER",
+      desc: "Intonasi yang ekspresif dan sangat alami.",
+      useCase: "Video Pendek & Komedi"
+    },
   ],
   "WaveNet (Produktif)": [
-    { id: "id-ID-Wavenet-A", name: "Lestari (Wavenet)", type: "Wavenet", premium: true, tier: "PRODUKTIF" },
-    { id: "id-ID-Wavenet-B", name: "Joko (Wavenet)", type: "Wavenet", premium: true, tier: "PRODUKTIF" },
-    { id: "id-ID-Wavenet-C", name: "Putri (Wavenet)", type: "Wavenet", premium: true, tier: "PRODUKTIF" },
+    { 
+      id: "id-ID-Wavenet-A", 
+      name: "Lestari (Wavenet)", 
+      type: "Wavenet", 
+      premium: true, 
+      tier: "PRODUKTIF",
+      desc: "Teknologi DeepMind untuk kejernihan suara maksimal.",
+      useCase: "Audiobook & Meditasi"
+    },
+    { 
+      id: "id-ID-Wavenet-B", 
+      name: "Joko (Wavenet)", 
+      type: "Wavenet", 
+      premium: true, 
+      tier: "PRODUKTIF",
+      desc: "Suara berat dan dramatis dengan teknologi Wavenet.",
+      useCase: "Misteri & Dokumenter"
+    },
+    { 
+      id: "id-ID-Wavenet-C", 
+      name: "Putri (Wavenet)", 
+      type: "Wavenet", 
+      premium: true, 
+      tier: "PRODUKTIF",
+      desc: "Suara wanita yang elegan dan profesional.",
+      useCase: "Iklan & Presentasi"
+    },
   ],
   "Studio Premium (Bisnis)": [
-    { id: "id-ID-Studio-A", name: "Eko (Iklan TV)", type: "Studio", premium: true, glow: true, tier: "BISNIS" },
-    { id: "id-ID-Studio-D", name: "Maya (Berita)", type: "Studio", premium: true, glow: true, tier: "BISNIS" },
+    { 
+      id: "id-ID-Studio-A", 
+      name: "Eko (Iklan TV)", 
+      type: "Studio", 
+      premium: true, 
+      glow: true, 
+      tier: "BISNIS",
+      desc: "Kualitas audio flagship seperti rekaman studio profesional.",
+      useCase: "Iklan High-End & Branding"
+    },
+    { 
+      id: "id-ID-Studio-D", 
+      name: "Maya (Berita)", 
+      type: "Studio", 
+      premium: true, 
+      glow: true, 
+      tier: "BISNIS",
+      desc: "Suara jernih dengan artikulasi sempurna.",
+      useCase: "Berita & Konten Formal"
+    },
   ],
   "Gemini AI Pro (Enterprise)": [
-    { id: "Puck", name: "Puck (Deep & Dramatic)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
-    { id: "Charon", name: "Charon (Mysterious & Calm)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
-    { id: "Kore", name: "Kore (Friendly & Bright)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
-    { id: "Fenrir", name: "Fenrir (Rugged & Bold)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
-    { id: "Zephyr", name: "Zephyr (Soft & Airy)", type: "Gemini", premium: true, glow: true, tier: "ENTERPRISE" },
+    { 
+      id: "Puck", 
+      name: "Puck (Deep & Dramatic)", 
+      type: "Gemini", 
+      premium: true, 
+      glow: true, 
+      tier: "ENTERPRISE",
+      desc: "Suara AI Gemini yang sangat dalam dan sinematik.",
+      useCase: "Film & Narasi Epik"
+    },
+    { 
+      id: "Charon", 
+      name: "Charon (Mysterious & Calm)", 
+      type: "Gemini", 
+      premium: true, 
+      glow: true, 
+      tier: "ENTERPRISE",
+      desc: "Elegan, tenang, dan penuh misteri.",
+      useCase: "Storytelling & Dokumenter"
+    },
+    { 
+      id: "Kore", 
+      name: "Kore (Friendly & Bright)", 
+      type: "Gemini", 
+      premium: true, 
+      glow: true, 
+      tier: "ENTERPRISE",
+      desc: "Ceria, ramah, dan sangat memikat.",
+      useCase: "Konten Anak & Marketing"
+    },
+    { 
+      id: "Fenrir", 
+      name: "Fenrir (Rugged & Bold)", 
+      type: "Gemini", 
+      premium: true, 
+      glow: true, 
+      tier: "ENTERPRISE",
+      desc: "Kasar, berani, dan penuh karakter.",
+      useCase: "Gaming & Brand Maskulin"
+    },
+    { 
+      id: "Zephyr", 
+      name: "Zephyr (Soft & Airy)", 
+      type: "Gemini", 
+      premium: true, 
+      glow: true, 
+      tier: "ENTERPRISE",
+      desc: "Lembut, menenangkan, dan ringan.",
+      useCase: "Relaksasi & Lifestyle"
+    },
   ],
 };
 
@@ -1865,7 +1983,7 @@ const App = () => {
                                 
                                 return (
                                   <option key={v.id} value={v.id} disabled={isLocked}>
-                                    {isLocked ? "🔒 " : ""}{v.name} ({v.type} - {voiceConfig.tiers[v.type] || 1}x)
+                                    {isLocked ? "🔒 " : ""}{v.name} ({voiceConfig.tiers[v.type] || 1}x)
                                   </option>
                                 );
                               })}
@@ -1890,6 +2008,48 @@ const App = () => {
                         <span className="hidden sm:inline text-xs font-bold whitespace-nowrap">Tes Suara</span>
                       </button>
                     </div>
+
+                    {/* Selected Voice Info Box */}
+                    {(() => {
+                      const selectedVoice = Object.values(VOICES).flat().find(v => v.id === voice);
+                      if (!selectedVoice) return null;
+                      return (
+                        <div className="mt-3 bg-surface2/30 rounded-xl p-4 border border-surface2/50 relative overflow-hidden group">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-dark rounded-lg border border-surface2 text-terracotta">
+                              <Mic className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-black text-white uppercase tracking-wider">
+                                  Tier: {selectedVoice.type} ({selectedVoice.tier})
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-bold text-text-muted">Beban:</span>
+                                  <span className="text-[10px] font-black text-terracotta bg-terracotta/10 px-1.5 py-0.5 rounded border border-terracotta/20">
+                                    {voiceConfig.tiers[selectedVoice.type] || 1}x Kredit
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-gray-400 font-medium mb-2 leading-relaxed">
+                                {selectedVoice.desc}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest bg-dark px-2 py-0.5 rounded border border-surface2">
+                                  Cocok Untuk:
+                                </span>
+                                <span className="text-[10px] font-bold text-gray-300">
+                                  {selectedVoice.useCase}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Subtle decorative glow */}
+                          <div className="absolute -right-4 -top-4 w-24 h-24 bg-terracotta/5 rounded-full blur-2xl group-hover:bg-terracotta/10 transition-all"></div>
+                        </div>
+                      );
+                    })()}
+
                     {(!user || user.tier === 'FREE') && (
                       <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20 animate-pulse">
                         <Gift className="w-3 h-3" />
@@ -2351,6 +2511,16 @@ const App = () => {
             </div>
           </section>
         )}
+
+        {/* Voice Playground Showcase */}
+        <section id="playground" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
+          <VoicePlayground 
+            onUpgrade={() => {
+              const element = document.getElementById('pricing');
+              if (element) element.scrollIntoView({ behavior: 'smooth' });
+            }} 
+          />
+        </section>
 
         {/* Content Packs */}
         <section
