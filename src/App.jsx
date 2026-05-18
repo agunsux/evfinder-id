@@ -347,6 +347,8 @@ const App = () => {
   const [socialUrl, setSocialUrl] = useState("");
 
   const [isPronunciationOpen, setIsPronunciationOpen] = useState(false);
+  const [isVoiceDropdownOpen, setIsVoiceDropdownOpen] = useState(false);
+  const voiceDropdownRef = useRef(null);
   const [newWord, setNewWord] = useState("");
   const [phoneticSuggestions, setPhoneticSuggestions] = useState([]);
   const [newPronunciation, setNewPronunciation] = useState("");
@@ -565,6 +567,16 @@ const App = () => {
   };
 
   useEffect(() => {
+    function handleClickOutside(event) {
+      if (voiceDropdownRef.current && !voiceDropdownRef.current.contains(event.target)) {
+        setIsVoiceDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     fetchVoiceConfig();
   }, [user]);
 
@@ -587,8 +599,29 @@ const App = () => {
     }
 
     fetchHistory();
-    // Auth state listener is setup in the main init effect above.
-    return;
+    // Watch for auth changes
+    let unsubscribe = () => {};
+    if (auth) {
+      try {
+        unsubscribe = auth.onAuthStateChanged(async (u) => {
+          if (u) {
+            await refreshUser();
+          } else {
+            setUser(null);
+          }
+          setIsAuthInitializing(false);
+        }, (error) => {
+          console.error("Auth state change error:", error);
+          setIsAuthInitializing(false);
+        });
+      } catch (e) {
+        console.error("onAuthStateChanged setup failed:", e);
+        setIsAuthInitializing(false);
+      }
+    } else {
+      setIsAuthInitializing(false);
+    }
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -676,20 +709,8 @@ const App = () => {
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
       if (data.audioContent) {
-        const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
-        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
-        try {
-          const blob = base64ToBlob(data.audioContent, mimeType);
-          const url = URL.createObjectURL(blob);
-          if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
-          setAudioUrl(url);
-          setIsTeaser(true);
-          setIsAudioVisible(true);
-        } catch (e) {
-          console.error('Failed to prepare audio blob for test pronunciation', e);
-          const audio = new Audio(`data:${mimeType};base64,${data.audioContent}`);
-          audio.play().catch(err => console.warn('Fallback audio.play() failed', err));
-        }
+        const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
+        audio.play();
       }
     } catch (err) {
       handleApiError(err, "Gagal mencoba suara.");
@@ -781,37 +802,12 @@ const App = () => {
 
   useEffect(() => {
     if (audioUrl && audioRef.current) {
-      const audioEl = audioRef.current;
-      audioEl.load();
-      // Try normal autoplay first
-      audioEl.muted = false;
-      audioEl.play()
-        .then(() => {
-          setIsPlaying(true);
-          // ensure unmuted after successful play
-          audioEl.muted = false;
-        })
-        .catch(async (e) => {
-          console.warn("Auto-play blocked or failed:", e);
-          setIsPlaying(false);
-          // Attempt muted autoplay (more likely to be allowed)
-          try {
-            audioEl.muted = true;
-            await audioEl.play();
-            // Unmute after starting playback
-            audioEl.muted = false;
-            setIsPlaying(true);
-            console.info('Muted autoplay succeeded');
-          } catch (e2) {
-            console.warn('Muted autoplay also failed:', e2);
-            audioEl.muted = false;
-            // Notify user to press Play (user gesture required)
-            try {
-              toast.error('Autoplay diblokir oleh browser. Tekan tombol Play untuk memutar audio.');
-            } catch (toastErr) {
-              /* ignore if toast unavailable */
-            }
-          }
+      audioRef.current.load();
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch(e => {
+            console.warn("Auto-play blocked or failed:", e);
+            setIsPlaying(false);
         });
     }
   }, [audioUrl]);
@@ -844,18 +840,11 @@ const App = () => {
       if (data.audioContent) {
         const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
         const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
-        try {
-          const blob = base64ToBlob(data.audioContent, mimeType);
-          const url = URL.createObjectURL(blob);
-          if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
-          setAudioUrl(url);
-          setIsTeaser(true);
-          setIsAudioVisible(true);
-          toast.success(`Berhasil memutar contoh suara ${voice}`);
-        } catch (e) {
-          console.error('Preview audio preparation failed', e);
-          toast.error('Gagal mempersiapkan audio preview.');
-        }
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.play();
+        toast.success(`Berhasil memutar contoh suara ${voice}`);
       }
     } catch (err) {
       console.error("Preview error:", err);
@@ -1017,17 +1006,13 @@ const App = () => {
   };
 
   const togglePlay = () => {
-    if (audioUrl && audioRef.current) {
+    if (audioUrl) {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play().catch((err) => {
-          console.warn('Audio playback failed:', err);
-        });
+        audioRef.current.play();
       }
       setIsPlaying(!isPlaying);
-    } else if (audioUrl) {
-      console.warn('Audio URL exists but audio element is not mounted yet.');
     } else {
       // Manage fallback synth state
       if (window.speechSynthesis.speaking) {
@@ -1136,16 +1121,15 @@ const App = () => {
       const isNetwork = err.message && (err.message.includes("Kesalahan jaringan") || err.message.includes("network-request-failed") || err.message.includes("network_error") || err.message.includes("iframe"));
       
       if (isInternal || isNetwork) {
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://shinerva.id';
         toast.error(
           <div className="flex flex-col gap-2">
             <p className="font-bold">Gagal terhubung ke Google</p>
-            <p className="text-xs">Ini karena pembatasan browser atau domain belum diizinkan. Silakan buka aplikasi di tab baru (<b>{origin}</b>) untuk login yang aman.</p>
+            <p className="text-xs">Ini karena pembatasan browser atau domain belum diizinkan. Silakan buka aplikasi di tab baru (<b>https://shinerva.id</b>) untuk login yang aman.</p>
             <button 
-              onClick={() => window.open(origin, '_blank')}
+              onClick={() => window.open('https://shinerva.id', '_blank')}
               className="bg-white text-black text-[10px] font-black py-1.5 px-3 rounded-lg hover:bg-gray-100 transition-all border-none cursor-pointer self-start"
             >
-              Buka {origin} &rarr;
+              Buka Shinerva.id &rarr;
             </button>
           </div>,
           { duration: 10000 }
@@ -1992,35 +1976,88 @@ const App = () => {
                       Suara Pilihan
                     </label>
                     <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <select
-                          value={voice}
-                          onChange={(e) => setVoice(e.target.value)}
-                          className="w-full bg-dark text-text appearance-none rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide"
+                      <div className="relative flex-1" ref={voiceDropdownRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
+                          className="w-full bg-dark text-text rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
                         >
-                          {Object.entries(VOICES).map(([category, voiceList]) => (
-                            <optgroup key={category} label={category.toUpperCase()}>
-                              {voiceList.map((v) => {
-                                const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
-                                const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
-                                const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
-                                
-                                const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
-                                const isUserFree = userTierIndex < 1;
-                                const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
-                                
-                                return (
-                                  <option key={v.id} value={v.id} disabled={isLocked}>
-                                    {isLocked ? "🔒 " : ""}{v.name} ({voiceConfig.tiers[v.type] || 1}x)
-                                  </option>
-                                );
-                              })}
-                            </optgroup>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
-                          <ChevronDown className="w-4 h-4" />
-                        </div>
+                          <span className="truncate">{getVoiceDisplayName(voice)}</span>
+                          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        <AnimatePresence>
+                          {isVoiceDropdownOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute z-50 left-0 right-0 mt-2 bg-surface rounded-2xl border border-surface2 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar"
+                            >
+                              {Object.entries(VOICES).map(([category, voiceList]) => (
+                                <div key={category}>
+                                  <div className="px-4 py-2 bg-surface2/30 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md border-b border-surface2/30">
+                                    {category}
+                                  </div>
+                                  <div className="p-1">
+                                    {voiceList.map((v) => {
+                                      const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
+                                      const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
+                                      const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
+                                      const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
+                                      const isUserFree = userTierIndex < 1;
+                                      const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
+                                      const isSelected = voice === v.id;
+                                      const isStudio = v.type === 'Studio' || v.glow;
+
+                                      return (
+                                        <button
+                                          key={v.id}
+                                          type="button"
+                                          disabled={isLocked}
+                                          onClick={() => {
+                                            setVoice(v.id);
+                                            setIsVoiceDropdownOpen(false);
+                                          }}
+                                          className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group relative overflow-hidden ${
+                                            isSelected ? 'bg-surface2' : 'hover:bg-surface2/50'
+                                          } ${isLocked ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
+                                        >
+                                          <div className="flex flex-col relative z-20">
+                                            <div className="flex items-center gap-2">
+                                              <span className={`text-sm font-bold ${isSelected ? 'text-terracotta' : 'text-text'}`}>
+                                                {isLocked && "🔒 "}{v.name}
+                                              </span>
+                                              {isStudio && (
+                                                <span className="text-[8px] font-black bg-terracotta text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(231,76,60,0.5)]">
+                                                  STUDIO
+                                                </span>
+                                              )}
+                                            </div>
+                                            <span className="text-[10px] text-gray-500 font-medium">Beban: {voiceConfig.tiers[v.type] || 1}x Kredit</span>
+                                          </div>
+                                          
+                                          {isStudio && (
+                                            <div className="absolute right-0 top-0 bottom-0 w-1 bg-terracotta/50 shadow-[0_0_15px_rgba(231,76,60,0.5)]"></div>
+                                          )}
+                                          
+                                          {isSelected && (
+                                            <Check className="w-4 h-4 text-terracotta relative z-20" />
+                                          )}
+
+                                          {isStudio && (
+                                            <div className="absolute inset-0 bg-gradient-to-r from-terracotta/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                       <button
                         onClick={handlePreviewVoice}
@@ -2041,20 +2078,39 @@ const App = () => {
                     {(() => {
                       const selectedVoice = Object.values(VOICES).flat().find(v => v.id === voice);
                       if (!selectedVoice) return null;
+                      const isStudio = selectedVoice.type === 'Studio' || selectedVoice.glow;
+
                       return (
-                        <div className="mt-3 bg-surface2/30 rounded-xl p-4 border border-surface2/50 relative overflow-hidden group">
+                        <div className={`mt-3 rounded-xl p-4 border relative overflow-hidden group transition-all ${
+                          isStudio 
+                          ? 'bg-terracotta/10 border-terracotta/30 shadow-[0_0_20px_rgba(231,76,60,0.1)]' 
+                          : 'bg-surface2/30 border-surface2/50'
+                        }`}>
                           <div className="flex items-start gap-3">
-                            <div className="p-2 bg-dark rounded-lg border border-surface2 text-terracotta">
+                            <div className={`p-2 rounded-lg border ${
+                              isStudio ? 'bg-terracotta text-white border-terracotta/50' : 'bg-dark border-surface2 text-terracotta'
+                            }`}>
                               <Mic className="w-4 h-4" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-black text-white uppercase tracking-wider">
-                                  Tier: {selectedVoice.type} ({selectedVoice.tier})
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-black text-white uppercase tracking-wider">
+                                    Tier: {selectedVoice.type} ({selectedVoice.tier})
+                                  </span>
+                                  {isStudio && (
+                                    <span className="text-[8px] font-black bg-white text-terracotta px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+                                      FLAGSHIP
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-[10px] font-bold text-text-muted">Beban:</span>
-                                  <span className="text-[10px] font-black text-terracotta bg-terracotta/10 px-1.5 py-0.5 rounded border border-terracotta/20">
+                                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${
+                                    isStudio 
+                                    ? 'text-white bg-terracotta border-terracotta/20' 
+                                    : 'text-terracotta bg-terracotta/10 border-terracotta/20'
+                                  }`}>
                                     {voiceConfig.tiers[selectedVoice.type] || 1}x Kredit
                                   </span>
                                 </div>
@@ -2063,17 +2119,21 @@ const App = () => {
                                 {selectedVoice.desc}
                               </p>
                               <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-text-muted uppercase tracking-widest bg-dark px-2 py-0.5 rounded border border-surface2">
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
+                                  isStudio ? 'bg-terracotta/20 text-white border-terracotta/30' : 'bg-dark text-text-muted border-surface2'
+                                }`}>
                                   Cocok Untuk:
                                 </span>
-                                <span className="text-[10px] font-bold text-gray-300">
+                                <span className={`text-[10px] font-bold ${isStudio ? 'text-white' : 'text-gray-300'}`}>
                                   {selectedVoice.useCase}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          {/* Subtle decorative glow */}
-                          <div className="absolute -right-4 -top-4 w-24 h-24 bg-terracotta/5 rounded-full blur-2xl group-hover:bg-terracotta/10 transition-all"></div>
+                          {/* Decorative glow */}
+                          <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl transition-all ${
+                            isStudio ? 'bg-terracotta/20 group-hover:bg-terracotta/30' : 'bg-terracotta/5 group-hover:bg-terracotta/10'
+                          }`}></div>
                         </div>
                       );
                     })()}
