@@ -1229,8 +1229,8 @@ const App = () => {
   const handleReferralClick = () => {
     setIsReferralOpen(true);
     if (user) {
-      setLastViewedReferrals(user.valid_referrals);
-      localStorage.setItem("lastViewedReferrals", user.valid_referrals.toString());
+
+
     }
   };
 
@@ -1292,7 +1292,7 @@ const App = () => {
                   >
                     <Gift className="w-4 h-4" /> 
                     Bonus Referral
-                    {user && (user.valid_referrals > lastViewedReferrals || (user.valid_referrals === 1 && lastViewedReferrals === 0)) && (
+                    {user && (user.valid_referrals > 0) && (
                       <span className="absolute -top-1 -right-1 flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-terracotta opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-terracotta"></span>
@@ -1643,34 +1643,12 @@ const App = () => {
                     {user.referral_code}
                   </span>
                 </button>
-                <button
-                  onClick={() =>
-                    user.social_bonus_status === "none" &&
-                    setShowSocialModal(true)
-                  }
-                  disabled={user.social_bonus_status !== "none"}
-                  className={`p-3 rounded-xl border flex justify-between items-center transition-colors border-none text-left ${user.social_bonus_status === "none" ? "bg-dark hover:bg-surface2 border-surface2 cursor-pointer" : "bg-surface/50 border-surface2/50 cursor-not-allowed opacity-70"}`}
-                >
+                <div className="p-3 rounded-xl bg-surface/50 border border-surface2/50 flex justify-between items-center opacity-70">
                   <div className="flex items-center gap-2">
-                    <Share2
-                      className={`w-4 h-4 ${user.social_bonus_status === "none" ? "text-terracotta" : "text-text-muted"}`}
-                    />{" "}
-                    <span
-                      className={`text-sm font-bold ${user.social_bonus_status === "none" ? "text-text" : "text-text-muted"}`}
-                    >
-                      Social Bonus
-                    </span>
+                    <Share2 className="w-4 h-4 text-text-muted" />
+                    <span className="text-sm font-bold text-text-muted">Social Bonus (Soon)</span>
                   </div>
-                  <span
-                    className={`text-xs font-bold ${user.social_bonus_status === "none" ? "text-terracotta animate-pulse" : user.social_bonus_status === "pending" ? "text-yellow-500" : "text-green-500"}`}
-                  >
-                    {user.social_bonus_status === "none"
-                      ? "Klaim 30rb!"
-                      : user.social_bonus_status === "pending"
-                        ? "Pending"
-                        : "Approved"}
-                  </span>
-                </button>
+                </div>
               </div>
             </div>
           )}
