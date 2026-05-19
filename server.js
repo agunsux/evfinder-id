@@ -959,7 +959,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
   app.get("/api/auth/diag", (req, res) => {
     const diag = {
       firebaseAdminInitialized: !!authAdmin,
-      initError: initErrorMsg || (authAdmin ? null : "Backend initialization incomplete or credentials missing."),
+      initError: initErrorMsg || (authAdmin ? "None" : "Backend initialization incomplete or credentials missing."),
       projectId: process.env.FIREBASE_PROJECT_ID || "(missing)",
       hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
       hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,

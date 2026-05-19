@@ -972,12 +972,12 @@ const App = () => {
         const res = await fetch("/api/auth/diag");
         const data = await res.json();
         
-        if (data.firebaseAdminInitialized) {
+        if (data.firebaseAdminInitialized || data.initError === "None") {
           // Server is healthy, clear any server-side init error
           setInitError(null);
         } else if (!user) {
           // Server failed and user is not logged in
-          const serverError = data.initError && data.initError !== "null" 
+          const serverError = data.initError && data.initError !== "null" && data.initError !== "None"
             ? data.initError 
             : "Backend initialization incomplete or credentials missing.";
           
@@ -2809,213 +2809,6 @@ const App = () => {
           </div>
         </section>
 
-        {/* Pronunciation Management Section */}
-        {user && (
-          <section id="pronunciation" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
-            <div className="bg-surface rounded-3xl p-8 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
-              
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                  <h2 className="text-3xl font-black text-text flex items-center gap-3">
-                    <BookOpen className="w-8 h-8 text-terracotta" /> 
-                    Daftar Aturan Pengucapan
-                  </h2>
-                  <p className="text-text-muted mt-2">
-                    Kelola bagaimana AI menyebutkan kata atau istilah khusus Anda.
-                  </p>
-                </div>
-                <div className="bg-surface2 px-4 py-2 rounded-full border border-surface2">
-                  <span className="text-sm font-bold text-terracotta">
-                    {Object.keys(user.pronunciations || {}).length} Aturan Aktif
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Form to add new rule */}
-                <div className="lg:col-span-4 space-y-4">
-                  <div className="bg-dark/50 rounded-2xl p-6 border border-surface2 h-full">
-                    <h3 className="font-bold text-text mb-4 text-sm uppercase tracking-wider">Tambah Aturan Baru</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Kata Asli</label>
-                        <input
-                          type="text"
-                          value={newWord}
-                          onChange={(e) => setNewWord(e.target.value)}
-                          className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none text-sm"
-                          placeholder="Contoh: Shinerva"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Cara Baca</label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={newPronunciation}
-                            onChange={(e) => setNewPronunciation(e.target.value)}
-                            className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none pr-10 text-sm"
-                            placeholder="Contoh: shi ner va"
-                          />
-                          <button 
-                            onClick={() => handleTestPronunciation(newWord, newPronunciation)}
-                            disabled={testLoading}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-surface2 rounded-lg transition-colors text-terracotta disabled:opacity-50 border-none bg-transparent cursor-pointer"
-                            title="Tes suara"
-                          >
-                            {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                          </button>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (newWord.trim() && newPronunciation.trim()) {
-                            handleUpdatePronunciation(newWord.trim(), newPronunciation.trim());
-                            setNewWord("");
-                            setNewPronunciation("");
-                          }
-                        }}
-                        className="w-full bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-none cursor-pointer mt-2"
-                      >
-                        <Plus className="w-4 h-4" /> Simpan Aturan
-                      </button>
-                    </div>
-                    
-                    <div className="mt-8 pt-6 border-t border-surface2">
-                      <h4 className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Tips Cepat</h4>
-                      <div className="space-y-2">
-                        {[
-                          { w: "AI", p: "ey ai" },
-                          { w: "TTS", p: "te te es" }
-                        ].map(tip => (
-                          <div 
-                            key={tip.w}
-                            onClick={() => {setNewWord(tip.w); setNewPronunciation(tip.p);}}
-                            className="flex justify-between items-center text-xs p-2 rounded-lg hover:bg-surface2 cursor-pointer transition-colors border border-transparent hover:border-surface2"
-                          >
-                            <span className="text-text font-bold">{tip.w}</span>
-                            <span className="text-text-muted">→ {tip.p}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* List of existing rules */}
-                <div className="lg:col-span-8">
-                  <div className="bg-dark/30 rounded-2xl p-2 border border-surface2 min-h-[300px] flex flex-col">
-                    <div className="max-h-[500px] overflow-y-auto custom-scrollbar p-2">
-                      {user.pronunciations && Object.keys(user.pronunciations).length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {Object.entries(user.pronunciations).map(([word, pron]) => (
-                            <div key={word} className="flex items-center justify-between bg-dark p-4 rounded-xl border border-surface2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-text font-bold truncate">{word}</span>
-                                <span className="text-terracotta text-xs font-medium truncate">Dibaca: {pron}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleTestPronunciation(word, pron)}
-                                  disabled={testLoading}
-                                  className="text-text-muted hover:text-terracotta transition-colors p-2 hover:bg-surface2 rounded-lg cursor-pointer border-none bg-transparent"
-                                  title="Tes suara"
-                                >
-                                  <Play className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleUpdatePronunciation(word, null)}
-                                  className="text-text-muted hover:text-red-500 transition-colors p-2 hover:bg-surface2 rounded-lg cursor-pointer border-none bg-transparent"
-                                  title="Hapus"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-4">
-                          <div className="w-16 h-16 bg-surface2 rounded-full flex items-center justify-center mb-4">
-                            <BookOpen className="w-8 h-8 text-text-muted" />
-                          </div>
-                          <h4 className="font-bold text-text mb-1">Belum ada aturan</h4>
-                          <p className="text-sm text-text-muted max-w-xs">
-                            Coba tambahkan kata yang sering salah diucapkan oleh AI agar hasilnya lebih sempurna.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Voice Playground Showcase */}
-        <section id="playground" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
-          <VoicePlayground 
-            language={language}
-            setLanguage={handleLanguageChange}
-            generateSample={generateSample}
-            onUpgrade={() => {
-              const element = document.getElementById('pricing');
-              if (element) element.scrollIntoView({ behavior: 'smooth' });
-            }} 
-          />
-        </section>
-
-        {/* Content Packs */}
-        <section
-          id="packs"
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32 relative"
-        >
-          <div className="text-center mb-16">
-            <div className="inline-block bg-terracotta/20 text-terracotta px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-4">
-              {language === 'ID' ? 'Pembaruan Fitur' : 'Feature Update'}
-            </div>
-            <h2 className="text-3xl md:text-4xl font-black mb-4 text-text">
-              {t('nav.packs')} <span className="text-text-muted">({language === 'ID' ? 'Segera Hadir' : 'Coming Soon'})</span>
-            </h2>
-            <p className="text-text-muted mx-auto max-w-2xl">
-              {language === 'ID' 
-                ? 'Template naskah siap pakai dengan gaya bacaan yang sudah dioptimasi AI. Segera hadir untuk membantu produktivitas Anda.' 
-                : 'Ready-to-use script templates with AI-optimized reading styles. Coming soon to help your productivity.'}
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(PACKS[language] || PACKS['ID']).map((pack) => (
-              <div
-                key={pack.id}
-                className={`bg-surface rounded-2xl p-6 border transition-colors flex flex-col items-start relative group opacity-60 ${pack.trending ? "border-terracotta/30 shadow-[0_0_15px_rgba(226,114,91,0.1)]" : "border-surface2"}`}
-              >
-                <div className="flex justify-between w-full mb-4">
-                  <span className="text-xs font-black px-2 py-1 bg-surface2 text-text-muted rounded-md uppercase tracking-widest">
-                    {pack.tag}
-                  </span>
-                  {pack.trending && (
-                    <span className="text-[10px] font-black px-2 py-1 bg-terracotta/50 text-white rounded-md uppercase tracking-widest">
-                      SOON
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xl font-bold mb-2 text-text">{pack.title}</h3>
-                <p className="text-text-muted text-sm mb-6 flex-grow">
-                  {pack.desc}
-                </p>
-                <button
-                  disabled
-                  className="w-full bg-dark/50 border border-gray-700 text-gray-500 font-bold py-2.5 rounded-lg transition-all text-sm cursor-not-allowed"
-                >
-                  {language === 'ID' ? 'Aktifkan Paket' : 'Activate Pack'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* Pricing Section */}
         <section
           id="pricing"
@@ -3045,40 +2838,34 @@ const App = () => {
             </div>
 
             {/* Supported Payment Methods */}
-            <div className="flex flex-wrap justify-center items-center gap-6 mb-12 opacity-70 hover:opacity-100 transition-opacity">
-               <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mr-2">Metode Pembayaran:</div>
-               <div className="flex items-center gap-4 grayscale hover:grayscale-0 transition-all">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-blue-400">DANA</span>
+            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mb-16 px-6 py-10 bg-surface2/20 rounded-[2.5rem] border border-surface2/50 shadow-2xl">
+               <div className="text-xs font-black text-text-muted uppercase tracking-[0.2em] w-full text-center mb-4">Pilihan Pembayaran Terlengkap:</div>
+               <div className="flex flex-wrap justify-center items-center gap-x-10 gap-y-6">
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-black text-blue-400 tracking-tighter">DANA</span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-orange-500">ShopeePay</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-black text-orange-500 tracking-tighter">ShopeePay</span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-purple-600">OVO</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-black text-purple-600 tracking-tighter">OVO</span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-blue-600">GoPay</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-black text-blue-600 tracking-tighter">GoPay</span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-red-600">LinkAja</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-black text-red-600 tracking-tighter">LinkAja</span>
                   </div>
-                  <div className="h-4 w-[1px] bg-surface2"></div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-text font-serif">QRIS</span>
+                  <div className="h-8 w-[1px] bg-surface2 hidden md:block"></div>
+                  <div className="flex flex-col items-center px-4 py-2 bg-white rounded-lg">
+                    <span className="text-2xl font-black text-black font-serif italic">QRIS</span>
                   </div>
-                  <div className="h-4 w-[1px] bg-surface2"></div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-blue-800">VA BCA</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-orange-600">VA BNI</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-blue-500">VA BRI</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-black text-blue-900 font-mono">Mandiri</span>
+                  <div className="h-8 w-[1px] bg-surface2 hidden md:block"></div>
+                  <div className="flex flex-wrap justify-center gap-8">
+                    <span className="text-sm font-black text-blue-800">VA BCA</span>
+                    <span className="text-sm font-black text-orange-600">VA BNI</span>
+                    <span className="text-sm font-black text-blue-500">VA BRI</span>
+                    <span className="text-sm font-black text-blue-900 font-mono">Mandiri</span>
                   </div>
                </div>
             </div>
@@ -3332,6 +3119,213 @@ const App = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Pronunciation Management Section */}
+        {user && (
+          <section id="pronunciation" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
+            <div className="bg-surface rounded-3xl p-8 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
+              
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                  <h2 className="text-3xl font-black text-text flex items-center gap-3">
+                    <BookOpen className="w-8 h-8 text-terracotta" /> 
+                    Daftar Aturan Pengucapan
+                  </h2>
+                  <p className="text-text-muted mt-2">
+                    Kelola bagaimana AI menyebutkan kata atau istilah khusus Anda.
+                  </p>
+                </div>
+                <div className="bg-surface2 px-4 py-2 rounded-full border border-surface2">
+                  <span className="text-sm font-bold text-terracotta">
+                    {Object.keys(user.pronunciations || {}).length} Aturan Aktif
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Form to add new rule */}
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="bg-dark/50 rounded-2xl p-6 border border-surface2 h-full">
+                    <h3 className="font-bold text-text mb-4 text-sm uppercase tracking-wider">Tambah Aturan Baru</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Kata Asli</label>
+                        <input
+                          type="text"
+                          value={newWord}
+                          onChange={(e) => setNewWord(e.target.value)}
+                          className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none text-sm"
+                          placeholder="Contoh: Shinerva"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Cara Baca</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={newPronunciation}
+                            onChange={(e) => setNewPronunciation(e.target.value)}
+                            className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none pr-10 text-sm"
+                            placeholder="Contoh: shi ner va"
+                          />
+                          <button 
+                            onClick={() => handleTestPronunciation(newWord, newPronunciation)}
+                            disabled={testLoading}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-surface2 rounded-lg transition-colors text-terracotta disabled:opacity-50 border-none bg-transparent cursor-pointer"
+                            title="Tes suara"
+                          >
+                            {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (newWord.trim() && newPronunciation.trim()) {
+                            handleUpdatePronunciation(newWord.trim(), newPronunciation.trim());
+                            setNewWord("");
+                            setNewPronunciation("");
+                          }
+                        }}
+                        className="w-full bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-none cursor-pointer mt-2"
+                      >
+                        <Plus className="w-4 h-4" /> Simpan Aturan
+                      </button>
+                    </div>
+                    
+                    <div className="mt-8 pt-6 border-t border-surface2">
+                      <h4 className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Tips Cepat</h4>
+                      <div className="space-y-2">
+                        {[
+                          { w: "AI", p: "ey ai" },
+                          { w: "TTS", p: "te te es" }
+                        ].map(tip => (
+                          <div 
+                            key={tip.w}
+                            onClick={() => {setNewWord(tip.w); setNewPronunciation(tip.p);}}
+                            className="flex justify-between items-center text-xs p-2 rounded-lg hover:bg-surface2 cursor-pointer transition-colors border border-transparent hover:border-surface2"
+                          >
+                            <span className="text-text font-bold">{tip.w}</span>
+                            <span className="text-text-muted">→ {tip.p}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* List of existing rules */}
+                <div className="lg:col-span-8">
+                  <div className="bg-dark/30 rounded-2xl p-2 border border-surface2 min-h-[300px] flex flex-col">
+                    <div className="max-h-[500px] overflow-y-auto custom-scrollbar p-2">
+                      {user.pronunciations && Object.keys(user.pronunciations).length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {Object.entries(user.pronunciations).map(([word, pron]) => (
+                            <div key={word} className="flex items-center justify-between bg-dark p-4 rounded-xl border border-surface2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-text font-bold truncate">{word}</span>
+                                <span className="text-terracotta text-xs font-medium truncate">Dibaca: {pron}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleTestPronunciation(word, pron)}
+                                  disabled={testLoading}
+                                  className="text-text-muted hover:text-terracotta transition-colors p-2 hover:bg-surface2 rounded-lg cursor-pointer border-none bg-transparent"
+                                  title="Tes suara"
+                                >
+                                  <Play className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdatePronunciation(word, null)}
+                                  className="text-text-muted hover:text-red-500 transition-colors p-2 hover:bg-surface2 rounded-lg cursor-pointer border-none bg-transparent"
+                                  title="Hapus"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-4">
+                          <div className="w-16 h-16 bg-surface2 rounded-full flex items-center justify-center mb-4">
+                            <BookOpen className="w-8 h-8 text-text-muted" />
+                          </div>
+                          <h4 className="font-bold text-text mb-1">Belum ada aturan</h4>
+                          <p className="text-sm text-text-muted max-w-xs">
+                            Coba tambahkan kata yang sering salah diucapkan oleh AI agar hasilnya lebih sempurna.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Voice Playground Showcase */}
+        <section id="playground" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
+          <VoicePlayground 
+            language={language}
+            setLanguage={handleLanguageChange}
+            generateSample={generateSample}
+            onUpgrade={() => {
+              const element = document.getElementById('pricing');
+              if (element) element.scrollIntoView({ behavior: 'smooth' });
+            }} 
+          />
+        </section>
+
+        {/* Content Packs */}
+        <section
+          id="packs"
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32 relative"
+        >
+          <div className="text-center mb-16">
+            <div className="inline-block bg-terracotta/20 text-terracotta px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-4">
+              {language === 'ID' ? 'Pembaruan Fitur' : 'Feature Update'}
+            </div>
+            <h2 className="text-3xl md:text-4xl font-black mb-4 text-text">
+              {t('nav.packs')} <span className="text-text-muted">({language === 'ID' ? 'Segera Hadir' : 'Coming Soon'})</span>
+            </h2>
+            <p className="text-text-muted mx-auto max-w-2xl">
+              {language === 'ID' 
+                ? 'Template naskah siap pakai dengan gaya bacaan yang sudah dioptimasi AI. Segera hadir untuk membantu produktivitas Anda.' 
+                : 'Ready-to-use script templates with AI-optimized reading styles. Coming soon to help your productivity.'}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(PACKS[language] || PACKS['ID']).map((pack) => (
+              <div
+                key={pack.id}
+                className={`bg-surface rounded-2xl p-6 border transition-colors flex flex-col items-start relative group opacity-60 ${pack.trending ? "border-terracotta/30 shadow-[0_0_15px_rgba(226,114,91,0.1)]" : "border-surface2"}`}
+              >
+                <div className="flex justify-between w-full mb-4">
+                  <span className="text-xs font-black px-2 py-1 bg-surface2 text-text-muted rounded-md uppercase tracking-widest">
+                    {pack.tag}
+                  </span>
+                  {pack.trending && (
+                    <span className="text-[10px] font-black px-2 py-1 bg-terracotta/50 text-white rounded-md uppercase tracking-widest">
+                      SOON
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-text">{pack.title}</h3>
+                <p className="text-text-muted text-sm mb-6 flex-grow">
+                  {pack.desc}
+                </p>
+                <button
+                  disabled
+                  className="w-full bg-dark/50 border border-gray-700 text-gray-500 font-bold py-2.5 rounded-lg transition-all text-sm cursor-not-allowed"
+                >
+                  {language === 'ID' ? 'Aktifkan Paket' : 'Activate Pack'}
+                </button>
+              </div>
+            ))}
           </div>
         </section>
 
