@@ -154,18 +154,18 @@ const VOICES = {
     ],
     "Pulse (Ekspresif)": [
       { 
-        id: "id-ID-Neural2-A", 
+        id: "id-ID-Wavenet-A", 
         name: "Siti (Emotional Storytelling)", 
-        type: "Neural2", 
+        type: "Wavenet", 
         premium: true, 
         tier: "STARTER",
         desc: "Suara emosional dengan penekanan pada kata-kata penting. Sangat cocok untuk narasi.",
         useCase: "Narasi YouTube & Storytelling"
       },
       { 
-        id: "id-ID-Neural2-B", 
+        id: "id-ID-Wavenet-B", 
         name: "Agus (Dynamic Creator)", 
-        type: "Neural2", 
+        type: "Wavenet", 
         premium: true, 
         tier: "STARTER",
         desc: "Energik dan punchy. Dibangun khusus untuk video pendek yang butuh perhatian instan.",
@@ -174,7 +174,7 @@ const VOICES = {
     ],
     "Flow (Cinematic)": [
       { 
-        id: "id-ID-Wavenet-A", 
+        id: "id-ID-Wavenet-C", 
         name: "Lestari (Smooth & Elegant)", 
         type: "Wavenet", 
         premium: true, 
@@ -183,7 +183,7 @@ const VOICES = {
         useCase: "Audiobook & Meditasi"
       },
       { 
-        id: "id-ID-Wavenet-B", 
+        id: "id-ID-Wavenet-D", 
         name: "Joko (Dramatic Deep)", 
         type: "Wavenet", 
         premium: true, 
@@ -191,88 +191,27 @@ const VOICES = {
         desc: "Deep dan berwibawa, ideal untuk narasi dokumenter intens.",
         useCase: "Misteri & Dokumenter"
       },
-      { 
-        id: "id-ID-Wavenet-C", 
-        name: "Putri (Sleek Corporate)", 
-        type: "Wavenet", 
-        premium: true, 
-        tier: "PRODUKTIF",
-        desc: "Modern dan meyakinkan untuk branding brand premium.",
-        useCase: "Iklan & Presentasi"
-      },
     ],
     "Aura Flagship (Aspirational)": [
       { 
-        id: "Charon", 
-        name: "Eko (Human Soul)", 
-        type: "Gemini", 
+        id: "id-ID-Wavenet-A", 
+        name: "Eko (Curated Soul)", 
+        type: "Wavenet", 
         premium: true, 
         glow: true, 
         tier: "BISNIS",
-        desc: "Teknologi Aura kami yang paling canggih. Tekstur suara yang tidak dapat dibedakan dari manusia.",
+        desc: "Tekstur emosi yang dioptimalkan untuk narasi sinematik.",
         useCase: "Iklan High-End & Cinematic"
       },
       { 
-        id: "Kore", 
-        name: "Maya (Emotional Breath)", 
-        type: "Gemini", 
+        id: "id-ID-Wavenet-C", 
+        name: "Maya (Curated Breath)", 
+        type: "Wavenet", 
         premium: true, 
         glow: true, 
         tier: "BISNIS",
         desc: "Penuh nuansa emosi halus, napas alami, dan kejernihan sinematik.",
         useCase: "Berita & Konten Storytelling"
-      },
-    ],
-    "Aura Cinema (Enterprise)": [
-      { 
-        id: "Puck", 
-        name: "Puck (Viral Quality)", 
-        type: "Gemini", 
-        premium: true, 
-        glow: true, 
-        tier: "ENTERPRISE",
-        desc: "Viral-quality narration with cinematic depth.",
-        useCase: "Film & Narasi Epik"
-      },
-      { 
-        id: "Charon", 
-        name: "Charon (Atmospheric Aura)", 
-        type: "Gemini", 
-        premium: true, 
-        glow: true, 
-        tier: "ENTERPRISE",
-        desc: "Emotionally layered and atmospheric human-like delivery.",
-        useCase: "Storytelling & Dokumenter"
-      },
-      { 
-        id: "Kore", 
-        name: "Kore (Radiant Aura)", 
-        type: "Gemini", 
-        premium: true, 
-        glow: true, 
-        tier: "ENTERPRISE",
-        desc: "Bright, engaging, and ultra-natural presence.",
-        useCase: "Konten Anak & Marketing"
-      },
-      { 
-        id: "Fenrir", 
-        name: "Fenrir (Rugged & Bold)", 
-        type: "Gemini", 
-        premium: true, 
-        glow: true, 
-        tier: "ENTERPRISE",
-        desc: "Kasar, berani, dan penuh karakter.",
-        useCase: "Gaming & Brand Maskulin"
-      },
-      { 
-        id: "Zephyr", 
-        name: "Zephyr (Soft & Airy)", 
-        type: "Gemini", 
-        premium: true, 
-        glow: true, 
-        tier: "ENTERPRISE",
-        desc: "Lembut, menenangkan, dan ringan.",
-        useCase: "Relaksasi & Lifestyle"
       },
     ],
   },
@@ -297,18 +236,18 @@ const VOICES = {
     ],
     "Pulse (Starter/Kreator)": [
       { 
-        id: "en-US-Neural2-F", 
+        id: "en-US-Wavenet-A", 
         name: "Sarah (Expressive)", 
-        type: "Neural2", 
+        type: "Wavenet", 
         premium: true, 
         tier: "STARTER",
         desc: "Emotionally rich English female narration.",
         useCase: "YouTube & Storytelling"
       },
       { 
-        id: "en-US-Neural2-J", 
+        id: "en-US-Wavenet-B", 
         name: "James (Dynamic)", 
-        type: "Neural2", 
+        type: "Wavenet", 
         premium: true, 
         tier: "STARTER",
         desc: "Engaging English male voice.",
@@ -337,9 +276,9 @@ const VOICES = {
     ],
     "Aura International": [
       { 
-        id: "Zephyr", 
-        name: "Zephyr (US Aura)", 
-        type: "Gemini", 
+        id: "en-US-Wavenet-I", 
+        name: "Arthur (London Aura)", 
+        type: "Wavenet", 
         premium: true, 
         glow: true, 
         tier: "BISNIS",
@@ -1071,8 +1010,7 @@ const App = () => {
         const generationTime = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`[TTS] Synthesis successful in ${generationTime}s. Audio Size: ${Math.round(data.audioContent.length / 1024)} KB`);
         
-        const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
-        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
+        const mimeType = 'audio/mpeg';
         
         let url;
         try {

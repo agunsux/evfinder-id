@@ -36,15 +36,6 @@ const clean = (val) => {
 
 const apiKey = clean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
 
-const genAI = new GoogleGenAI({
-  apiKey: apiKey,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
-
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
@@ -53,9 +44,7 @@ let voiceConfig = {
   tiers: {
     'Standard': 1,
     'Wavenet': 1,
-    'Neural2': 4,
-    'Studio': 40,
-    'Chirp': 8
+    'Studio': 10
   },
   limits: {
     free_request_chars: 500,
@@ -794,12 +783,11 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
 
       const tier = user.tier || 'FREE';
       
-      // Voice Authorization - SMART VOICE ROUTING
+      // Voice Authorization - STABLE VOICE ROUTING
       let actualVoice = voice || 'id-ID-Standard-A';
       
-      const isNeuralVoice = actualVoice.includes('Neural2');
       const isWavenetVoice = actualVoice.includes('Wavenet');
-      const isStudioVoice = actualVoice.includes('Studio') || actualVoice.includes('Chirp') || isGeminiVoice;
+      const isStudioVoice = actualVoice.includes('Studio');
 
       const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
       const userTierIndex = tierOrder.indexOf(tier);
@@ -808,18 +796,14 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         if (isStudioVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
           return res.status(403).json({ error: 'Suara Premium ini hanya tersedia untuk paket BISNIS ke atas. Silakan upgrade paket Anda.' });
         }
-        if (isWavenetVoice && userTierIndex < tierOrder.indexOf('PRODUKTIF')) {
-          return res.status(403).json({ error: 'Suara WaveNet hanya tersedia untuk paket PRODUKTIF ke atas. Silakan upgrade paket Anda.' });
-        }
-        if (isNeuralVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
-          return res.status(403).json({ error: 'Suara Neural2 hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
+        if (isWavenetVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
+          return res.status(403).json({ error: 'Suara ini hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
         }
       }
 
       // Multiplier logic
       let voiceTierName = 'Standard';
       if (isWavenetVoice) voiceTierName = 'Wavenet';
-      else if (isNeuralVoice) voiceTierName = 'Neural2';
       else if (isStudioVoice) voiceTierName = 'Studio';
 
       const multiplier = voiceConfig.tiers[voiceTierName] || 1;
@@ -833,102 +817,65 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       }
 
       // Rungu Engine logic
-      let modifiedText = text
+      const modifiedText = text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&apos;");
 
-      if (isGeminiVoice) {
-        // Prepare text for Gemini (strip SSML but keep expressives)
-        modifiedText = text; // Gemini doesn't need SSML escaping like this
-      } else {
-        // Interpret Expressive Prosody Cues for SSML
-        modifiedText = modifiedText
-          .replace(/\[semangat\]/gi, '<prosody rate="1.1" pitch="+2st">')
-          .replace(/\[\/semangat\]/gi, '</prosody>')
-          .replace(/\[sedih\]/gi, '<prosody rate="0.85" pitch="-2st" volume="soft">')
-          .replace(/\[\/sedih\]/gi, '</prosody>')
-          .replace(/\[serius\]/gi, '<prosody rate="0.95" pitch="-1st" volume="medium">')
-          .replace(/\[\/serius\]/gi, '</prosody>')
-          .replace(/\[bisik\]/gi, '<prosody volume="x-soft" rate="0.9">')
-          .replace(/\[\/bisik\]/gi, '</prosody>')
-          .replace(/\[teriak\]/gi, '<emphasis level="strong"><prosody volume="loud" pitch="+3st">')
-          .replace(/\[\/teriak\]/gi, '</prosody></emphasis>');
-      }
+      // Interpret Expressive Prosody Cues for SSML
+      const expressiveText = modifiedText
+        .replace(/\[semangat\]/gi, '<prosody rate="1.1" pitch="+2st">')
+        .replace(/\[\/semangat\]/gi, '</prosody>')
+        .replace(/\[sedih\]/gi, '<prosody rate="0.85" pitch="-2st" volume="soft">')
+        .replace(/\[\/sedih\]/gi, '</prosody>')
+        .replace(/\[serius\]/gi, '<prosody rate="0.95" pitch="-1st" volume="medium">')
+        .replace(/\[\/serius\]/gi, '</prosody>')
+        .replace(/\[bisik\]/gi, '<prosody volume="x-soft" rate="0.9">')
+        .replace(/\[\/bisik\]/gi, '</prosody>')
+        .replace(/\[teriak\]/gi, '<emphasis level="strong"><prosody volume="loud" pitch="+3st">')
+        .replace(/\[\/teriak\]/gi, '</prosody></emphasis>');
 
       // Pronunciation Global Dictionary
       const globalPhonetics = { "AI": "ey ay", "IT": "ay ti", "Shinerva": "shi ner va", "RUNGU": "ru ngu" };
       const allPronunciations = { ...globalPhonetics, ...(user.pronunciations || {}) };
       
-      let processedText = modifiedText;
-      if (!isGeminiVoice) {
-         // Apply pronunciation only for SSML path for now to avoid breaking Gemini's natural engine
-         Object.entries(allPronunciations).forEach(([word, pron]) => {
-           const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-           const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
-           processedText = processedText.replace(regex, pron);
-         });
-      }
+      let processedText = expressiveText;
+      Object.entries(allPronunciations).forEach(([word, pron]) => {
+        const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+        processedText = processedText.replace(regex, pron);
+      });
 
-      let finalAudioContent = "";
-      if (isGeminiVoice) {
-        try {
-          // Use Gemini 1.5 Flash for reliable multimodal generation
-          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-          const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: processedText }] }],
-            generationConfig: {
-              responseModalities: ["audio"],
-              speechConfig: {
-                voiceConfig: {
-                  prebuiltVoiceConfig: { voiceName: voice },
-                },
-              },
-            },
-          });
-          const pcmBase64 = result?.response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-          if (!pcmBase64) {
-            console.error(`[Gemini TTS] No audio data returned for voice: ${voice}`);
-            throw new Error(`Gemini TTS (${voice}) returned no audio data. Please ensure your API key supports multimodal output.`);
+      const ssmlText = `<speak>${processedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva titik ey ay.</prosody>' : ''}</speak>`;
+      const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
+      
+      console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode})`);
+      
+      const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { ssml: ssmlText },
+          voice: { languageCode: languageCode, name: actualVoice },
+          audioConfig: { 
+            audioEncoding: 'MP3', 
+            speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
           }
-          finalAudioContent = pcmToWav(pcmBase64, 24000);
-          console.log(`[Gemini TTS] Success: Generated audio for ${voice}`);
-        } catch (geminiErr) {
-          console.error(`[Gemini TTS] Error:`, geminiErr.message);
-          throw new Error(`Gagal memproses suara Aura (${voice}): ${geminiErr.message}`);
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        console.error(`[Google TTS] Error Status ${response.status}:`, data.error);
+        if (data.error?.message?.includes("API key not valid")) {
+            throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
         }
-      } else {
-        const ssmlText = `<speak>${processedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva dot ai di.</prosody>' : ''}</speak>`;
-        const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
-        
-        console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode})`);
-        
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            input: { ssml: ssmlText },
-            voice: { languageCode: languageCode, name: actualVoice },
-            audioConfig: { 
-              audioEncoding: 'MP3', 
-              speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
-            }
-          })
-        });
-        
-        const data = await response.json();
-        if (!response.ok) {
-          console.error(`[Google TTS] Error Status ${response.status}:`, data.error);
-          if (data.error?.message?.includes("API key not valid")) {
-             throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
-          }
-          throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
-        }
-        finalAudioContent = data.audioContent;
-        console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}`);
+        throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
       }
+      const finalAudioContent = data.audioContent;
+      console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}`);
 
       if (!isSample) {
         user.used_chars += totalCharCost;
@@ -973,7 +920,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
   app.get("/api/auth/diag", (req, res) => {
     const diag = {
       firebaseAdminInitialized: !!authAdmin,
-      initError: initErrorMsg || "",
+      initError: initErrorMsg || (authAdmin ? "" : "Backend initialization incomplete or credentials missing."),
       projectId: process.env.FIREBASE_PROJECT_ID || "(missing)",
       hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
       hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
