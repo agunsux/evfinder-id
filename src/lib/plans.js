@@ -33,5 +33,26 @@ export const PLANS = {
     credits: 1500000,
     type: "subscription",
     tier: "BISNIS"
+  },
+  TOPUP_RECEH: {
+    id: "topup_receh",
+    name: "Paket Receh",
+    price: 25000,
+    credits: 60000,
+    type: "topup"
+  },
+  TOPUP_AMAN: {
+    id: "topup_aman",
+    name: "Paket Aman",
+    price: 75000,
+    credits: 200000,
+    type: "topup"
+  },
+  TOPUP_DARURAT: {
+    id: "topup_darurat",
+    name: "Paket Darurat Bisnis",
+    price: 150000,
+    credits: 500000,
+    type: "topup"
   }
 };

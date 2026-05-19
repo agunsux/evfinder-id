@@ -17,33 +17,124 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { PLAYGROUND_VOICES } from "../lib/voicePlaygroundData";
 
-const VoicePlayground = ({ onUpgrade }) => {
-  const [activeTierIdx, setActiveTierIdx] = useState(3); // Start with Studio (Flagship)
+const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
+  const [activeTierIdx, setActiveTierIdx] = useState(0); 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null); // id of playing sample
   const [progress, setProgress] = useState({}); // { id: progress_percent }
+  const [loadedUrls, setLoadedUrls] = useState({});
+  const [loadingIds, setLoadingIds] = useState({});
   
   const audioRefs = useRef({});
 
-  const activeTier = PLAYGROUND_VOICES[activeTierIdx];
+  const t = (key) => {
+    const translations = {
+      ID: {
+        title: "Voice Playground",
+        subtitle: "Eksplorasi kualitas suara AI terbaik kami dalam berbagai bahasa. Dengar perbedaannya dan pilih karakter yang paling cocok.",
+        upgrade: "Upgrade Sekarang",
+        tech: "Pilih Teknologi",
+        variants: "Varian Suara",
+        quality_title_aura: "Kualitas Flagship (Segera Hadir)",
+        quality_desc_aura: "Aura Voice menggunakan pemrosesan audio tingkat lanjut untuk menghasilkan nuansa emosi, slang perkotaan, dan dinamika bicara yang tidak bisa dibedakan dengan manusia asli.",
+        quality_title_pulse: "Teknologi Pulse (Segera Hadir)",
+        quality_desc_pulse: "Pulse Voice memberikan ekspresi emosional yang mendalam dan intonasi yang dinamis untuk konten video pendek serta storytelling yang memikat.",
+        quality_cta: "Segera hadir untuk semua kreator.",
+        join: "Bergabung dengan",
+        creators: "2.5k+ Kreator",
+        upgraded: "yang sudah upgrade.",
+        pricing: "Lihat Paket Harga",
+        activate_aura: "Daftar Tunggu Aura Premium",
+        activate_pulse: "Daftar Tunggu Pulse Pro",
+        coming_soon: "Segera Hadir"
+      },
+      EN: {
+        title: "Voice Playground",
+        subtitle: "Explore our best AI voices across multiple languages. Hear the difference and choose your perfect character.",
+        upgrade: "Upgrade Now",
+        tech: "Select Technology",
+        variants: "Voice Variants",
+        quality_title_aura: "Flagship Quality (Coming Soon)",
+        quality_desc_aura: "Aura Voice uses advanced audio processing to generate emotional nuances, urban slang, and speech dynamics indistinguishable from real humans.",
+        quality_title_pulse: "Pulse Technology (Coming Soon)",
+        quality_desc_pulse: "Pulse Voice delivers deep emotional expressions and dynamic intonations for short video content and engaging storytelling.",
+        quality_cta: "Coming soon for all creators.",
+        join: "Join over",
+        creators: "2.5k+ Creators",
+        upgraded: "who have already upgraded.",
+        pricing: "View Pricing Plans",
+        activate_aura: "Aura Premium Waitlist",
+        activate_pulse: "Pulse Pro Waitlist",
+        coming_soon: "Coming Soon"
+      }
+    };
+    return translations[language][key] || translations['ID'][key];
+  };
+
+  const currentVoices = PLAYGROUND_VOICES[language] || PLAYGROUND_VOICES["ID"];
+  const activeTier = currentVoices[activeTierIdx] || currentVoices[0];
   const activeCategory = activeTier.categories[activeCategoryIdx] || activeTier.categories[0];
 
-  const togglePlay = (sample) => {
-    const audio = audioRefs.current[sample.id];
+  // Reset indices when language changes to avoid out of bounds
+  useEffect(() => {
+    setActiveTierIdx(0);
+    setActiveCategoryIdx(0);
+    if (currentlyPlaying) {
+      audioRefs.current[currentlyPlaying]?.pause();
+      setCurrentlyPlaying(null);
+    }
+  }, [language]);
+
+  const togglePlay = async (sample) => {
+    if (currentlyPlaying === sample.id) {
+      audioRefs.current[sample.id]?.pause();
+      setCurrentlyPlaying(null);
+      return;
+    }
+
+    // Stop others
+    if (currentlyPlaying && audioRefs.current[currentlyPlaying]) {
+      audioRefs.current[currentlyPlaying].pause();
+      audioRefs.current[currentlyPlaying].currentTime = 0;
+    }
+
+    let audio = audioRefs.current[sample.id];
     if (!audio) return;
 
-    if (currentlyPlaying === sample.id) {
-      audio.pause();
-      setCurrentlyPlaying(null);
-    } else {
-      // Stop others
-      if (currentlyPlaying && audioRefs.current[currentlyPlaying]) {
-        audioRefs.current[currentlyPlaying].pause();
-        audioRefs.current[currentlyPlaying].currentTime = 0;
+    // Proactively generate if URL is missing or suspected dead
+    if ((!audio.src || audio.src.includes('storage.googleapis.com')) && generateSample && !loadedUrls[sample.id]) {
+      setLoadingIds(prev => ({ ...prev, [sample.id]: true }));
+      try {
+        const newUrl = await generateSample(sample.script, sample.voiceId);
+        if (newUrl) {
+          setLoadedUrls(prev => ({ ...prev, [sample.id]: newUrl }));
+          audio.src = newUrl;
+          audio.load();
+        }
+      } catch (err) {
+        console.error("Failed to generate sample voice", err);
+      } finally {
+        setLoadingIds(prev => ({ ...prev, [sample.id]: false }));
       }
-      
-      audio.play().catch(e => console.error("Audio playback failed", e));
+    }
+
+    try {
+      await audio.play();
       setCurrentlyPlaying(sample.id);
+    } catch (e) {
+      console.error("Audio playback failed", e);
+      // If playback failed, try generating one last time if we haven't already
+      if (generateSample && !loadedUrls[sample.id]) {
+        setLoadingIds(prev => ({ ...prev, [sample.id]: true }));
+        const newUrl = await generateSample(sample.script, sample.voiceId);
+        setLoadingIds(prev => ({ ...prev, [sample.id]: false }));
+        if (newUrl) {
+          setLoadedUrls(prev => ({ ...prev, [sample.id]: newUrl }));
+          audio.src = newUrl;
+          audio.load();
+          audio.play().then(() => setCurrentlyPlaying(sample.id)).catch(err => console.error("Final play attempt failed", err));
+        }
+      }
     }
   };
 
@@ -62,10 +153,10 @@ const VoicePlayground = ({ onUpgrade }) => {
 
   const getTierIcon = (tier) => {
     switch (tier.toLowerCase()) {
-      case 'standard': return <Mic2 className="w-4 h-4" />;
-      case 'wavenet': return <Ghost className="w-4 h-4" />;
-      case 'neural2': return <TrendingUp className="w-4 h-4" />;
-      case 'studio': return <Sparkles className="w-4 h-4" />;
+      case 'basic': return <Mic2 className="w-4 h-4" />;
+      case 'flow': return <Ghost className="w-4 h-4" />;
+      case 'pulse': return <TrendingUp className="w-4 h-4" />;
+      case 'aura': return <Sparkles className="w-4 h-4" />;
       default: return <Volume2 className="w-4 h-4" />;
     }
   };
@@ -75,19 +166,21 @@ const VoicePlayground = ({ onUpgrade }) => {
       {/* Header */}
       <div className="p-8 border-b border-surface2 bg-gradient-to-br from-surface to-dark">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h2 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
-              Voice Playground <Sparkles className="text-terracotta w-6 h-6 animate-pulse" />
-            </h2>
-            <p className="text-gray-400 mt-2 text-sm max-w-xl font-medium leading-relaxed">
-              Eksplorasi kualitas suara AI terbaik kami. Dengar perbedaannya dan pilih karakter suara yang paling cocok untuk konten viral Anda.
-            </p>
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+            <div>
+              <h2 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
+                {t('title')} <Sparkles className="text-terracotta w-6 h-6 animate-pulse" />
+              </h2>
+              <p className="text-gray-400 mt-2 text-sm max-w-xl font-medium leading-relaxed">
+                {t('subtitle')}
+              </p>
+            </div>
           </div>
           <button 
              onClick={onUpgrade}
              className="bg-white text-black px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"
           >
-            Upgrade Now <ArrowRight className="w-4 h-4" />
+            {t('upgrade')} <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -95,8 +188,8 @@ const VoicePlayground = ({ onUpgrade }) => {
       <div className="flex flex-col lg:flex-row min-h-[600px]">
         {/* Tier Sidebar */}
         <div className="w-full lg:w-72 bg-surface/30 border-r border-surface2 p-6 space-y-3">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 px-2">Pilih Teknologi</p>
-          {PLAYGROUND_VOICES.map((tier, idx) => (
+          <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 px-2">{t('tech')}</p>
+          {currentVoices.map((tier, idx) => (
             <button
               key={tier.tier}
               onClick={() => {
@@ -119,7 +212,7 @@ const VoicePlayground = ({ onUpgrade }) => {
                 </div>
                 <div className="text-left">
                   <p className={`font-bold text-sm ${activeTierIdx === idx ? 'text-white' : 'text-gray-400'}`}>{tier.tier}</p>
-                  <p className="text-[10px] text-gray-500 font-medium">{tier.voices.length} Varian Suara</p>
+                  <p className="text-[10px] text-gray-500 font-medium">{(tier.tier === 'Aura' || tier.tier === 'Pulse') ? t('coming_soon') : `${tier.voices.length} ${t('variants')}`}</p>
                 </div>
               </div>
               <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
@@ -135,20 +228,49 @@ const VoicePlayground = ({ onUpgrade }) => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 p-8 bg-dark/20">
+        <div className="flex-1 p-8 bg-dark/20 relative">
+          {(activeTier.tier === 'Aura' || activeTier.tier === 'Pulse') && (
+            <div className="absolute inset-0 z-10 bg-dark/60 backdrop-blur-sm flex items-center justify-center p-8 text-center">
+              <div className="max-w-md">
+                <div className="w-20 h-20 bg-terracotta/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-terracotta/30">
+                  {activeTier.tier === 'Aura' ? <Sparkles className="w-10 h-10 text-terracotta animate-pulse" /> : <TrendingUp className="w-10 h-10 text-terracotta animate-pulse" />}
+                </div>
+                <h3 className="text-2xl font-black text-white mb-4">{activeTier.tier === 'Aura' ? t('quality_title_aura') : t('quality_title_pulse')}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed mb-8">
+                  {activeTier.tier === 'Aura' ? t('quality_desc_aura') : t('quality_desc_pulse')}
+                </p>
+                <button 
+                  onClick={onUpgrade}
+                  className="bg-terracotta text-white px-8 py-3 rounded-xl font-black text-sm"
+                >
+                  {activeTier.tier === 'Aura' ? t('activate_aura') : t('activate_pulse')}
+                </button>
+              </div>
+            </div>
+          )}
           {/* Categories Tab */}
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-3 mb-8">
             {activeTier.categories.map((cat, idx) => (
               <button
                 key={cat.slug}
                 onClick={() => setActiveCategoryIdx(idx)}
-                className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all border ${
+                className={`relative px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all border overflow-hidden group ${
                   activeCategoryIdx === idx 
-                  ? 'bg-terracotta text-white border-terracotta shadow-[0_4px_12px_rgba(231,76,60,0.3)]' 
-                  : 'bg-surface2/50 text-gray-400 border-surface2 hover:border-gray-600'
+                  ? 'text-white border-terracotta shadow-[0_8px_25px_rgba(226,114,91,0.4)]' 
+                  : 'text-gray-400 border-surface2/60 hover:text-white hover:border-terracotta/50 bg-surface2/20 backdrop-blur-sm'
                 }`}
               >
-                {cat.name}
+                {activeCategoryIdx === idx && (
+                  <motion.div 
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-terracotta z-[-1]"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  {cat.name}
+                  {activeCategoryIdx === idx && <div className="w-1 h-1 rounded-full bg-white animate-pulse" />}
+                </span>
               </button>
             ))}
           </div>
@@ -177,11 +299,14 @@ const VoicePlayground = ({ onUpgrade }) => {
                 >
                   {/* Audio Element (Hidden) */}
                   <audio
+                    key={loadedUrls[sample.id] || sample.url}
                     ref={el => audioRefs.current[sample.id] = el}
-                    src={sample.url}
                     onTimeUpdate={() => handleTimeUpdate(sample.id)}
                     onEnded={() => handleEnded(sample.id)}
-                  />
+                    className="hidden"
+                  >
+                    <source src={loadedUrls[sample.id] || sample.url} type="audio/mpeg" />
+                  </audio>
 
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -207,13 +332,22 @@ const VoicePlayground = ({ onUpgrade }) => {
                     </div>
                     <button 
                       onClick={() => togglePlay(sample)}
+                      disabled={loadingIds[sample.id]}
                       className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
                         currentlyPlaying === sample.id 
                         ? 'bg-terracotta text-white scale-110' 
+                        : loadingIds[sample.id]
+                        ? 'bg-surface2 text-gray-500 animate-pulse'
                         : 'bg-white text-black hover:scale-105 active:scale-95'
                       }`}
                     >
-                      {currentlyPlaying === sample.id ? <Pause className="fill-current w-5 h-5" /> : <Play className="fill-current w-5 h-5" />}
+                      {loadingIds[sample.id] ? (
+                        <div className="w-5 h-5 border-2 border-terracotta border-t-transparent rounded-full animate-spin" />
+                      ) : currentlyPlaying === sample.id ? (
+                        <Pause className="fill-current w-5 h-5" />
+                      ) : (
+                        <Play className="fill-current w-5 h-5" />
+                      )}
                     </button>
                   </div>
 
@@ -252,7 +386,7 @@ const VoicePlayground = ({ onUpgrade }) => {
           </div>
 
           {/* Premium Infographic */}
-          {activeTier.tier === 'Studio' && (
+          {(activeTier.tier === 'Aura' || activeTier.tier === 'Pulse') && (
             <motion.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
@@ -260,12 +394,12 @@ const VoicePlayground = ({ onUpgrade }) => {
             >
               <div className="flex flex-col md:flex-row items-center gap-8">
                 <div className="p-4 bg-terracotta/20 rounded-2xl">
-                  <Sparkles className="w-12 h-12 text-terracotta" />
+                  {activeTier.tier === 'Aura' ? <Sparkles className="w-12 h-12 text-terracotta" /> : <TrendingUp className="w-12 h-12 text-terracotta" />}
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-white mb-2 tracking-tight">Kualitas Flagship yang Tak Terkalahkan</h3>
+                  <h3 className="text-xl font-black text-white mb-2 tracking-tight">{activeTier.tier === 'Aura' ? t('quality_title_aura') : t('quality_title_pulse')}</h3>
                   <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
-                    Studio Voice menggunakan pemrosesan audio tingkat lanjut untuk menghasilkan nuansa emosi, slang perkotaan, dan dinamika bicara yang tidak bisa dibedakan dengan manusia asli. <strong>Sangat cocok untuk konten viral.</strong>
+                    {activeTier.tier === 'Aura' ? t('quality_desc_aura') : t('quality_desc_pulse')} <strong>{t('quality_cta')}</strong>
                   </p>
                 </div>
               </div>
@@ -285,7 +419,7 @@ const VoicePlayground = ({ onUpgrade }) => {
             ))}
           </div>
           <p className="text-sm font-bold text-gray-300">
-            Bergabung dengan <span className="text-white">2.5k+ Kreator</span> yang sudah upgrade.
+            {t('join')} <span className="text-white">{t('creators')}</span> {t('upgraded')}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -293,13 +427,13 @@ const VoicePlayground = ({ onUpgrade }) => {
             onClick={onUpgrade}
             className="text-white hover:text-terracotta text-sm font-bold transition-all"
           >
-            Lihat Paket Harga
+            {t('pricing')}
           </button>
           <button 
             onClick={onUpgrade}
             className="bg-terracotta hover:bg-terracotta/80 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-[0_10px_30px_rgba(231,76,60,0.3)] transition-all hover:scale-105 active:scale-95"
           >
-            Aktifkan Studio Premium &rarr;
+            {activeTier.tier === 'Aura' ? t('activate_aura') : activeTier.tier === 'Pulse' ? t('activate_pulse') : t('upgrade')} &rarr;
           </button>
         </div>
       </div>

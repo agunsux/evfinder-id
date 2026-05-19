@@ -7,7 +7,19 @@ import path from 'path';
 import cors from 'cors';
 import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
-import { authAdmin, initErrorMsg } from './src/lib/firebaseAdmin.js';
+import { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
+import { fileURLToPath } from 'url';
+
+const getFilename = () => {
+  try {
+    return fileURLToPath(import.meta.url);
+  } catch (e) {
+    return path.resolve(process.argv[1] || 'server.js');
+  }
+};
+const __filename = getFilename();
+const __dirname = path.dirname(__filename);
+import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 
 // --- Startup Check ---
 if (!authAdmin) {
@@ -35,33 +47,15 @@ const clean = (val) => {
 
 const apiKey = clean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
 
-const genAI = new GoogleGenAI({
-  apiKey: apiKey,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
-    }
-  }
-});
-
 const isProd = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 3000;
 
-// --- FILE-BACKED DB ---
-const dataFolder = path.join(process.cwd(), 'data');
-if (!fs.existsSync(dataFolder)) {
-  fs.mkdirSync(dataFolder, { recursive: true });
-}
-const usersFile = path.join(dataFolder, 'users.json');
-const voiceConfigFile = path.join(dataFolder, 'voice_config.json');
-
+// --- VOICE CONFIG ---
 let voiceConfig = {
   tiers: {
     'Standard': 1,
     'Wavenet': 1,
-    'Neural2': 4,
-    'Studio': 40,
-    'Chirp': 8
+    'Studio': 10
   },
   limits: {
     free_request_chars: 500,
@@ -71,45 +65,6 @@ let voiceConfig = {
   }
 };
 
-if (fs.existsSync(voiceConfigFile)) {
-  try {
-    const savedConfig = JSON.parse(fs.readFileSync(voiceConfigFile, 'utf8'));
-    voiceConfig = {
-      ...voiceConfig,
-      ...savedConfig,
-      limits: { ...voiceConfig.limits, ...(savedConfig.limits || {}) }
-    };
-  } catch(e) {
-    console.error("Error reading voice_config.json", e);
-  }
-}
-
-async function saveVoiceConfig() {
-  try {
-    await fs.promises.writeFile(voiceConfigFile, JSON.stringify(voiceConfig, null, 2));
-  } catch (err) {
-    console.error("Error saving voice config:", err);
-  }
-}
-
-let users = new Map();
-if (fs.existsSync(usersFile)) {
-  try {
-    const data = JSON.parse(fs.readFileSync(usersFile, 'utf8'));
-    users = new Map(data);
-  } catch(e) {
-    console.error("Error reading users.json", e);
-  }
-}
-
-async function saveUsers() {
-  try {
-    await fs.promises.writeFile(usersFile, JSON.stringify(Array.from(users.entries()), null, 2));
-  } catch (err) {
-    console.error("Error saving users:", err);
-  }
-}
-
 function generateId() {
   return crypto.randomBytes(8).toString('hex');
 }
@@ -117,12 +72,97 @@ function generateRefCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
-// Ensure an admin user exists for exports
-users.set('admin', {
-  id: 'admin', name: 'Admin', email: 'hello.shinerva@gmail.com', password: 'admin', tier: 'ENTERPRISE', valid_referrals: 0, has_received_referral_bonus: false, signup_bonus_chars: 10000, monthly_chars: 1000000, earned_chars: 0, used_chars: 0, generation_count: 0, email_subscribed: true, whatsapp_opted_in: false
-});
+async function loadInitialConfig() {
+  if (!dbAdmin) {
+    console.warn("[Firebase] Skipping initial config: dbAdmin is null.");
+    return;
+  }
+  
+  const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
+  console.log(`[Firebase] Handshake with database: ${dbId}`);
+  
+  try {
+    // Attempt a light operation to verify database access
+    await dbAdmin.collection('_system_').doc('health').get(); 
+    console.log("[Firebase] Database connection verified.");
+  } catch (err) {
+    const isNotFound = err.code === 5 || err.code === 'not-found' || 
+                      String(err.message).includes("NOT_FOUND") || 
+                      String(err.message).includes("not-found") ||
+                      String(err.message).includes("5");
+
+    if (isNotFound) {
+      if (dbId !== "(default)") {
+        console.warn(`[Firebase] ERROR 5: Named database '${dbId}' not found. Falling back to (default)...`);
+        const fallbackDb = getFirestoreDb("(default)");
+        if (fallbackDb) {
+          setDbAdmin(fallbackDb);
+          try {
+            await fallbackDb.collection('_system_').doc('health').get();
+            console.log("[Firebase] Fallback to (default) database successful.");
+          } catch (fallbackErr) {
+            console.error("[Firebase] Fallback database also unreachable. App will run with limited profile features.");
+            setDbAdmin(null);
+          }
+        }
+      } else {
+        console.error("[Firebase] ERROR 5: The (default) database is missing. App will run in limited mode.");
+        setDbAdmin(null);
+      }
+    } else {
+      console.warn("[Firebase] Handshake warning (non-fatal):", err.message);
+    }
+  }
+
+  // Load config after verified
+  if (dbAdmin) {
+    try {
+      const doc = await dbAdmin.collection('config').doc('voices').get();
+      if (doc.exists) {
+        voiceConfig = { ...voiceConfig, ...doc.data() };
+        console.log("[Firebase] Global voice config loaded.");
+      }
+    } catch (err) {
+      console.warn("[Firebase] Could not load global config doc (config/voices), using defaults.");
+    }
+  }
+}
+
+async function getUser(uid) {
+  if (!dbAdmin) return null;
+  try {
+    const doc = await dbAdmin.collection('users').doc(uid).get();
+    return doc.exists ? doc.data() : null;
+  } catch (err) {
+    console.error(`[Firestore] getUser error for ${uid}:`, err.message);
+    return null;
+  }
+}
+
+async function saveUser(uid, userData) {
+  if (!dbAdmin) return;
+  try {
+    await dbAdmin.collection('users').doc(uid).set(userData, { merge: true });
+  } catch (err) {
+    console.error(`[Firestore] saveUser error for ${uid}:`, err.message);
+  }
+}
+
+async function findUserByEmail(email) {
+  if (!dbAdmin) return null;
+  try {
+    const snapshot = await dbAdmin.collection('users').where('email', '==', email).limit(1).get();
+    return snapshot.empty ? null : snapshot.docs[0].data();
+  } catch (err) {
+    console.error(`[Firestore] findUserByEmail error for ${email}:`, err.message);
+    return null;
+  }
+}
 
 async function createServer() {
+  console.log("[Server] Initializing...");
+  await loadInitialConfig();
+  
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -147,6 +187,7 @@ async function createServer() {
     // Anonymous Sample Preview BYPASS - check first before Firebase requirement
     const isSample = req.body?.isSample === true;
     const authHeader = req.headers.authorization;
+    
     if ((!authHeader || !authHeader.startsWith('Bearer ')) && isSample) {
       console.log('[Auth] Anonymous sample voice preview allowed');
       req.user = {
@@ -164,14 +205,6 @@ async function createServer() {
       };
       return next();
     }
-
-    if (!authAdmin) {
-      console.error("[Firebase Admin] Auth is not initialized. Check server environment variables.");
-      return res.status(503).json({ error: 'Sistem autentikasi sementara tidak tersedia.' });
-    }
-
-    const isSample2 = req.body?.isSample === true;
-    console.log('[Auth Debug] authHeader:', authHeader ? 'present' : 'missing', 'isSample:', isSample2, 'body keys:', Object.keys(req.body || {}));
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Auth token missing' });
@@ -194,8 +227,8 @@ async function createServer() {
         return res.status(401).json({ error: 'Token does not contain email' });
       }
 
-      // Sync with local users map
-      let user = users.get(uid);
+      // Sync with Firestore
+      let user = await getUser(uid);
       
       const currentEmailVerified = !!decodedToken.email_verified;
       const lowerEmail = email.toLowerCase();
@@ -203,18 +236,14 @@ async function createServer() {
       // Migration: If not found by UID, try finding by email
       if (!user) {
         console.log(`[Auth] User ${lowerEmail} not found by UID ${uid}, searching by email...`);
-        for (const [id, u] of users.entries()) {
-          // Case-insensitive email comparison for better reliability
-          if (u.email && u.email.toLowerCase() === lowerEmail) {
-            console.log(`[Auth] Migrating user ${lowerEmail} from old ID ${id} to Firebase UID ${uid}`);
-            user = u;
-            user.id = uid; 
-            // Update email to match Firebase (canonical version) if needed
-            user.email = email;
-            users.set(uid, user);
-            users.delete(id);
-            break;
-          }
+        user = await findUserByEmail(email);
+        if (user) {
+          console.log(`[Auth] Migrating user ${lowerEmail} from old ID ${user.id} to Firebase UID ${uid}`);
+          const oldId = user.id;
+          user.id = uid;
+          user.email = email;
+          await saveUser(uid, user);
+          // If we had a delete function we'd delete the old doc, but UIDs should be unique
         }
       }
 
@@ -222,12 +251,10 @@ async function createServer() {
       if (!user) {
         const refCode = req.headers['x-ref-code'] || '';
         let referredBy = null;
-        if (refCode) {
-          for (const [rid, ru] of users.entries()) {
-            if (ru.referral_code === refCode) {
-              referredBy = rid;
-              break;
-            }
+        if (refCode && dbAdmin) {
+          const refSnapshot = await dbAdmin.collection('users').where('referral_code', '==', refCode).limit(1).get();
+          if (!refSnapshot.empty) {
+            referredBy = refSnapshot.docs[0].id;
           }
         }
 
@@ -257,13 +284,14 @@ async function createServer() {
           pronunciations: {},
           history: []
         };
-        users.set(uid, user);
+        await saveUser(uid, user);
         console.log(`[Server] New user created via Firebase: ${email} (${uid}), Verified: ${currentEmailVerified}`);
       } else {
         // Sync emailVerified for existing users
         if (user.emailVerified !== currentEmailVerified) {
           user.emailVerified = currentEmailVerified;
           console.log(`[Server] User ${email} emailVerified updated to ${currentEmailVerified}`);
+          await saveUser(uid, { emailVerified: currentEmailVerified });
         }
       }
 
@@ -272,15 +300,28 @@ async function createServer() {
         console.log("[Auth] Granting Enterprise tier to verified admin email: hello.shinerva@gmail.com");
         user.tier = 'ENTERPRISE';
         user.monthly_chars = 1000000;
+        await saveUser(uid, { tier: 'ENTERPRISE', monthly_chars: 1000000 });
       }
-      
-      saveUsers();
 
-      // Monthly Credits Reset Check
+      // Subscription Expiration & Monthly Credits Reset Check
       const now = new Date();
+      let userUpdated = false;
+      const updates = {};
+
+      if (user.subscription_expires_at && now.getTime() > user.subscription_expires_at) {
+        console.log(`[Subscription] User ${user.email} subscription expired. Downgrading to FREE.`);
+        user.tier = 'FREE';
+        user.monthly_chars = 10000;
+        user.subscription_expires_at = null;
+        updates.tier = 'FREE';
+        updates.monthly_chars = 10000;
+        updates.subscription_expires_at = null;
+        userUpdated = true;
+      }
+
       const lastCheck = user.last_reset_check ? new Date(user.last_reset_check) : new Date(user.signup_date);
       if (now.getMonth() !== lastCheck.getMonth() || now.getFullYear() !== lastCheck.getFullYear()) {
-         // Reset monthly allowance based on tier
+         // Reset monthly allowance based on current tier (after potential downgrade)
          const tierLimits = {
            'FREE': 10000,
            'STARTER': 50000,
@@ -290,8 +331,17 @@ async function createServer() {
            'ENTERPRISE': 5000000
          };
          user.monthly_chars = tierLimits[user.tier] || 10000;
+         user.used_chars = 0; // Reset usage for new month
          user.last_reset_check = Date.now();
-         saveUsers();
+         updates.monthly_chars = user.monthly_chars;
+         updates.used_chars = 0;
+         updates.last_reset_check = user.last_reset_check;
+         userUpdated = true;
+         console.log(`[Server] Monthly credits reset for ${user.email} (${user.tier})`);
+      }
+
+      if (userUpdated) {
+        await saveUser(uid, updates);
       }
 
       req.user = user;
@@ -348,7 +398,7 @@ async function createServer() {
     res.json(voiceConfig);
   });
 
-  app.post('/api/admin/voice-config', authenticate, (req, res) => {
+  app.post('/api/admin/voice-config', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
     const { tiers, limits } = req.body;
     if (tiers) {
@@ -359,14 +409,20 @@ async function createServer() {
     }
     
     if (tiers || limits) {
-      saveVoiceConfig();
+      if (dbAdmin) {
+        try {
+          await dbAdmin.collection('config').doc('voices').set(voiceConfig);
+        } catch (err) {
+          console.error("[Firestore] Error saving voice config:", err);
+        }
+      }
       res.json({ success: true, voiceConfig });
     } else {
       res.status(400).json({ error: 'Invalid config' });
     }
   });
 
-  app.post('/api/user/pronunciations', authenticate, (req, res) => {
+  app.post('/api/user/pronunciations', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { word, pronunciation } = req.body;
     if (!word) return res.status(400).json({ error: 'Word is required' });
@@ -379,29 +435,34 @@ async function createServer() {
       req.user.pronunciations[word] = pronunciation;
     }
     
-    saveUsers();
+    await saveUser(req.user.id, { pronunciations: req.user.pronunciations });
     res.json({ success: true, pronunciations: req.user.pronunciations });
   });
 
-  app.post('/api/user/settings', authenticate, (req, res) => {
+  app.post('/api/user/settings', authenticate, async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     const { whatsapp, whatsapp_opted_in, email_subscribed } = req.body;
-    if (whatsapp !== undefined) req.user.whatsapp = whatsapp;
-    if (whatsapp_opted_in !== undefined) req.user.whatsapp_opted_in = whatsapp_opted_in;
-    if (email_subscribed !== undefined) req.user.email_subscribed = email_subscribed;
-    saveUsers();
+    
+    const updates = {};
+    if (whatsapp !== undefined) { req.user.whatsapp = whatsapp; updates.whatsapp = whatsapp; }
+    if (whatsapp_opted_in !== undefined) { req.user.whatsapp_opted_in = whatsapp_opted_in; updates.whatsapp_opted_in = whatsapp_opted_in; }
+    if (email_subscribed !== undefined) { req.user.email_subscribed = email_subscribed; updates.email_subscribed = email_subscribed; }
+    
+    await saveUser(req.user.id, updates);
     res.json({ success: true, user: req.user });
   });
 
   // --- ADMIN EXPORTS ---
-  app.get('/api/admin/export/email', authenticate, (req, res) => {
+  app.get('/api/admin/export/email', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+    if (!dbAdmin) return res.status(503).json({ error: 'Firestore unavailable' });
+
+    const snapshot = await dbAdmin.collection('users').where('email_subscribed', '==', true).get();
     let csv = "Name,Email,Tier,Signup Date,Total Characters Used\n";
-    for (const [id, u] of users.entries()) {
-      if (u.email_subscribed) {
-        csv += `"${u.name}","${u.email}","${u.tier}","${new Date(u.signup_date).toISOString()}","${u.used_chars}"\n`;
-      }
-    }
+    snapshot.forEach(doc => {
+      const u = doc.data();
+      csv += `"${u.name}","${u.email}","${u.tier}","${new Date(u.signup_date).toISOString()}","${u.used_chars}"\n`;
+    });
     res.header('Content-Type', 'text/csv');
     res.attachment('email_list.csv');
     res.send(csv);
@@ -425,7 +486,7 @@ async function createServer() {
     }
 
     const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
-    const orderId = `ORDER-${user.id}-${generateId().substring(0, 4)}-${Date.now()}`;
+    const orderId = `ORDER-${user.id}-${planId}-${Date.now()}`;
 
     const parameter = {
       transaction_details: {
@@ -441,10 +502,19 @@ async function createServer() {
         id: plan.id,
         price: price,
         quantity: 1,
-        name: `Paket ${plan.name} (${billingCycle || 'One-time'})`
+        name: `Shinerva ${plan.name} (${billingCycle || 'One-time'})`
       }],
+      metadata: {
+        uid: user.id,
+        plan_id: planId,
+        billing_cycle: billingCycle
+      },
+      enabled_payments: [
+        "gopay", "shopeepay", "ovo", "dana", "linkaja", "qris", 
+        "bca_va", "bni_va", "bri_va", "mandiri_va", "other_va"
+      ],
       callbacks: {
-        finish: `${req.protocol}://${req.get('host')}`
+        finish: `${req.protocol}://${req.get('host')}/settings`
       }
     };
 
@@ -470,42 +540,69 @@ async function createServer() {
 
       if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
         if (fraudStatus === 'challenge') {
-          // TODO: handle challenge case
+          console.warn(`Transaction challenge: ${orderId}`);
         } else {
           // SUCCESS
-          // Extract UID from orderId if we saved it, or we need to find user by some other way
-          // Actually, we should have passed UID in metadata or something.
-          // Let's use a simple lookup for now or pass custom field.
-          // For now, let's assume we can get it from item_details or custom_field
-          
-          // Re-fetch custom fields if available
-          // Since we didn't use custom_field in createTransaction, let's look at how we can identify the user.
-          // Better: include user UID in orderId prefix or use metadata.
-          
           const parts = orderId.split('-');
-          // If we use ORDER-UID-TIMESTAMP
           const uid = parts[1];
-          const user = users.get(uid);
+          const planIdFromOrderId = parts[2];
+          
+          let user = await getUser(uid);
 
           if (user) {
-            const planId = statusResponse.item_details ? statusResponse.item_details[0].id : null;
-            // Fallback: If not in notification, we might need to store pending orders
-            // For now, let's look at gross_amount to match plan
             const amount = parseInt(statusResponse.gross_amount);
             
-            const matchedPlan = Object.values(PLANS).find(p => p.price === amount || p.yearlyPrice === amount);
+            // Find plan either by id or price
+            const matchedPlan = Object.values(PLANS).find(p => p.id === planIdFromOrderId.toLowerCase() || p.price === amount || p.yearlyPrice === amount);
             
             if (matchedPlan) {
+              const updates = {};
+              const now = Date.now();
+              
               if (matchedPlan.type === 'topup') {
-                user.earned_chars += matchedPlan.credits;
+                user.earned_chars = (user.earned_chars || 0) + matchedPlan.credits;
+                updates.earned_chars = user.earned_chars;
+                
+                // STARTER specific: also sets tier and expiry for 30 days
+                if (matchedPlan.id === 'starter') {
+                  user.tier = 'STARTER';
+                  user.monthly_chars = matchedPlan.credits; // Reset monthly allowance to 50k for this month
+                  const currentExpiry = user.subscription_expires_at || now;
+                  const startPoint = currentExpiry > now ? currentExpiry : now;
+                  user.subscription_expires_at = startPoint + (30 * 24 * 60 * 60 * 1000);
+                  
+                  updates.tier = user.tier;
+                  updates.monthly_chars = user.monthly_chars;
+                  updates.subscription_expires_at = user.subscription_expires_at;
+                  console.log(`[Payment] Starter success: Added credits and set STARTER tier for ${user.email}`);
+                } else {
+                  console.log(`[Payment] Success: Added ${matchedPlan.credits} credits to ${user.email}`);
+                }
               } else {
                 user.tier = matchedPlan.tier;
                 user.monthly_chars = matchedPlan.credits;
+                // Subscriptions last 30 days (standard) or 365 days
+                const isYearly = amount === matchedPlan.yearlyPrice;
+                const durationDays = isYearly ? 365 : 30;
+                
+                // If already has active subscription, extend it, otherwise start from now
+                const currentExpiry = user.subscription_expires_at || now;
+                const startPoint = currentExpiry > now ? currentExpiry : now;
+                
+                user.subscription_expires_at = startPoint + (durationDays * 24 * 60 * 60 * 1000);
+                
+                updates.tier = user.tier;
+                updates.monthly_chars = user.monthly_chars;
+                updates.subscription_expires_at = user.subscription_expires_at;
+                console.log(`[Payment] Success: User ${user.email} upgraded to ${matchedPlan.tier}. Expires: ${new Date(user.subscription_expires_at).toISOString()}`);
               }
-              user.last_payment_at = Date.now();
+              
+              user.last_payment_at = now;
               user.last_order_id = orderId;
-              saveUsers();
-              console.log(`User ${user.email} upgraded to ${matchedPlan.tier} / received ${matchedPlan.credits} credits`);
+              updates.last_payment_at = user.last_payment_at;
+              updates.last_order_id = orderId;
+              
+              await saveUser(uid, updates);
             }
           }
         }
@@ -517,14 +614,18 @@ async function createServer() {
     }
   });
 
-  app.get('/api/admin/export/whatsapp', authenticate, (req, res) => {
+  app.get('/api/admin/export/whatsapp', authenticate, async (req, res) => {
     if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+    if (!dbAdmin) return res.status(503).json({ error: 'Firestore unavailable' });
+
+    const snapshot = await dbAdmin.collection('users').where('whatsapp_opted_in', '==', true).get();
     let csv = "Name,WhatsApp,Tier,Signup Date,Total Characters Used\n";
-    for (const [id, u] of users.entries()) {
-      if (u.whatsapp_opted_in && u.whatsapp) {
+    snapshot.forEach(doc => {
+      const u = doc.data();
+      if (u.whatsapp) {
         csv += `"${u.name}","${u.whatsapp}","${u.tier}","${new Date(u.signup_date).toISOString()}","${u.used_chars}"\n`;
       }
-    }
+    });
     res.header('Content-Type', 'text/csv');
     res.attachment('whatsapp_list.csv');
     res.send(csv);
@@ -671,14 +772,35 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
     try {
       let { text, voice, speed, pitch, volume, isSample } = req.body;
       const apiKey = clean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
-      const user = req.user;
+      let user = req.user;
+      const isGeminiVoice = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr', 'Aoife', 'Eos'].includes(voice);
 
       if (!user) {
-        return res.status(401).json({ error: 'Harap masuk (login) untuk menggunakan layanan TTS.' });
+        if (isSample) {
+          // Allow limited guest access for samples
+          user = { 
+            id: 'guest', 
+            tier: 'FREE', 
+            monthly_chars: 0, 
+            signup_bonus_chars: 0, 
+            earned_chars: 0, 
+            used_chars: 0, 
+            generation_count: 0,
+            pronunciations: {} 
+          };
+        } else {
+          return res.status(401).json({ error: 'Harap masuk (login) untuk menggunakan layanan TTS.' });
+        }
       }
 
       if (isSample) {
-        text = "Halo, ini adalah contoh suara saya yang jernih dan natural di Shinerva. Suara ini menggunakan teknologi kecerdasan buatan terbaru untuk menghasilkan pengucapan yang sangat mirip dengan manusia asli.";
+        // Allow custom text for samples but limit length to avoid abuse
+        if (text && text.length > 500) {
+          return res.status(400).json({ error: "Sample text is too long (max 500 chars)." });
+        }
+        if (!text) {
+          text = "Halo, ini adalah contoh suara saya yang jernih dan natural di Shinerva. Suara ini menggunakan teknologi kecerdasan buatan terbaru untuk menghasilkan pengucapan yang sangat mirip dengan manusia asli.";
+        }
       }
 
       if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -695,35 +817,29 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         return res.status(503).json({ error: 'Layanan TTS sedang dalam pemeliharaan (Konfigurasi API tidak ditemukan).' });
       }
 
-      const isGeminiVoice = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
       const tier = user.tier || 'FREE';
       
-      // Voice Authorization - SMART VOICE ROUTING
+      // Voice Authorization - STABLE VOICE ROUTING
       let actualVoice = voice || 'id-ID-Standard-A';
       
-      const isNeuralVoice = actualVoice.includes('Neural2');
       const isWavenetVoice = actualVoice.includes('Wavenet');
-      const isStudioVoice = actualVoice.includes('Studio') || actualVoice.includes('Chirp') || isGeminiVoice;
+      const isStudioVoice = actualVoice.includes('Studio');
 
       const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
       const userTierIndex = tierOrder.indexOf(tier);
 
-      if (!isSample && text.length >= 150) {
+      if (!isSample) {
         if (isStudioVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
           return res.status(403).json({ error: 'Suara Premium ini hanya tersedia untuk paket BISNIS ke atas. Silakan upgrade paket Anda.' });
         }
-        if (isWavenetVoice && userTierIndex < tierOrder.indexOf('PRODUKTIF')) {
-          return res.status(403).json({ error: 'Suara WaveNet hanya tersedia untuk paket PRODUKTIF ke atas. Silakan upgrade paket Anda.' });
-        }
-        if (isNeuralVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
-          return res.status(403).json({ error: 'Suara Neural2 hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
+        if (isWavenetVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
+          return res.status(403).json({ error: 'Suara ini hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
         }
       }
 
       // Multiplier logic
       let voiceTierName = 'Standard';
       if (isWavenetVoice) voiceTierName = 'Wavenet';
-      else if (isNeuralVoice) voiceTierName = 'Neural2';
       else if (isStudioVoice) voiceTierName = 'Studio';
 
       const multiplier = voiceConfig.tiers[voiceTierName] || 1;
@@ -737,80 +853,69 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       }
 
       // Rungu Engine logic
-      let modifiedText = text
+      const modifiedText = text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&apos;");
 
-      if (isGeminiVoice) {
-        // Prepare text for Gemini (strip SSML but keep expressives)
-        modifiedText = text; // Gemini doesn't need SSML escaping like this
-      } else {
-        // Interpret Expressive Prosody Cues for SSML
-        modifiedText = modifiedText
-          .replace(/\[semangat\]/gi, '<prosody rate="1.1" pitch="+2st">')
-          .replace(/\[\/semangat\]/gi, '</prosody>')
-          .replace(/\[sedih\]/gi, '<prosody rate="0.85" pitch="-2st" volume="soft">')
-          .replace(/\[\/sedih\]/gi, '</prosody>')
-          .replace(/\[serius\]/gi, '<prosody rate="0.95" pitch="-1st" volume="medium">')
-          .replace(/\[\/serius\]/gi, '</prosody>')
-          .replace(/\[bisik\]/gi, '<prosody volume="x-soft" rate="0.9">')
-          .replace(/\[\/bisik\]/gi, '</prosody>')
-          .replace(/\[teriak\]/gi, '<emphasis level="strong"><prosody volume="loud" pitch="+3st">')
-          .replace(/\[\/teriak\]/gi, '</prosody></emphasis>');
-      }
+      // Interpret Expressive Prosody Cues for SSML
+      const expressiveText = modifiedText
+        .replace(/\[semangat\]/gi, '<prosody rate="1.1" pitch="+2st">')
+        .replace(/\[\/semangat\]/gi, '</prosody>')
+        .replace(/\[sedih\]/gi, '<prosody rate="0.85" pitch="-2st" volume="soft">')
+        .replace(/\[\/sedih\]/gi, '</prosody>')
+        .replace(/\[serius\]/gi, '<prosody rate="0.95" pitch="-1st" volume="medium">')
+        .replace(/\[\/serius\]/gi, '</prosody>')
+        .replace(/\[bisik\]/gi, '<prosody volume="x-soft" rate="0.9">')
+        .replace(/\[\/bisik\]/gi, '</prosody>')
+        .replace(/\[teriak\]/gi, '<emphasis level="strong"><prosody volume="loud" pitch="+3st">')
+        .replace(/\[\/teriak\]/gi, '</prosody></emphasis>');
 
       // Pronunciation Global Dictionary
       const globalPhonetics = { "AI": "ey ay", "IT": "ay ti", "Shinerva": "shi ner va", "RUNGU": "ru ngu" };
       const allPronunciations = { ...globalPhonetics, ...(user.pronunciations || {}) };
       
-      let processedText = modifiedText;
-      if (!isGeminiVoice) {
-         // Apply pronunciation only for SSML path for now to avoid breaking Gemini's natural engine
-         Object.entries(allPronunciations).forEach(([word, pron]) => {
-           const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-           const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
-           processedText = processedText.replace(regex, pron);
-         });
-      }
+      let processedText = expressiveText;
+      Object.entries(allPronunciations).forEach(([word, pron]) => {
+        const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+        processedText = processedText.replace(regex, pron);
+      });
 
-      let finalAudioContent = "";
-      if (isGeminiVoice) {
-        const response = await genAI.models.generateContent({
-          model: "gemini-3.1-flash-tts-preview",
-          contents: [{ parts: [{ text: processedText }] }],
-          config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: voice },
-              },
-            },
-          },
-        });
-        const pcmBase64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (!pcmBase64) throw new Error("Gemini TTS returned no audio data");
-        finalAudioContent = pcmToWav(pcmBase64, 24000);
-      } else {
-        const ssmlText = `<speak>${processedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva dot ai di.</prosody>' : ''}</speak>`;
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            input: { ssml: ssmlText },
-            voice: { languageCode: 'id-ID', name: actualVoice },
-            audioConfig: { 
-              audioEncoding: 'MP3', 
-              speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
-            }
-          })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || 'Google TTS Error');
-        finalAudioContent = data.audioContent;
+      const finalProcessedText = (processedText || "").trim() || "Halo.";
+      const ssmlText = `<speak>${finalProcessedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva titik ey ay.</prosody>' : ''}</speak>`;
+      const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
+      
+      console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode}). SSML Length: ${ssmlText.length}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[Google TTS] Payload: ${ssmlText.slice(0, 200)}...`);
       }
+      
+      const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { ssml: ssmlText },
+          voice: { languageCode: languageCode, name: actualVoice },
+          audioConfig: { 
+            audioEncoding: 'MP3', 
+            speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
+          }
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        console.error(`[Google TTS] Error Status ${response.status}:`, data.error);
+        if (data.error?.message?.includes("API key not valid")) {
+            throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
+        }
+        throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
+      }
+      const finalAudioContent = data.audioContent;
+      console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}`);
 
       if (!isSample) {
         user.used_chars += totalCharCost;
@@ -826,13 +931,28 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
           duration: Math.round(text.length / 15),
           credits_used: totalCharCost
         });
-        saveUsers();
+
+        await saveUser(req.user.id, {
+          used_chars: user.used_chars,
+          generation_count: user.generation_count,
+          last_generation_at: user.last_generation_at,
+          history: user.history 
+        });
       }
 
       res.json({ audioContent: finalAudioContent, voice: actualVoice });
     } catch (error) {
-      console.error('TTS error:', error);
-      res.status(500).json({ error: error.message });
+      console.error('TTS error details:', {
+        message: error.message,
+        stack: error.stack,
+        isSample: req.body?.isSample,
+        voice: req.body?.voice
+      });
+      res.status(500).json({ 
+        error: error.message, 
+        detail: isProd ? undefined : error.stack,
+        code: 'TTS_FAILED'
+      });
     }
   };
 
@@ -840,7 +960,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
   app.get("/api/auth/diag", (req, res) => {
     const diag = {
       firebaseAdminInitialized: !!authAdmin,
-      initError: initErrorMsg,
+      initError: initErrorMsg || (authAdmin ? null : "Backend initialization incomplete or credentials missing."),
       projectId: process.env.FIREBASE_PROJECT_ID || "(missing)",
       hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
       hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
@@ -877,6 +997,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
   });
 
   app.post(['/api/tts', '/api/tts/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
+  app.post(['/api/tts/sample'], (req, res, next) => { req.body.isSample = true; next(); }, ttsRateLimiterMiddleware, handleTtsRequest);
   app.post(['/api/generate-voice', '/api/generate-voice/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
 
   // --- FINAL API SAFETY NET ---
@@ -921,12 +1042,23 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Server] Listening on http://0.0.0.0:${PORT} (Express, API, and Frontend ready)`);
-  });
+  return app;
 }
 
-createServer().catch(err => {
+let app;
+const appPromise = createServer();
+
+appPromise.then(resolvedApp => {
+  app = resolvedApp;
+  const isMain = process.argv[1] && (path.resolve(process.argv[1]) === path.resolve(__filename));
+  if (isMain) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`[Server] Listening on http://0.0.0.0:${PORT} (Express, API, and Frontend ready)`);
+    });
+  }
+}).catch(err => {
   console.error("CRITICAL: Server failed to start:", err);
   process.exit(1);
 });
+
+export default appPromise;

@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- 0. GLOBAL SAFETY NET ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- 1. PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'hello.shinerva@gmail.com' && isEmailVerified()
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- 2. ENTITY VALIDATIONS ---
+    
+    function isValidUser(data) {
+      return data.id is string 
+        && data.email is string
+        && (data.tier in ['FREE', 'STARTER', 'KREATOR', 'PRODUKTIF', 'BISNIS', 'ENTERPRISE'])
+        && (data.get('monthly_chars', 0) is number)
+        && (data.get('used_chars', 0) is number);
+    }
+
+    function isValidHistory(data) {
+      return data.id is string
+        && data.date is number
+        && data.text_length is number
+        && data.voice is string
+        && data.credits_used is number;
+    }
+
+    // --- 3. COLLECTIONS ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(incoming()) && (
+        // Owners can only update non-billing fields
+        (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'pronunciations', 'whatsapp', 'whatsapp_opted_in', 'email_subscribed']))
+        || isAdmin()
+      );
+    }
+
+    match /users/{userId}/history/{historyId} {
+      allow list: if isOwner(userId) || isAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidHistory(incoming());
+      // History is immutable
+      allow update, delete: if isAdmin();
+    }
+
+    match /config/voices {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // Add specifically for the "admins" collection if we were using it for role lookup
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+    }
+  }
+}

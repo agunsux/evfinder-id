@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and usage statistics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "emailVerified": { "type": "boolean" },
+        "tier": { "type": "string", "enum": ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"] },
+        "signup_date": { "type": "number" },
+        "monthly_chars": { "type": "number" },
+        "earned_chars": { "type": "number" },
+        "used_chars": { "type": "number" },
+        "generation_count": { "type": "number" },
+        "referral_code": { "type": "string" },
+        "referred_by": { "type": "string" },
+        "pronunciations": { "type": "object", "description": "Map of word to phonetic pronunciation" }
+      },
+      "required": ["id", "email", "tier"]
+    },
+    "HistoryEntry": {
+      "title": "HistoryEntry",
+      "description": "Record of a single TTS generation event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "number" },
+        "text_length": { "type": "number" },
+        "voice": { "type": "string" },
+        "tier": { "type": "string" },
+        "duration": { "type": "number" },
+        "credits_used": { "type": "number" }
+      }
+    },
+    "VoiceConfig": {
+      "title": "VoiceConfig",
+      "description": "Global settings for voice tiers and limits",
+      "type": "object",
+      "properties": {
+        "tiers": { "type": "object" },
+        "limits": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Public and private user data"
+    },
+    "/users/{userId}/history/{historyId}": {
+      "schema": "HistoryEntry",
+      "description": "User's generation history"
+    },
+    "/config/voices": {
+      "schema": "VoiceConfig",
+      "description": "System-wide voice configuration"
+    }
+  }
+}

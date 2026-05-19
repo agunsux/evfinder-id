@@ -46,235 +46,547 @@ import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
 import VoicePlayground from "./components/VoicePlayground";
 
-const PACKS = [
-  {
-    id: 1,
-    tag: "Sejarah & Edukasi",
-    title: "Sejarah Revolusi",
-    desc: "Narasi sejarah perjuangan kemerdekaan dengan gaya epik, heroik, dan dramatis.",
-    content:
-      "Bangsa yang besar adalah bangsa yang menghargai jasa para pahlawannya. Di tengah gemuruh meriam dan bau mesiu, Soekarno berdiri tegak di hadapan ribuan rakyat, mengumumkan bahwa penindasan telah berakhir.",
-  },
-  {
-    id: 2,
-    tag: "Entertainment",
-    title: "Pop Culture Recap",
-    desc: "Breakdown film, series, selebriti, atau trending topic dengan gaya engaging dan santai.",
-    content:
-      "Kalian sadar nggak kalau di trailer film terbaru ini ada detail tersembunyi? Yup, Easter Egg ini beneran ngerubah teori fans di seluruh dunia! Mari kita bedah bareng-bareng kenapa adegan ini begitu penting untuk timeline-nya.",
-  },
-  {
-    id: 3,
-    tag: "Marketing",
-    title: "Hard Sell Ads",
-    desc: "Template iklan persuasif dengan teknik urgensi tinggi, call-to-action kuat.",
-    content:
-      "PROMO TERBATAS! Dapatkan diskon hingga 70 persen hanya untuk seratus pembeli pertama hari ini. Jangan sampai ketinggalan, klik link di bio sekarang juga!",
-  },
-  {
-    id: 4,
-    tag: "Sosial Media",
-    title: "Reels & TikTok Narrator",
-    trending: true,
-    desc: "Gaya fast-paced, hook kuat di 3 detik pertama, energik, punchy, cocok untuk video pendek 15-60 detik.",
-    content:
-      "Stop scrolling! Kalian harus tau cara cepat upgrade skill editing cuma dalam 15 detik! Teknik ini udah dipakai sama banyak top content creator di seluruh dunia.",
-  },
-  {
-    id: 5,
-    tag: "Lifestyle",
-    title: "Motivasi & Mindset",
-    desc: "Narasi inspiratif, pengembangan diri, mindset sukses, morning motivation, quote story.",
-    content:
-      "Kesuksesan bukan tentang seberapa cepat kamu berlari, tapi tentang seberapa kuat kamu bangkit setiap kali terjatuh. Hari ini adalah awal baru untuk masa depanmu.",
-  },
-  {
-    id: 6,
-    tag: "Storytelling",
-    title: "True Crime & Misteri",
-    desc: "Cerita kriminal, misteri, unsolved case dengan gaya tegang, dramatis, dan merinding.",
-    content:
-      "Malam itu begitu sunyi, sampai sebuah suara di balik pintu mengubah segalanya. Tidak ada yang menduga kalau rahasia ini baru akan terungkap setelah dua puluh tahun lamanya.",
-  },
+const PACKS = {
+  ID: [
+    {
+      id: 1,
+      tag: "Epic Storytelling",
+      title: "Cinematic Narrator",
+      desc: "Narasi berbobot tinggi untuk dokumenter, sejarah, atau video pendek dramatis.",
+      content:
+        "Di balik kabut pagi yang menyelimuti Jakarta, sebuah rahasia besar terkubur selama puluhan tahun. Kini, saatnya dunia mendengarkan kebenaran yang selama ini dibisikkan oleh angin.",
+    },
+    {
+      id: 2,
+      tag: "Viral Tech",
+      title: "The Explainer",
+      desc: "Gaya bicara jernih, persuasif, dan modern untuk breakdown konten teknologi atau tren global.",
+      content:
+        "Kenapa desain Apple selalu terasa berbeda? Ini bukan soal minimalisme biasa. Ini soal bagaimana sebuah produk memahami cara kerja pikiran manusia sebelum kita menyadarinya sendiri.",
+    },
+    {
+      id: 3,
+      tag: "TikTok & Reels",
+      title: "Human Fast-Paced",
+      trending: true,
+      desc: "Energik, natural, dan penuh emosi. Didesain untuk menahan audiens agar tidak scroll ke video lain.",
+      content:
+        "Tunggu sebentar! Kalian sadar nggak kalau cara kita bikin konten selama ini salah total? Sini gue spill rahasianya cuma dalam lima belas detik biar video kalian langsung FYP!",
+    },
+    {
+      id: 4,
+      tag: "Audiobook",
+      title: "Emotional Storyteller",
+      desc: "Deep breaths, smooth transitions, and emotional layers for books and long-form content.",
+      content:
+        "Dia berjalan menyusuri lorong yang sepi itu, merasakan detak jantungnya sendiri yang berdegup kencang. 'Apakah ini akhirnya?' tanyanya dalam hati, sambil menatap cahaya di ujung jalan.",
+    },
+    {
+      id: 5,
+      tag: "Marketing",
+      title: "Premium Branding",
+      desc: "Mewah, elegan, dan meyakinkan. Sangat cocok untuk brand high-end yang menginginkan otoritas.",
+      content:
+        "Kemewahan sejati bukanlah tentang apa yang Anda lihat, melainkan tentang apa yang Anda rasakan. Rasakan kenyamanan tanpa kompromi dengan koleksi terbaru kami.",
+    },
+    {
+      id: 6,
+      tag: "Podcast",
+      title: "The Intimate Host",
+      desc: "Santai, dekat, dan hangat. Memberikan kesan obrolan asli di pagi hari.",
+      content:
+        "Halo semuanya, selamat datang kembali di podcast gue. Hari ini kita bakal ngobrol santai soal gimana caranya tetap tenang di tengah hiruk pikuk kehidupan kota besar.",
+    },
+  ],
+  EN: [
+    {
+      id: 1,
+      tag: "Epic Storytelling",
+      title: "Cinematic Narrator",
+      desc: "High-stakes narration for documentaries, history, or dramatic short videos.",
+      content:
+        "Behind the morning mist that covers London, a great secret has been buried for decades. Now, it's time for the world to hear the truth that has been whispered by the wind.",
+    },
+    {
+      id: 2,
+      tag: "Viral Tech",
+      title: "The Explainer",
+      desc: "Clear, persuasive, and modern speaking style for breaking down tech content or global trends.",
+      content:
+        "Why does Apple's design always feel different? It's not just about simple minimalism. It's about how a product understands the way the human mind works before we even realize it ourselves.",
+    },
+    {
+      id: 3,
+      tag: "TikTok & Reels",
+      title: "Human Fast-Paced",
+      trending: true,
+      desc: "Energetic, natural, and full of emotion. Designed to keep viewers from scrolling past.",
+      content:
+        "Wait a second! Do you realize that the way we've been making content is completely wrong? Here's the secret in just fifteen seconds so your videos can go viral instantly!",
+    },
+    {
+      id: 4,
+      tag: "Audiobook",
+      title: "Emotional Storyteller",
+      desc: "Deep breaths, smooth transitions, and emotional layers for books and long-form content.",
+      content:
+        "He walked down the quiet hallway, feeling his own heart beating fast. 'Is this the end?' he asked himself, while staring at the light at the end of the road.",
+    },
+    {
+      id: 5,
+      tag: "Marketing",
+      title: "Premium Branding",
+      desc: "Luxurious, elegant, and persuasive. Perfect for high-end brands wanting authority.",
+      content:
+        "True luxury is not about what you see, but what you feel. Experience uncompromising comfort with our latest collection.",
+    },
+    {
+      id: 6,
+      tag: "Podcast",
+      title: "The Intimate Host",
+      desc: "Relaxed, close, and warm. Gives the impression of a real morning conversation.",
+      content:
+        "Hi everyone, welcome back to my podcast. Today we're going to have a relaxed chat about how to stay calm amidst the hustle and bustle of big city life.",
+    },
+  ]
+};
+
+const FAQS = {
+  ID: [
+    {
+      question: "Apa itu Shinerva AI TTS?",
+      answer:
+        "Shinerva AI TTS adalah teknologi yang mengubah tulisan menjadi suara manusia yang sangat natural menggunakan kecerdasan buatan (AI). Sederhananya, ini adalah suara robot yang kini sudah semanusiawi aslinya—lengkap dengan emosi, intonasi, dan napas—sehingga cocok untuk mengisi suara video Anda tanpa perlu rekam suara sendiri.",
+    },
+    {
+      question: "Apa itu Shinerva?",
+      answer:
+        "Shinerva adalah platform AI Voice emosional pertama di Asia Tenggara. Kami melampaui Text To Speech (TTS) biasa dengan memberikan jiwa, emosi, dan karakter pada setiap narasi untuk kreator modern.",
+    },
+    {
+      question: "Apakah kredit saya bisa hangus?",
+      answer:
+        "Tergantung paket Anda. Kredit dari paket Top-Up tidak akan pernah hangus. Untuk paket bulanan (Kreator ke atas), sisa kredit akan rollover ke bulan berikutnya. Namun untuk paket FREE, kuota akan diperbarui setiap bulan.",
+    },
+    {
+      question: "Apakah suara AI ini bisa dipakai di TikTok atau YouTube?",
+      answer:
+        "Sangat bisa! Suara emosional kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Kami membantu cerita Anda terasa lebih manusiawi dan mengonversi audiens lebih baik.",
+    },
+    {
+      question: "Apa perbedaan teknologi Basic dan Aura?",
+      answer:
+        "Basic adalah teknologi standar untuk narasi fungsional. Pulse (Segera Hadir) menambahkan ekspresi emosional, sementara Aura (Segera Hadir) adalah teknologi flagship multimodal kami yang menghasilkan tekstur suara, napas, dan intonasi yang hampir mustahil dibedakan dari rekaman manusia.",
+    },
+    {
+      question: "Bagaimana cara menghubungi bantuan?",
+      answer:
+        "Anda bisa menghubungi tim kami melalui WhatsApp atau Email untuk bantuan teknis, kerja sama agency, atau kebutuhan integrasi API khusus.",
+    },
+  ],
+  EN: [
+    {
+      question: "What is Shinerva AI TTS?",
+      answer:
+        "Shinerva AI TTS is a technology that transforms written text into highly natural human speech using Artificial Intelligence. Simply put, it's a 'robot voice' that now sounds as human as the real thing—complete with emotions, intonations, and breaths—making it perfect for voiceovers without needing to record yourself.",
+    },
+    {
+      question: "What is Shinerva?",
+      answer:
+        "Shinerva is the first emotional AI Voice platform in Southeast Asia. We go beyond standard Text To Speech (TTS) by giving soul, emotion, and character to every narration for modern creators.",
+    },
+    {
+      question: "Will my credits expire?",
+      answer:
+        "It depends on your plan. Credits from Top-Up packs never expire. For monthly plans (Creator and above), unused credits roll over to the next month. For FREE plans, the quota is refreshed every month.",
+    },
+    {
+      question: "Can these AI voices be used on TikTok or YouTube?",
+      answer:
+        "Absolutely! Our emotional voices are specifically designed to pass monetization verification on social media (YouTube/TikTok/Reels). We help your stories feel more human and convert audiences better.",
+    },
+    {
+      question: "What is the difference between Basic and Aura technology?",
+      answer:
+        "Basic is standard technology for functional narration. Pulse (Coming Soon) adds emotional expression, while Aura (Coming Soon) is our flagship multimodal technology that produces voice textures, breaths, and intonations almost indistinguishable from human recordings.",
+    },
+    {
+      question: "How do I contact support?",
+      answer:
+        "You can contact our team via WhatsApp or Email for technical assistance, agency partnerships, or custom API integration needs.",
+    },
+  ]
+};
+
+const LANGUAGES = [
+  { code: "ID", name: "Indonesia", flag: "🇮🇩" },
+  { code: "EN", name: "English", flag: "🇺🇸" }
 ];
 
-const FAQS = [
-  {
-    question: "Apa itu Shinerva.id?",
-    answer:
-      "Shinerva.id adalah platform AI Text-to-Speech (TTS) tercanggih untuk Bahasa Indonesia yang mampu menghasilkan suara manusiawi yang alami dan emosional.",
+const TRANSLATIONS = {
+  ID: {
+    nav: {
+      home: "Beranda",
+      packs: "Harga Paket",
+      pricing: "Harga",
+      faq: "Tanya Jawab",
+      contact: "Hubungi Kami",
+      pronunciation: "Aturan Pengucapan",
+      referral: "Bonus Referral",
+      profile: "Profil Akun",
+      history_voices: "Riwayat Suara",
+      referral_bonus: "Referral & Bonus",
+      subscription: "Langganan & Paket",
+      dev_console: "Voice Dev Console",
+      logout: "Keluar Sekarang",
+      login: "Masuk",
+      signup: "Mulai Gratis",
+      account: "Akun Saya",
+      remaining: "Karakter Tersisa"
+    },
+    hero: {
+      tag: "Platform AI Voice Emosional Pertama di Asia Tenggara",
+      title_part1: "Suara AI yang",
+      title_accent: "Sangat Manusiawi",
+      subtitle: "Beri jiwa pada konten Anda. Platform AI Voice pertama yang mengutamakan tekstur emosi, napas, dan intonasi manusiawi untuk kreator.",
+      cta_primary: "Mulai Kreasi — Gratis",
+      cta_secondary: "Dengarkan Sampel"
+    },
+    welcome: {
+      title: "Selamat Datang!",
+      subtitle: "Kamu dapat 10.000 karakter gratis untuk memulai (~6 menit audio).",
+      cta: "Siap!"
+    },
+    studio: {
+      title: "Rungu Engine Studio",
+      label: "Editor Naskah",
+      placeholder: "Ketik atau tempel naskah Anda di sini...",
+      generate: "Hasilkan Suara",
+      generating: "Sedang Memproses...",
+      sample: "Tes Suara",
+      voicesSelection: "Bahasa & Suara",
+      settings: "Pengaturan Pro",
+      speed: "Kecepatan",
+      pitch: "Nada",
+      volume: "Volume",
+      remaining: "Sisa Kredit",
+      cost: "Beban",
+      cost_est: "Estimasi Biaya",
+      chars: "Karakter",
+      limit_reached: "Batas Request Tercapai!",
+      insufficient: "Kredit Tidak Mencukupi!",
+      near_limit: "Hampir Mencapai Batas!",
+      length: "Panjang Naskah",
+      quota: "Kuota Harian",
+      preview: "Tes Suara",
+      download: "Unduh",
+      share: "Bagikan",
+      unlock_aura: "Aura Flagship (Segera Hadir) — Tekstur emosi paling manusiawi untuk konten Anda.",
+      view_packs: "Lihat Paket"
+    },
+    pricing: {
+      title: "Pilih Paket Keajaiban Anda",
+      subtitle: "Akses teknologi AI Voice tercanggih di Asia Tenggara. Hemat hingga 40% dengan paket tahunan.",
+      monthly: "Bulanan",
+      yearly: "Tahunan",
+      current: "Paket Saat Ini",
+      upgrade: "Upgrade Sekarang",
+      cta: "Pilih Paket",
+      save: "Hemat"
+    },
+    playground: {
+      title: "Voice Playground",
+      subtitle: "Eksplorasi kualitas suara AI terbaik kami dalam berbagai bahasa. Dengar perbedaannya dan pilih karakter yang paling cocok.",
+      upgrade: "Upgrade Sekarang",
+      tech: "Pilih Teknologi",
+      variants: "Varian Suara",
+      quality_title: "Kualitas Flagship yang Tak Terkalahkan",
+      quality_desc: "Aura (Segera Hadir) menggunakan algoritma canggih untuk memberikan 'jiwa' di setiap suku kata.",
+      join: "Bergabung dengan",
+      creators: "Kreator",
+      upgraded: "yang sudah upgrade."
+    }
   },
-  {
-    question: "Apakah kredit saya bisa hangus?",
-    answer:
-      "Tergantung paket Anda. Kredit dari paket Top-Up tidak akan pernah hangus. Untuk paket bulanan (Kreator ke atas), sisa kredit akan rollover ke bulan berikutnya. Namun untuk paket FREE, kuota akan diperbarui setiap bulan dan sisa kuota yang tidak terpakai akan hangus.",
-  },
-  {
-    question: "Apakah suara AI ini bisa dipakai di TikTok atau YouTube?",
-    answer:
-      "Sangat bisa! Suara kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Untuk paket Kreator ke atas, Anda mendapatkan hak komersial penuh.",
-  },
-  {
-    question: "Apa perbedaan teknologi Basic dan Pulse?",
-    answer:
-      "Basic adalah teknologi TTS standar untuk kebutuhan harian, sementara Pulse menggunakan pemrosesan saraf ekspresif yang menghasilkan intonasi, jeda, dan emosi yang sangat mendalam untuk narasi konten kreatif.",
-  },
-  {
-    question: "Bagaimana cara menghubungi bantuan?",
-    answer:
-      "Anda bisa menghubungi tim kami melalui WhatsApp atau Email yang tersedia di bagian bawah website jika mengalami kendala atau membutuhkan integrasi khusus.",
-  },
-];
+  EN: {
+    nav: {
+      home: "Home",
+      packs: "Content Packs",
+      pricing: "Pricing",
+      faq: "FAQ",
+      contact: "Contact Us",
+      pronunciation: "Pronunciation Rules",
+      referral: "Referral Bonus",
+      profile: "Account Profile",
+      history_voices: "Voice History",
+      referral_bonus: "Referral & Bonus",
+      subscription: "Subscription & Plans",
+      dev_console: "Voice Dev Console",
+      logout: "Logout Now",
+      login: "Login",
+      signup: "Start for Free",
+      account: "My Account",
+      remaining: "Credits Remaining"
+    },
+    hero: {
+      tag: "Southeast Asia’s Emotional AI Voice Platform",
+      title_part1: "AI Voices That",
+      title_accent: "Actually Feel Human",
+      subtitle: "Give soul to your content. The first AI voice platform prioritizing emotional texture, breath, and human-like intonation for creators.",
+      cta_primary: "Start Creation — Free",
+      cta_secondary: "Listen to Samples"
+    },
+    welcome: {
+      title: "Welcome!",
+      subtitle: "You got 10,000 free credits to start (~6 minutes of audio).",
+      cta: "Ready!"
+    },
+    studio: {
+      title: "Rungu Engine Studio",
+      label: "Script Editor",
+      placeholder: "Type or paste your script here...",
+      generate: "Generate Voice",
+      generating: "Generating Audio...",
+      sample: "Test Voice",
+      voicesSelection: "Language & Voice",
+      settings: "Pro Settings",
+      speed: "Speed",
+      pitch: "Pitch",
+      volume: "Volume",
+      remaining: "Credits Left",
+      cost: "Cost",
+      cost_est: "Cost Estimate",
+      chars: "Characters",
+      limit_reached: "Request Limit Reached!",
+      insufficient: "Insufficient Credits!",
+      near_limit: "Near Request Limit!",
+      length: "Script Length",
+      quota: "Daily Quota",
+      preview: "Test Voice",
+      download: "Download",
+      share: "Share",
+      unlock_aura: "Aura Flagship (Coming Soon) — The most human emotional texture for your content.",
+      view_packs: "View Packs"
+    },
+    pricing: {
+      title: "Choose Your Magic Plan",
+      subtitle: "Access the most advanced AI Voice technology in Southeast Asia. Save up to 40% with annual plans.",
+      monthly: "Monthly",
+      yearly: "Yearly",
+      current: "Current Plan",
+      upgrade: "Upgrade Now",
+      cta: "Select Plan",
+      save: "Save"
+    },
+    playground: {
+      title: "Voice Playground",
+      subtitle: "Explore our best AI voices across multiple languages. Hear the difference and choose your character.",
+      upgrade: "Upgrade Now",
+      tech: "Select Technology",
+      variants: "Voice Variants",
+      quality_title: "Unbeatable Flagship Quality",
+      quality_desc: "Aura (Coming Soon) is our next-gen engine that mimics human vocal fry, breaths, and deep emotion.",
+      join: "Join over",
+      creators: "Creators",
+      upgraded: "who have upgraded."
+    }
+  }
+};
 
 const VOICES = {
-  "Basic (Free)": [
-    { 
-      id: "id-ID-Standard-A", 
-      name: "Ratna (Wanita)", 
-      type: "Standard", 
-      tier: "FREE", 
-      desc: "Fast, lightweight voice generation for everyday content.",
-      useCase: "Podcast & Edukasi"
-    },
-    { 
-      id: "id-ID-Standard-B", 
-      name: "Bambang (Pria)", 
-      type: "Standard", 
-      tier: "FREE",
-      desc: "Practical voice generation for simple announcements.",
-      useCase: "Berita & Pengumuman"
-    },
-  ],
-  "Pulse (Starter/Kreator)": [
-    { 
-      id: "id-ID-Neural2-A", 
-      name: "Siti (Emotionally Expressive)", 
-      type: "Neural2", 
-      premium: true, 
-      tier: "STARTER",
-      desc: "Emotionally expressive voices built for creators.",
-      useCase: "Narasi YouTube & Storytelling"
-    },
-    { 
-      id: "id-ID-Neural2-D", 
-      name: "Agus (Dynamic Narration)", 
-      type: "Neural2", 
-      premium: true, 
-      tier: "STARTER",
-      desc: "Dynamic and engaging storytelling with creator-focused pacing.",
-      useCase: "Video Pendek & Komedi"
-    },
-  ],
-  "Flow (Produktif)": [
-    { 
-      id: "id-ID-Wavenet-A", 
-      name: "Lestari (Smooth Flow)", 
-      type: "Wavenet", 
-      premium: true, 
-      tier: "PRODUKTIF",
-      desc: "Smooth cinematic narration with natural pacing.",
-      useCase: "Audiobook & Meditasi"
-    },
-    { 
-      id: "id-ID-Wavenet-B", 
-      name: "Joko (Immersive Flow)", 
-      type: "Wavenet", 
-      premium: true, 
-      tier: "PRODUKTIF",
-      desc: "Deep and dramatic voices for immersive storytelling.",
-      useCase: "Misteri & Dokumenter"
-    },
-    { 
-      id: "id-ID-Wavenet-C", 
-      name: "Putri (Elegant Flow)", 
-      type: "Wavenet", 
-      premium: true, 
-      tier: "PRODUKTIF",
-      desc: "Sleek and professional voices for cinematic delivery.",
-      useCase: "Iklan & Presentasi"
-    },
-  ],
-  "Aura Premium (Bisnis)": [
-    { 
-      id: "id-ID-Studio-A", 
-      name: "Eko (Flagship Aura)", 
-      type: "Studio", 
-      premium: true, 
-      glow: true, 
-      tier: "BISNIS",
-      desc: "Our flagship ultra-human AI voice experience.",
-      useCase: "Iklan High-End & Branding"
-    },
-    { 
-      id: "id-ID-Studio-D", 
-      name: "Maya (Human-Like Aura)", 
-      type: "Studio", 
-      premium: true, 
-      glow: true, 
-      tier: "BISNIS",
-      desc: "Ultra-natural, emotionally layered cinematic creator voice.",
-      useCase: "Berita & Konten Formal"
-    },
-  ],
-  "Aura Cinema (Enterprise)": [
-    { 
-      id: "Puck", 
-      name: "Puck (Viral Quality)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Viral-quality narration with cinematic depth.",
-      useCase: "Film & Narasi Epik"
-    },
-    { 
-      id: "Charon", 
-      name: "Charon (Atmospheric Aura)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Emotionally layered and atmospheric human-like delivery.",
-      useCase: "Storytelling & Dokumenter"
-    },
-    { 
-      id: "Kore", 
-      name: "Kore (Radiant Aura)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Bright, engaging, and ultra-natural presence.",
-      useCase: "Konten Anak & Marketing"
-    },
-    { 
-      id: "Fenrir", 
-      name: "Fenrir (Rugged & Bold)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Kasar, berani, dan penuh karakter.",
-      useCase: "Gaming & Brand Maskulin"
-    },
-    { 
-      id: "Zephyr", 
-      name: "Zephyr (Soft & Airy)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Lembut, menenangkan, dan ringan.",
-      useCase: "Relaksasi & Lifestyle"
-    },
-  ],
+  "ID": {
+    "Basic (Fungsional)": [
+      { 
+        id: "id-ID-Standard-A", 
+        name: "Ratna (Wanita)", 
+        type: "Standard", 
+        tier: "FREE", 
+        desc: "Suara jernih untuk penjelasan teknis dan tutorial sederhana.",
+        useCase: "Podcast & Edukasi"
+      },
+      { 
+        id: "id-ID-Standard-B", 
+        name: "Bambang (Pria)", 
+        type: "Standard", 
+        tier: "FREE",
+        desc: "Gaya bicara formal untuk pengumuman atau berita singkat.",
+        useCase: "Berita & Pengumuman"
+      },
+    ],
+    "Pulse (Segera Hadir)": [
+      { 
+        id: "id-ID-Wavenet-A", 
+        name: "Siti (Emotional Storytelling)", 
+        type: "Wavenet", 
+        premium: true, 
+        comingSoon: true,
+        tier: "STARTER",
+        desc: "Suara emosional dengan penekanan pada kata-kata penting. Sangat cocok untuk narasi.",
+        useCase: "Narasi YouTube & Storytelling"
+      },
+      { 
+        id: "id-ID-Wavenet-B", 
+        name: "Agus (Dynamic Creator)", 
+        type: "Wavenet", 
+        premium: true, 
+        comingSoon: true,
+        tier: "STARTER",
+        desc: "Energik dan punchy. Dibangun khusus untuk video pendek yang butuh perhatian instan.",
+        useCase: "Video Pendek & Komedi"
+      },
+    ],
+    "Flow (Cinematic)": [
+      { 
+        id: "id-ID-Wavenet-C", 
+        name: "Lestari (Smooth & Elegant)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Suara mengalir yang memberikan rasa nyaman dan profesional.",
+        useCase: "Audiobook & Meditasi"
+      },
+      { 
+        id: "id-ID-Wavenet-D", 
+        name: "Joko (Dramatic Deep)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Deep dan berwibawa, ideal untuk narasi dokumenter intens.",
+        useCase: "Misteri & Dokumenter"
+      },
+    ],
+    "Aura Flagship (Segera Hadir)": [
+      { 
+        id: "id-ID-Wavenet-A", 
+        name: "Eko (Curated Soul)", 
+        type: "Wavenet", 
+        premium: true, 
+        glow: true, 
+        comingSoon: true,
+        tier: "BISNIS",
+        desc: "Tekstur emosi yang dioptimalkan untuk narasi sinematik.",
+        useCase: "Iklan High-End & Cinematic"
+      },
+      { 
+        id: "id-ID-Wavenet-C", 
+        name: "Maya (Curated Breath)", 
+        type: "Wavenet", 
+        premium: true, 
+        glow: true, 
+        comingSoon: true,
+        tier: "BISNIS",
+        desc: "Penuh nuansa emosi halus, napas alami, dan kejernihan sinematik.",
+        useCase: "Berita & Konten Storytelling"
+      },
+    ],
+  },
+  "EN": {
+    "Basic (Free)": [
+      { 
+        id: "en-US-Standard-C", 
+        name: "Cathy (Female)", 
+        type: "Standard", 
+        tier: "FREE", 
+        desc: "Natural English female voice.",
+        useCase: "Education & Blogs"
+      },
+      { 
+        id: "en-US-Standard-D", 
+        name: "David (Male)", 
+        type: "Standard", 
+        tier: "FREE",
+        desc: "Clear English male voice.",
+        useCase: "News & Announcements"
+      },
+    ],
+    "Pulse (Coming Soon)": [
+      { 
+        id: "en-US-Wavenet-A", 
+        name: "Sarah (Expressive)", 
+        type: "Wavenet", 
+        premium: true, 
+        comingSoon: true,
+        tier: "STARTER",
+        desc: "Emotionally rich English female narration.",
+        useCase: "YouTube & Storytelling"
+      },
+      { 
+        id: "en-US-Wavenet-B", 
+        name: "James (Dynamic)", 
+        type: "Wavenet", 
+        premium: true, 
+        comingSoon: true,
+        tier: "STARTER",
+        desc: "Engaging English male voice.",
+        useCase: "Marketing & Shorts"
+      },
+    ],
+    "Flow (Produktif)": [
+      { 
+        id: "en-US-Wavenet-F", 
+        name: "Fiona (Smooth)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Soft and professional English flow.",
+        useCase: "Audiobooks & Meditations"
+      },
+      { 
+        id: "en-US-Wavenet-G", 
+        name: "George (Formal)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Deep and formal English narration.",
+        useCase: "Presentations & Business"
+      },
+    ],
+    "Aura International (Coming Soon)": [
+      { 
+        id: "en-US-Wavenet-I", 
+        name: "Arthur (London Aura)", 
+        type: "Wavenet", 
+        premium: true, 
+        glow: true, 
+        comingSoon: true,
+        tier: "BISNIS",
+        desc: "Ultra-natural English presence.",
+        useCase: "Branding & International High-End"
+      },
+    ]
+  },
+  "CMN": {
+    "Basic (Free)": [
+      { 
+        id: "cmn-CN-Standard-A", 
+        name: "Meiling (Female)", 
+        type: "Standard", 
+        tier: "FREE", 
+        desc: "Standard Mandarin female voice.",
+        useCase: "Educational Content"
+      },
+    ],
+    "Pulse (Coming Soon)": [
+      { 
+        id: "cmn-CN-Wavenet-C", 
+        name: "Lao Wang (Male)", 
+        type: "Wavenet", 
+        premium: true, 
+        comingSoon: true,
+        tier: "STARTER",
+        desc: "Warm and deep Mandarin male voice.",
+        useCase: "Storytelling & News"
+      },
+    ]
+  }
 };
 
 const getVoiceDisplayName = (id) => {
   if (!id) return "-";
-  for (const category in VOICES) {
-    const voice = VOICES[category].find(v => v.id === id);
-    if (voice) return voice.name.split(" (")[0]; // Just the name part
+  for (const lang in VOICES) {
+    for (const category in VOICES[lang]) {
+      const voice = VOICES[lang][category].find(v => v.id === id);
+      if (voice) return voice.name.split(" (")[0];
+    }
   }
   return id.split("-").slice(-2).join("-");
 };
@@ -291,12 +603,52 @@ const formatDuration = (seconds) => {
 
 
 const App = () => {
+  const [language, setLanguage] = useState("ID");
+
+  const t = (path) => {
+    const keys = path.split('.');
+    let result = TRANSLATIONS[language];
+    for (const key of keys) {
+      if (!result || result[key] === undefined) return path;
+      result = result[key];
+    }
+    return result;
+  };
+
+  const LanguageSelector = () => (
+    <div className="relative group">
+      <button 
+        className="flex items-center gap-1.5 bg-surface2 hover:bg-surface3 border border-surface2 px-2.5 py-1.5 rounded-full transition-all cursor-pointer text-xs font-bold text-text-muted hover:text-text"
+      >
+        <span>{LANGUAGES.find(l => l.code === language)?.flag}</span>
+        <span className="hidden sm:inline">{LANGUAGES.find(l => l.code === language)?.code}</span>
+        <ChevronDown className="w-3 h-3" />
+      </button>
+      <div className="absolute right-0 mt-2 w-32 bg-surface border border-surface2 rounded-xl shadow-xl overflow-hidden z-[80] invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
+        {LANGUAGES.map((lang) => (
+          <button
+            key={lang.code}
+            onClick={() => {
+              setLanguage(lang.code);
+              // Force some UI updates if needed
+            }}
+            className={`w-full flex items-center gap-2 px-4 py-2 text-xs font-medium hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-left ${language === lang.code ? 'text-terracotta bg-terracotta/5' : 'text-text-muted'}`}
+          >
+            <span>{lang.flag}</span>
+            <span>{lang.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
   const [text, setText] = useState("");
   const [voice, setVoice] = useState("id-ID-Wavenet-A");
   const [speed, setSpeed] = useState(1);
   const [pitch, setPitch] = useState(0);
   const [volume, setVolume] = useState(0);
   const [status, setStatus] = useState("idle"); // idle, loading, success
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [showFallback, setShowFallback] = useState(false);
   const [isAudioVisible, setIsAudioVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [notification, setNotification] = useState(null);
@@ -306,19 +658,17 @@ const App = () => {
   const [authMode, setAuthMode] = useState("login"); // login, signup
   const [user, setUser] = useState(null);
 
-  const switchAuthMode = (mode) => {
-    setAuthMode(mode);
-  };
-
   const getRemainingCredits = () => {
     if (!user) return 0;
     return Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0));
   };
 
   const getVoiceType = (voiceId) => {
-    for (const group of Object.values(VOICES)) {
-      const v = group.find(i => i.id === voiceId);
-      if (v) return v.type;
+    for (const lang of Object.values(VOICES)) {
+      for (const group of Object.values(lang)) {
+        const v = group.find(i => i.id === voiceId);
+        if (v) return v.type;
+      }
     }
     return "Standard";
   };
@@ -363,18 +713,20 @@ const App = () => {
    const isCappedByQuota = estimatedCost > remainingCredits;
 
   const base64ToBlob = (base64, mime) => {
-    const byteCharacters = atob(base64);
-    const byteArrays = [];
-    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-      const slice = byteCharacters.slice(offset, offset + 512);
-      const byteNumbers = new Array(slice.length);
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
+    try {
+      if (!base64) return null;
+      // Clean the base64 string from any potential whitespace or headers
+      const cleanBase64 = base64.trim().replace(/^data:audio\/\w+;base64,/, "").replace(/\s/g, "");
+      const byteCharacters = atob(cleanBase64);
+      const byteNumbers = new Uint8Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
+      return new Blob([byteNumbers], { type: mime });
+    } catch (e) {
+      console.error("[base64ToBlob] Conversion error:", e);
+      return null;
     }
-    return new Blob(byteArrays, { type: mime });
   };
    const isCappedByRequest = text.length > currentMaxRequestChars;
    const isNearLimit = (text.length > 0) && (text.length > currentMaxRequestChars * 0.9 || (remainingCredits > 0 && estimatedCost > remainingCredits * 0.9) || (remainingCredits < 500));
@@ -568,9 +920,14 @@ const App = () => {
       try {
         const res = await fetch("/api/auth/diag");
         const data = await res.json();
+        
         if (!data.firebaseAdminInitialized && !user) {
-          console.warn("[System] Firebase Admin is not initialized on server.", data.initError || "");
-          setInitError(data.initError || "Backend initialization incomplete.");
+          // If server failed but returned null for initError, use a default string
+          const serverError = (data.initError) 
+            ? (data.initError === "null" ? "Backend initialization incomplete or credentials missing." : data.initError)
+            : "Backend initialization incomplete or credentials missing.";
+          console.warn("[System] Firebase Admin is not initialized on server.", serverError);
+          setInitError(serverError);
         } else {
           setInitError(null);
         }
@@ -612,11 +969,11 @@ const App = () => {
           }
           setIsAuthInitializing(false);
         }, (error) => {
-          console.error("Auth state change error:", error);
+          console.error("Auth state change error:", error?.message || error);
           setIsAuthInitializing(false);
         });
       } catch (e) {
-        console.error("onAuthStateChanged setup failed:", e);
+        console.error("onAuthStateChanged setup failed:", e?.message || e);
         setIsAuthInitializing(false);
       }
     } else {
@@ -814,22 +1171,20 @@ const App = () => {
   }, [audioUrl]);
 
   const handlePreviewVoice = async () => {
+    if (!user) {
+      toast.error("Silakan login untuk mencoba suara.");
+      return;
+    }
+    
     setTestLoading(true);
     try {
-      const headers = {
-        "Content-Type": "application/json"
-      };
-
-      if (auth?.currentUser) {
-        const idToken = await auth.currentUser.getIdToken();
-        if (idToken) {
-          headers.Authorization = `Bearer ${idToken}`;
-        }
-      }
-
+      const idToken = await auth.currentUser.getIdToken();
       const options = {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
         body: JSON.stringify({
           voice,
           speed,
@@ -841,16 +1196,19 @@ const App = () => {
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
       if (data.audioContent) {
-        const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
-        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
+        const mimeType = 'audio/mpeg';
         const blob = base64ToBlob(data.audioContent, mimeType);
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.play();
-        toast.success(`Berhasil memutar contoh suara ${voice}`);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audio.play().catch(e => console.error("[Preview] Play error:", e));
+          toast.success(`Berhasil memutar contoh suara ${getVoiceDisplayName(voice)}`);
+        } else {
+          toast.error("Gagal memproses data suara.");
+        }
       }
     } catch (err) {
-      console.error("Preview error:", err);
+      console.error("Preview error:", err?.message || err);
       if (err.data && err.data.error) {
         toast.error(`Gagal: ${err.data.error}`);
       } else {
@@ -861,20 +1219,51 @@ const App = () => {
     }
   };
 
+  const generateSample = async (sampleText, voiceId) => {
+    try {
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          text: sampleText, 
+          voice: voiceId, 
+          isSample: true 
+        }),
+      };
+
+      const res = await fetch("/api/tts/sample", options);
+      if (!res.ok) throw new Error("Gagal mengambil sampel suara");
+      const data = await res.json();
+      
+      if (data.audioContent) {
+        const mimeType = 'audio/mpeg';
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        return blob ? URL.createObjectURL(blob) : null;
+      }
+      return null;
+    } catch (err) {
+      console.error("[Playground] Sample failed:", err?.message || err);
+      return null;
+    }
+  };
+
   const handleGenerate = async () => {
     if (!auth?.currentUser) {
-      setNotification("anda belum sign up/log in");
-      setTimeout(() => setNotification(null), 3000);
+      toast.error("Silakan masuk/daftar terlebih dahulu untuk melakukan generasi suara.");
+      setAuthMode("login");
+      setIsAuthOpen(true);
       return;
     }
 
     if (!text.trim()) {
-      alert("Silakan tulis naskah terlebih dahulu.");
+      toast.error("Silakan tulis naskah terlebih dahulu.");
       return;
     }
 
     if (isCappedByRequest) {
-      toast.error(`Naskah terlalu panjang! Batas maksimum untuk paket ${user.tier} adalah ${currentMaxRequestChars.toLocaleString("id-ID")} karakter.`);
+      toast.error(`Naskah terlalu panjang! Batas maksimum untuk paket ${user?.tier || 'FREE'} adalah ${currentMaxRequestChars.toLocaleString("id-ID")} karakter.`);
       return;
     }
 
@@ -884,7 +1273,7 @@ const App = () => {
     }
 
     if (cooldown > 0) {
-      alert(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
+      toast.error(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
       return;
     }
 
@@ -899,11 +1288,16 @@ const App = () => {
 
   const proceedWithGenerate = async () => {
     setStatus("loading");
+    setLoadingMessage("Menghubungkan ke Rungu Engine...");
+    setShowFallback(false);
+    const startTime = Date.now();
 
     try {
       if (!auth?.currentUser) throw new Error("Anda harus login untuk melakukan generasi.");
       
       const idTokenBuffer = await auth.currentUser.getIdToken(true);
+      
+      setLoadingMessage("Mensintesis gelombang audio...");
       const options = {
         method: "POST",
         headers: {
@@ -923,48 +1317,74 @@ const App = () => {
       const data = await checkResponse(res, 0, options);
 
       if (data.audioContent) {
-        console.log(`[TTS] Received audio content. Size: ${Math.round(data.audioContent.length / 1024)} KB`);
+        setLoadingMessage("Mengunduh hasil...");
+        const generationTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[TTS] Synthesis successful in ${generationTime}s. Audio Size: ${Math.round(data.audioContent.length / 1024)} KB`);
         
-        const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
-        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
+        const mimeType = 'audio/mpeg';
+        
+        let url;
         const blob = base64ToBlob(data.audioContent, mimeType);
-        const url = URL.createObjectURL(blob);
-        
-        // Clean up previous blob URL to prevent memory leaks
-        if (audioUrl && audioUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(audioUrl);
+        if (blob) {
+          try {
+            url = URL.createObjectURL(blob);
+            
+            // Clean up previous blob URL
+            if (audioUrl && audioUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(audioUrl);
+            }
+          } catch (blobErr) {
+            console.error("[TTS] Object URL creation failed:", blobErr);
+            url = `data:${mimeType};base64,${data.audioContent}`;
+          }
+        } else {
+          console.warn("[TTS] Blob creation failed, falling back to data URI");
+          url = `data:${mimeType};base64,${data.audioContent}`;
         }
 
         setAudioUrl(url);
         setGeneratedInfo({
           duration: data.duration,
-          voice: data.voice
+          voice: data.voice,
+          time: generationTime
         });
         setIsTeaser(data.isTeaser || false);
-        // setUser will trigger re-render, and useEffect will pick up audioUrl to play
         setStatus("success");
         setIsAudioVisible(true);
         
-        // Success: Trigger cooldown on client side too
+        // Cooldown management
         const cdTime = (!user || user.tier === 'FREE') ? 15 : 2;
         setCooldown(cdTime);
 
+        toast.success(`Suara berhasil dibuat dalam ${generationTime} detik!`, { icon: '✨' });
+        
         setTimeout(() => setStatus("idle"), 3000);
         refreshUser();
         
-        // Growth Prompt: Share your creation
-        if (user.generation_count % 3 === 0) {
-            toast.success("Share your creation & tag @rungu.id to get +30k characters!", { duration: 5000 });
+        if (user?.generation_count && user.generation_count % 3 === 0) {
+            toast("Share kreasi Anda & tag @rungu.id untuk bonus karakter!", { icon: '🎁', duration: 6000 });
         }
       } else {
-        throw new Error("No audio content returned");
+        throw new Error("Gagal menerima data suara dari server.");
       }
     } catch (err) {
+      console.error("[TTS] Critical error in proceedWithGenerate:", err?.message || err);
       setStatus("idle");
+      setLoadingMessage("");
+      setShowFallback(true);
+      
       if (err.status === 429 && err.data?.cooldownRemaining) {
         setCooldown(err.data.cooldownRemaining);
       }
-      handleApiError(err, "Gagal menghasilkan suara.");
+      
+      // Special handling for specific text errors
+      if (err.message?.includes("naskah terlalu panjang")) {
+         toast.error("Naskah melebihi batas karakter.");
+      } else if (err.message?.includes("kredit tidak mencukupi")) {
+         toast.error("Kredit karakter Anda habis.");
+      } else {
+         handleApiError(err, "Gagal memproses suara. Pastikan naskah dan pilihan suara sudah benar.");
+      }
     }
   };
 
@@ -1056,7 +1476,7 @@ const App = () => {
         }
       } catch (err) {
         if (err.name !== "AbortError") {
-          console.error("Error sharing:", err);
+          console.error("Error sharing:", err?.message || err);
         }
       }
     } else {
@@ -1108,14 +1528,14 @@ const App = () => {
           setUser(syncData.user);
         }
       } catch (syncErr) {
-        console.error("[Auth] Background sync error:", syncErr);
+        console.error("[Auth] Background sync error:", syncErr?.message || syncErr);
       }
 
       await refreshUser();
       setIsAuthOpen(false);
       toast.success("Login Google berhasil!");
     } catch (err) {
-      console.error("[Auth] Google sign-in error:", err);
+      console.error("[Auth] Google sign-in error:", err?.message || err);
       toast.error(err.message || "Gagal masuk dengan Google.");
     } finally {
       setGoogleLoading(false);
@@ -1136,7 +1556,7 @@ const App = () => {
     if (!auth?.currentUser) {
       setAuthMode("signup");
       setIsAuthOpen(true);
-      toast.error("Silakan login terlebih dahulu untuk melakukan pembelian.");
+      toast.error(language === 'ID' ? "Silakan login terlebih dahulu untuk melakukan pembelian." : "Please login first to make a purchase.");
       return;
     }
 
@@ -1186,7 +1606,7 @@ const App = () => {
     }
   };
 
-  if (!isConfigValid) {
+  if (!isConfigValid || (initError && !user)) {
     return (
       <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-4 text-center">
         <div className="w-16 h-16 bg-terracotta/20 rounded-full flex items-center justify-center mb-6">
@@ -1199,7 +1619,9 @@ const App = () => {
         </p>
         <div className="bg-surface2 p-4 rounded-xl border border-surface2 text-left w-full max-w-md">
           <h3 className="text-xs font-black text-terracotta uppercase mb-2">Pesan Kesalahan:</h3>
-          <p className="text-xs font-mono text-text-muted break-all mb-4">{initError || clientInitError || "Firebase configuration missing or project mismatch."}</p>
+          <p className="text-xs font-mono text-text-muted break-all mb-4">
+            {initError || clientInitError || "Konfigurasi Firebase ditemukan namun terjadi kegagalan saat inisialisasi layanan (Check Console for details)."}
+          </p>
           
           <div className="mt-4 p-3 bg-black/20 rounded border border-white/5 font-mono text-[10px] space-y-1">
             <div className="flex justify-between"><span className="text-gray-500">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
@@ -1209,11 +1631,11 @@ const App = () => {
 
           <h3 className="text-xs font-black text-blue-400 uppercase mb-2 border-t border-surface/50 pt-4 mt-4">Saran Perbaikan:</h3>
           <ul className="text-xs text-text-muted list-disc pl-4 space-y-2">
-            <li>Buka <b>Settings</b> &gt; <b>Secrets</b>.</li>
-            <li>Pastikan <b>VITE_FIREBASE_API_KEY</b> berisi API Key yang valid (diawali AIza...).</li>
-            <li>Pastikan <b>VITE_FIREBASE_PROJECT_ID</b> bernilai <code>practical-gecko-476621-q4</code>.</li>
-            <li>Jika Anda meremote project lain, pastikan kedua nilai tersebut berasal dari project yang sama di Firebase Console.</li>
-            <li>Hapus tanda kutip jika ada di nilai secret tersebut.</li>
+            <li>Buka <b>Settings</b> &gt; <b>Secrets</b> di AI Studio.</li>
+            <li>Pastikan <b>FIREBASE_PROJECT_ID</b>, <b>FIREBASE_CLIENT_EMAIL</b>, dan <b>FIREBASE_PRIVATE_KEY</b> sudah diisi untuk sisi server.</li>
+            <li>Buka Firebase Console &gt; Project Settings &gt; <b>Service Accounts</b> untuk mendapatkan kredensial tersebut.</li>
+            <li>Pastikan <b>Cloud Firestore</b> sudah diaktifkan di Firebase Console.</li>
+            <li>Jika Anda baru saja mengaktifkannya, tunggu 1-2 menit lalu muat ulang halaman.</li>
           </ul>
         </div>
         <button 
@@ -1252,40 +1674,41 @@ const App = () => {
           <div className="flex justify-between h-24 items-center">
             <div className="flex items-center gap-4">
               <ShinervaLogo className="w-12 h-12 text-terracotta" />
-              <span className="font-black text-3xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer">
-                Shinerva <span className="text-terracotta">TTS</span>
+              <span className="font-black text-2xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer flex flex-col leading-tight">
+                SHINERVA AI
+                <span className="text-[10px] text-terracotta uppercase tracking-[0.3em] font-black">Text To Speech</span>
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a
-                href="#aura"
+                href="#"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Aura
+                {t('nav.home')}
               </a>
               <a
                 href="#packs"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Content Packs
+                {t('nav.packs')}
               </a>
               <a
                 href="#pricing"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Pricing
+                {t('nav.pricing')}
               </a>
               <a
                 href="#faq"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                FAQ
+                {t('nav.faq')}
               </a>
               <a
                 href="#contact"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Hubungi Kami
+                {t('nav.contact')}
               </a>
               {user && (
                 <>
@@ -1293,14 +1716,14 @@ const App = () => {
                     href="#pronunciation"
                     className="text-text-muted hover:text-text font-medium transition-colors"
                   >
-                    Aturan Pengucapan
+                    {t('nav.pronunciation')}
                   </a>
                   <button
                     onClick={handleReferralClick}
                     className="flex items-center gap-2 text-terracotta hover:text-trdark font-bold transition-all border-none bg-transparent cursor-pointer relative"
                   >
                     <Gift className="w-4 h-4" /> 
-                    Bonus Referral
+                    {t('nav.referral')}
                     {user && (user.valid_referrals > 0) && (
                       <span className="absolute -top-1 -right-1 flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-terracotta opacity-75"></span>
@@ -1323,6 +1746,8 @@ const App = () => {
                   <Moon className="w-5 h-5" />
                 )}
               </button>
+
+              <LanguageSelector />
 
               {user ? (
                 <div className="relative">
@@ -1350,7 +1775,7 @@ const App = () => {
                     >
                       <div className="p-4 border-b border-surface2 bg-surface2/30">
                         <div className="flex items-center justify-between mb-1">
-                           <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Akun Saya</p>
+                           <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{t('nav.account')}</p>
                            <button onClick={() => setIsUserMenuOpen(false)} className="text-text-muted hover:text-text bg-transparent border-none cursor-pointer p-1">
                              <X className="w-3 h-3" />
                            </button>
@@ -1361,7 +1786,7 @@ const App = () => {
                              {user.tier}
                            </span>
                            <span className="text-[10px] font-bold text-text-muted">
-                             {remainingCredits.toLocaleString("id-ID")} Karakter Tersisa
+                             {remainingCredits.toLocaleString(language === 'ID' ? "id-ID" : "en-US")} {t('nav.remaining')}
                            </span>
                         </div>
                       </div>
@@ -1375,7 +1800,7 @@ const App = () => {
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
                         >
                           <UserCircle className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">Profil Akun</span>
+                          <span className="text-sm font-bold">{t('nav.profile')}</span>
                         </button>
                         
                         <button 
@@ -1386,7 +1811,7 @@ const App = () => {
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
                         >
                           <History className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">Riwayat Suara</span>
+                          <span className="text-sm font-bold">{t('nav.history_voices')}</span>
                         </button>
 
                         <button 
@@ -1397,7 +1822,7 @@ const App = () => {
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
                         >
                           <UserPlus className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">Referral & Bonus</span>
+                          <span className="text-sm font-bold">{t('nav.referral_bonus')}</span>
                         </button>
                         
                         <button 
@@ -1408,7 +1833,7 @@ const App = () => {
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
                         >
                           <Settings className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">Langganan & Paket</span>
+                          <span className="text-sm font-bold">{t('nav.subscription')}</span>
                         </button>
 
                         {user.tier === 'ENTERPRISE' && (
@@ -1449,7 +1874,7 @@ const App = () => {
                     }}
                     className="text-text-muted hover:text-text font-bold text-sm tracking-tight transition-colors border-none bg-transparent cursor-pointer px-3 py-2 rounded-lg hover:bg-surface2 hidden xs:block"
                   >
-                    Masuk
+                    {t('nav.login')}
                   </button>
                   <button
                     onClick={() => {
@@ -1458,7 +1883,7 @@ const App = () => {
                     }}
                     className="bg-terracotta hover:bg-trdark text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-full font-bold text-[11px] sm:text-sm transition-all transform hover:scale-105 shadow-lg shadow-terracotta/20 border-none cursor-pointer whitespace-nowrap"
                   >
-                    Mulai Gratis (10k Karakter)
+                    {t('nav.signup')}
                   </button>
                 </div>
               )}
@@ -1478,8 +1903,8 @@ const App = () => {
       {user && user.generation_count === 0 && !hasSeenWelcome && (
         <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[60] bg-dark border border-terracotta p-6 rounded-2xl shadow-2xl max-w-sm text-center">
              <div className="text-4xl mb-4">🎉</div>
-             <h3 className="font-black text-xl mb-2">Selamat Datang!</h3>
-             <p className="text-gray-400 text-sm mb-4">Kamu dapat 10.000 karakter gratis untuk memulai (~6 menit audio).</p>
+             <h3 className="font-black text-xl mb-2">{t('welcome.title')}</h3>
+             <p className="text-gray-400 text-sm mb-4">{t('welcome.subtitle')}</p>
              <button 
                onClick={() => {
                  setHasSeenWelcome(true);
@@ -1488,7 +1913,7 @@ const App = () => {
                }} 
                className="bg-terracotta px-6 py-2 rounded-full font-bold text-sm border-none cursor-pointer text-white"
              >
-               Siap!
+               {t('welcome.cta')}
              </button>
         </div>
       )}
@@ -1539,25 +1964,27 @@ const App = () => {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-24 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-terracotta/10 rounded-full blur-[120px] -z-10"></div>
           <div className="flex justify-center mb-6">
-            <span className="bg-terracotta/10 text-terracotta px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] border border-terracotta/20 animate-pulse">
-              Powered by RUNGU Engine
+            <span className="bg-terracotta/10 text-terracotta px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] border border-terracotta/20">
+              Southeast Asia’s Emotional AI Voice Platform
             </span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-tight text-text">
-            Ubah Teks Menjadi <br />
-            <span className="gradient-text">Suara Manusiawi</span>
+          <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-6 leading-tight text-text">
+            {t('hero.title_part1')} <br />
+            <span className="gradient-text">{t('hero.title_accent')}</span>
           </h1>
-          <p className="text-xl text-text-muted mb-10 max-w-2xl mx-auto font-medium">
-            Generator suara AI paling realistis di Indonesia. Sempurna untuk
-            konten TikTok, YouTube, Podcast, dan Iklan Anda tanpa harus rekaman.
+          <p className="text-xl text-text-muted mb-10 max-w-3xl mx-auto font-medium">
+            {t('hero.subtitle')}
           </p>
           <div className="flex justify-center gap-4">
-            <div className="flex items-center gap-2 bg-surface2 px-4 py-2 rounded-full border border-surface2">
-              <Check className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-bold text-text-muted">
-                Bonus 10.000 Karakter Signup
-              </span>
-            </div>
+             <button
+                onClick={() => {
+                  setAuthMode("signup");
+                  setIsAuthOpen(true);
+                }}
+                className="bg-terracotta hover:bg-trdark text-white px-8 py-4 rounded-full font-black text-lg transition-all transform hover:scale-105 shadow-2xl shadow-terracotta/30 border-none cursor-pointer"
+              >
+                {t('hero.cta_primary')}
+              </button>
           </div>
         </section>
 
@@ -1670,19 +2097,19 @@ const App = () => {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="font-bold text-text-muted">
-                      Editor Naskah
+                      {t('studio.label')}
                     </label>
                     <div className="flex flex-col items-end">
                       <div className="flex items-center gap-2">
                         {estimatedCost > 0 && (
                           <span className="text-[10px] font-bold text-text-muted bg-surface2 px-2 py-0.5 rounded">
-                            Beban: {estimatedCost.toLocaleString("id-ID")} Kredit
+                            {t('studio.cost')}: {estimatedCost.toLocaleString(language === 'ID' ? "id-ID" : "en-US")} {language === 'ID' ? 'Kredit' : 'Credits'}
                           </span>
                         )}
                       </div>
                       {(isCappedByRequest || isCappedByQuota) && (
                         <span className="text-[10px] text-terracotta font-bold mt-1 animate-pulse">
-                          {isCappedByRequest ? "Batas Request Tercapai!" : "Kredit Tidak Mencukupi!"}
+                          {isCappedByRequest ? t('studio.limit_reached') : t('studio.insufficient')}
                         </span>
                       )}
                       {!isCappedByRequest && !isCappedByQuota && isNearLimit && (
@@ -1697,19 +2124,19 @@ const App = () => {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     className={`w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${(isNearLimit || isCappedByRequest || isCappedByQuota) ? "border-terracotta ring-1 ring-terracotta" : ""}`}
-                    placeholder="Ketik naskah Anda di sini..."
+                    placeholder={t('studio.placeholder')}
                   />
                   {user && (
                     <div className="mt-2 flex justify-between items-center text-[10px] font-bold">
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5 text-text-muted">
-                          <span>Panjang Naskah:</span>
+                          <span>{t('studio.length')}:</span>
                           <span className={`${isCappedByRequest ? "text-terracotta" : "text-text"} font-mono`}>
                             {text.length.toLocaleString("id-ID")} / {currentMaxRequestChars.toLocaleString("id-ID")}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 text-text-muted border-l border-surface2/30 pl-4">
-                          <span>Sisa Kredit:</span>
+                          <span>{t('studio.remaining')}:</span>
                           <span className={remainingCredits < 1000 ? "text-terracotta" : "text-text"}>
                             {remainingCredits.toLocaleString("id-ID")}
                           </span>
@@ -1717,102 +2144,134 @@ const App = () => {
                       </div>
                       {user.tier === 'FREE' && (
                         <div className="text-terracotta bg-terracotta/5 px-2 py-0.5 rounded border border-terracotta/10">
-                          Kuota Harian: {Math.max(0, 20 - user.generation_count)} / 20
+                          {t('studio.quota')}: {Math.max(0, 20 - user.generation_count)} / 20
                         </div>
                       )}
                     </div>
                   )}
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-bold text-text-muted mb-2">
-                      Suara Pilihan
+                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <label className="block text-sm font-bold text-text-muted">
+                      {t('studio.voicesSelection')}
                     </label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1" ref={voiceDropdownRef}>
+                    <div className="flex bg-dark p-1 rounded-xl border border-surface2">
+                      {LANGUAGES.map((lang) => (
                         <button
-                          type="button"
-                          onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
-                          className="w-full bg-dark text-text rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
+                          key={lang.code}
+                          onClick={() => {
+                            setLanguage(lang.code);
+                            // Set first voice in new language
+                            const firstVoice = Object.values(VOICES[lang.code]).flat()[0];
+                            if (firstVoice) setVoice(firstVoice.id);
+                          }}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black transition-all border-none cursor-pointer ${
+                            language === lang.code 
+                            ? "bg-terracotta text-white shadow-lg shadow-terracotta/20" 
+                            : "text-text-muted hover:text-text hover:bg-surface2/50"
+                          }`}
                         >
-                          <span className="truncate">{getVoiceDisplayName(voice)}</span>
-                          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                          <span>{lang.flag}</span>
+                          <span className="hidden xs:inline">{lang.name}</span>
                         </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1" ref={voiceDropdownRef}>
+                          <button
+                            type="button"
+                            onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
+                            className="w-full bg-dark text-text rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
+                          >
+                            <span className="truncate">{getVoiceDisplayName(voice)}</span>
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
 
-                        <AnimatePresence>
-                          {isVoiceDropdownOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute z-50 left-0 right-0 mt-2 bg-surface rounded-2xl border border-surface2 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar"
-                            >
-                              {Object.entries(VOICES).map(([category, voiceList]) => (
-                                <div key={category}>
-                                  <div className="px-4 py-2 bg-surface2/30 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md border-b border-surface2/30">
-                                    {category}
-                                  </div>
-                                  <div className="p-1">
-                                    {voiceList.map((v) => {
-                                      const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
-                                      const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
-                                      const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
-                                      const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
-                                      const isUserFree = userTierIndex < 1;
-                                      const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
-                                      const isSelected = voice === v.id;
-                                      const isStudio = v.type === 'Studio' || v.glow;
+                          <AnimatePresence>
+                            {isVoiceDropdownOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute z-50 left-0 right-0 mt-2 bg-surface rounded-2xl border border-surface2 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar"
+                              >
+                                {Object.entries(VOICES[language]).map(([category, voiceList]) => (
+                                  <div key={category}>
+                                    <div className="px-4 py-2 bg-surface2/30 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md border-b border-surface2/30">
+                                      {category}
+                                    </div>
+                                    <div className="p-1">
+                                      {voiceList.map((v) => {
+                                        const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
+                                        const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
+                                        const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
+                                        const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
+                                        const isUserFree = userTierIndex < 1;
+                                        const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree) || v.comingSoon;
+                                        const isSelected = voice === v.id;
+                                        const isStudio = v.type === 'Studio' || v.glow;
 
-                                      return (
-                                        <button
-                                          key={v.id}
-                                          type="button"
-                                          disabled={isLocked}
-                                          onClick={() => {
-                                            setVoice(v.id);
-                                            setIsVoiceDropdownOpen(false);
-                                          }}
-                                          className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group relative overflow-hidden ${
-                                            isSelected ? 'bg-surface2' : 'hover:bg-surface2/50'
-                                          } ${isLocked ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
-                                        >
-                                          <div className="flex flex-col relative z-20">
-                                            <div className="flex items-center gap-2">
-                                              <span className={`text-sm font-bold ${isSelected ? 'text-terracotta' : 'text-text'}`}>
-                                                {isLocked && "🔒 "}{v.name}
-                                              </span>
-                                              {isStudio && (
-                                                <span className="text-[8px] font-black bg-terracotta text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(231,76,60,0.5)]">
-                                                  AURA
+                                        return (
+                                          <button
+                                            key={v.id}
+                                            type="button"
+                                            disabled={isLocked}
+                                            onClick={() => {
+                                              setVoice(v.id);
+                                              setIsVoiceDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group relative overflow-hidden ${
+                                              isSelected ? 'bg-surface2' : 'hover:bg-surface2/50'
+                                            } ${isLocked ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
+                                          >
+                                            <div className="flex flex-col relative z-20">
+                                              <div className="flex items-center gap-2">
+                                                <span className={`text-sm font-bold ${isSelected ? 'text-terracotta' : 'text-text'}`}>
+                                                  {isLocked && !v.comingSoon && "🔒 "}{v.name}
                                                 </span>
-                                              )}
+                                                {v.comingSoon && (
+                                                  <span className="text-[8px] font-black bg-surface2 text-gray-400 px-1.5 py-0.5 rounded border border-white/5 uppercase">
+                                                    SOON
+                                                  </span>
+                                                )}
+                                                {isStudio && !v.comingSoon && (
+                                                  <span className="text-[8px] font-black bg-terracotta text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(231,76,60,0.5)]">
+                                                    AURA
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <span className="text-[10px] text-gray-500 font-medium">
+                                                {v.comingSoon 
+                                                  ? (language === 'ID' ? 'Segera Hadir' : 'Coming Soon')
+                                                  : `Beban: ${voiceConfig.tiers[v.type] || 1}x Kredit`
+                                                }
+                                              </span>
                                             </div>
-                                            <span className="text-[10px] text-gray-500 font-medium">Beban: {voiceConfig.tiers[v.type] || 1}x Kredit</span>
-                                          </div>
-                                          
-                                          {isStudio && (
-                                            <div className="absolute right-0 top-0 bottom-0 w-1 bg-terracotta/50 shadow-[0_0_15px_rgba(231,76,60,0.5)]"></div>
-                                          )}
-                                          
-                                          {isSelected && (
-                                            <Check className="w-4 h-4 text-terracotta relative z-20" />
-                                          )}
+                                            
+                                            {isStudio && (
+                                              <div className="absolute right-0 top-0 bottom-0 w-1 bg-terracotta/50 shadow-[0_0_15px_rgba(231,76,60,0.5)]"></div>
+                                            )}
+                                            
+                                            {isSelected && (
+                                              <Check className="w-4 h-4 text-terracotta relative z-20" />
+                                            )}
 
-                                          {isStudio && (
-                                            <div className="absolute inset-0 bg-gradient-to-r from-terracotta/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
+                                            {isStudio && (
+                                              <div className="absolute inset-0 bg-gradient-to-r from-terracotta/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       <button
                         onClick={handlePreviewVoice}
                         disabled={testLoading}
@@ -1830,7 +2289,7 @@ const App = () => {
 
                     {/* Selected Voice Info Box */}
                     {(() => {
-                      const selectedVoice = Object.values(VOICES).flat().find(v => v.id === voice);
+                      const selectedVoice = Object.values(VOICES[language]).flat().find(v => v.id === voice);
                       if (!selectedVoice) return null;
                       const isStudio = selectedVoice.type === 'Studio' || selectedVoice.glow;
 
@@ -1893,9 +2352,9 @@ const App = () => {
                     })()}
 
                     {(!user || user.tier === 'FREE') && (
-                      <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20 animate-pulse">
+                      <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20">
                         <Gift className="w-3 h-3" />
-                        <span className="font-bold">Buka fitur suara Flow, Pulse & Aura Flagship dengan paket starter! <a href="#pricing" className="underline">Upgrade Sekarang</a></span>
+                        <span className="font-bold">{t('studio.unlock_aura')} <a href="#pricing" className="underline">{t('studio.view_packs')}</a></span>
                       </div>
                     )}
                   </div>
@@ -2068,8 +2527,8 @@ const App = () => {
                   </div>
                   {audioUrl && (
                     <audio
+                      key={audioUrl}
                       ref={audioRef}
-                      src={audioUrl}
                       onEnded={() => {
                         setIsPlaying(false);
                         setCurrentTime(0);
@@ -2077,7 +2536,9 @@ const App = () => {
                       onTimeUpdate={updateProgress}
                       onLoadedMetadata={updateProgress}
                       className="hidden"
-                    />
+                    >
+                      <source src={audioUrl} type="audio/mpeg" />
+                    </audio>
                   )}
 
                   {isAudioVisible && (
@@ -2160,7 +2621,7 @@ const App = () => {
                   <button
                     onClick={handleGenerate}
                     disabled={status === "loading" || status === "success" || cooldown > 0 || isCappedByRequest || isCappedByQuota}
-                    className={`w-full py-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-all shadow-lg border-none cursor-pointer 
+                    className={`w-full py-4 rounded-xl font-bold flex flex-col justify-center items-center transition-all shadow-lg border-none cursor-pointer 
                       ${
                         status === "success"
                           ? "bg-green-600 text-white"
@@ -2171,38 +2632,71 @@ const App = () => {
                               : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-white"
                       }`}
                   >
-                    {status === "idle" && cooldown === 0 && (
-                      isCappedByRequest ? (
+                    <div className="flex items-center gap-2">
+                      {status === "idle" && cooldown === 0 && (
+                        isCappedByRequest ? (
+                          <>
+                             <AlertTriangle className="w-5 h-5" /> Naskah Terlalu Panjang
+                          </>
+                        ) : isCappedByQuota ? (
+                          <>
+                             <AlertCircle className="w-5 h-5" /> Kredit Tidak Cukup
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-5 h-5" /> Hasilkan Suara Sekarang
+                          </>
+                        )
+                      )}
+                      {status === "idle" && cooldown > 0 && (
                         <>
-                           <AlertTriangle className="w-5 h-5" /> Naskah Terlalu Panjang
+                          <Loader2 className="w-5 h-5 animate-spin" /> Tunggu {cooldown}s...
                         </>
-                      ) : isCappedByQuota ? (
+                      )}
+                      {status === "loading" && (
                         <>
-                           <AlertCircle className="w-5 h-5" /> Kredit Tidak Cukup
+                          <Loader2 className="w-5 h-5 animate-spin" /> Sedang Proses...
                         </>
-                      ) : (
+                      )}
+                      {status === "success" && (
                         <>
-                          <Mic className="w-5 h-5" /> Hasilkan Suara Sekarang
+                          <CheckCircle className="w-5 h-5" /> Suara Berhasil Dibuat
                         </>
-                      )
-                    )}
-                    {status === "idle" && cooldown > 0 && (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" /> Tunggu {cooldown}s...
-                      </>
-                    )}
-                    {status === "loading" && (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" /> Memproses
-                        Suara...
-                      </>
-                    )}
-                    {status === "success" && (
-                      <>
-                        <CheckCircle className="w-5 h-5" /> Selesai!
-                      </>
+                      )}
+                    </div>
+                    {status === "loading" && loadingMessage && (
+                      <span className="text-[10px] font-medium opacity-80 mt-1 animate-pulse">{loadingMessage}</span>
                     )}
                   </button>
+
+                  {showFallback && (
+                    <div className="mt-4 p-4 bg-terracotta/10 border border-terracotta/20 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+                       <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-terracotta shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                             <p className="text-xs font-bold text-text">Gagal Menghasilkan Suara?</p>
+                             <p className="text-[11px] text-text-muted mt-1">Kami mengalami kendala teknis sementara. Anda bisa mencoba lagi atau gunakan Browser TTS gratis sebagai cadangan.</p>
+                             <div className="flex gap-2 mt-3">
+                                <button 
+                                  onClick={handleGenerate}
+                                  className="text-[11px] font-bold bg-terracotta text-white px-3 py-1.5 rounded-lg border-none cursor-pointer"
+                                >
+                                  Coba Lagi
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    fallbackTTS();
+                                    setShowFallback(false);
+                                  }}
+                                  className="text-[11px] font-bold bg-surface2 text-text px-3 py-1.5 rounded-lg border border-surface3 cursor-pointer"
+                                >
+                                  Browser TTS (Cepat)
+                                </button>
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2357,6 +2851,8 @@ const App = () => {
         {/* Voice Playground Showcase */}
         <section id="playground" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
           <VoicePlayground 
+            language={language}
+            generateSample={generateSample}
             onUpgrade={() => {
               const element = document.getElementById('pricing');
               if (element) element.scrollIntoView({ behavior: 'smooth' });
@@ -2371,18 +2867,19 @@ const App = () => {
         >
           <div className="text-center mb-16">
             <div className="inline-block bg-terracotta/20 text-terracotta px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-4">
-              Feature Update
+              {language === 'ID' ? 'Pembaruan Fitur' : 'Feature Update'}
             </div>
             <h2 className="text-3xl md:text-4xl font-black mb-4 text-text">
-              Content Packs <span className="text-text-muted">(Coming Soon)</span>
+              {t('nav.packs')} <span className="text-text-muted">({language === 'ID' ? 'Segera Hadir' : 'Coming Soon'})</span>
             </h2>
             <p className="text-text-muted mx-auto max-w-2xl">
-              Template naskah siap pakai dengan gaya bacaan yang sudah
-              dioptimasi AI. Segera hadir untuk membantu produktivitas Anda.
+              {language === 'ID' 
+                ? 'Template naskah siap pakai dengan gaya bacaan yang sudah dioptimasi AI. Segera hadir untuk membantu produktivitas Anda.' 
+                : 'Ready-to-use script templates with AI-optimized reading styles. Coming soon to help your productivity.'}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {PACKS.map((pack) => (
+            {(PACKS[language] || PACKS['ID']).map((pack) => (
               <div
                 key={pack.id}
                 className={`bg-surface rounded-2xl p-6 border transition-colors flex flex-col items-start relative group opacity-60 ${pack.trending ? "border-terracotta/30 shadow-[0_0_15px_rgba(226,114,91,0.1)]" : "border-surface2"}`}
@@ -2405,7 +2902,7 @@ const App = () => {
                   disabled
                   className="w-full bg-dark/50 border border-gray-700 text-gray-500 font-bold py-2.5 rounded-lg transition-all text-sm cursor-not-allowed"
                 >
-                  Activate Pack
+                  {language === 'ID' ? 'Aktifkan Paket' : 'Activate Pack'}
                 </button>
               </div>
             ))}
@@ -2418,16 +2915,16 @@ const App = () => {
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
         >
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-4">
-              Pilih Paket Anda
+            <h2 className="text-4xl md:text-5xl font-black mb-4">
+               {t('pricing.title')}
             </h2>
-            <p className="text-text-muted max-w-2xl mx-auto mb-8">
-              Mulai gratis, upgrade saat Anda siap untuk produksi profesional.
+            <p className="text-text-muted max-w-2xl mx-auto mb-8 text-lg">
+               {t('pricing.subtitle')}
             </p>
 
             {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-4 mb-12">
-              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-text-muted'}`}>Bulanan</span>
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-text-muted'}`}>{t('pricing.monthly')}</span>
               <button 
                 onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
                 className="w-14 h-7 bg-surface2 rounded-full relative p-1 transition-colors cursor-pointer border-none"
@@ -2435,40 +2932,75 @@ const App = () => {
                 <div className={`w-5 h-5 bg-terracotta rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'}`}></div>
               </button>
               <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-text-muted'}`}>Tahunan</span>
-                <span className="bg-green-500/20 text-green-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Hemat 27%</span>
+                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-text-muted'}`}>{t('pricing.yearly')}</span>
+                <span className="bg-green-500/20 text-green-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">{t('pricing.save')} 27%</span>
               </div>
+            </div>
+
+            {/* Supported Payment Methods */}
+            <div className="flex flex-wrap justify-center items-center gap-6 mb-12 opacity-70 hover:opacity-100 transition-opacity">
+               <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mr-2">Metode Pembayaran:</div>
+               <div className="flex items-center gap-4 grayscale hover:grayscale-0 transition-all">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-400">DANA</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-orange-500">ShopeePay</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-purple-600">OVO</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-600">GoPay</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-red-600">LinkAja</span>
+                  </div>
+                  <div className="h-4 w-[1px] bg-surface2"></div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-text font-serif">QRIS</span>
+                  </div>
+                  <div className="h-4 w-[1px] bg-surface2"></div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-800">VA BCA</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-orange-600">VA BNI</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-500">VA BRI</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-900 font-mono">Mandiri</span>
+                  </div>
+               </div>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {/* Free */}
             <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2">Free</h3>
+              <h3 className="text-lg font-bold mb-2">Basic</h3>
               <div className="text-2xl font-black text-text mb-6">
                 Rp 0{" "}
                 <span className="text-xs font-medium text-text-muted">
-                  /bulan
+                  /mo
                 </span>
               </div>
               <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 6 menit audio ≈ 6 video TikTok 1 menit
+                 Entry-level emotional voices for creators.
               </div>
               <ul className="space-y-4 mb-8 flex-grow text-text-muted text-xs">
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  10.000 Kredit / Bulan
-                </li>
-                <li className="flex items-center gap-2 text-red-400">
-                  <X className="w-3 h-3 text-red-500 flex-shrink-0" />{" "}
-                  Kredit Sisa Hangus
+                  10.000 Credits / mo
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Tier 1 (Basic / Flow)
+                  Tier 1 (Fungsional) Voices
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Maks 10 Video / Hari
+                  Limited Daily generations
                 </li>
               </ul>
               <button
@@ -2478,48 +3010,44 @@ const App = () => {
                 }}
                 className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer"
               >
-                Coba Sekarang
+                {t('hero.cta_primary')}
               </button>
             </div>
             {/* Starter */}
             <div className="bg-surface border border-terracotta p-6 rounded-3xl flex flex-col relative shadow-[0_0_30px_rgba(226,114,91,0.15)]">
               <div className="absolute top-0 right-6 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
-                Paling Populer
+                Entry Pack
               </div>
               <h3 className="text-lg font-bold mb-2 text-text">Starter</h3>
               <div className="text-2xl font-black text-text mb-6">
-                Rp 19rb{" "}
+                Rp 19k{" "}
                 <span className="text-xs font-medium text-text-muted">
-                  /skali
+                  /topup
                 </span>
               </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 33 menit audio ≈ 33 video TikTok 1 menit
+              <div className="text-xs text-text-muted bg-surface2 px-3 py-2 rounded-lg mb-6 font-medium">
+                 Expressive voices (Pulse) are coming soon.
               </div>
               <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  50.000 Kredit (Top Up)
+                  50.000 Credits (Permanent)
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Pulse: Suara Ekspresif & Manusiawi
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Hak Penggunaan Komersial
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Kredit Tidak Akan Hangus
+                   Unlock Flow Voices <span className="text-[10px] opacity-60">(Pulse soon)</span>
                 </li>
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.STARTER.id)}
                 disabled={purchaseLoading === PLANS.STARTER.id}
-                className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer flex justify-center items-center"
+                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === PLANS.STARTER.id 
+                    ? "bg-surface2 text-text-muted" 
+                    : "bg-terracotta hover:bg-trdark text-white"
+                }`}
               >
-                {purchaseLoading === PLANS.STARTER.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
+                {purchaseLoading === PLANS.STARTER.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
               </button>
             </div>
             {/* Kreator */}
@@ -2549,7 +3077,7 @@ const App = () => {
                   Kredit
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Basic, Flow, Pulse & Aura
+                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Basic, Flow, <span className="opacity-60">Pulse (Soon)</span> & <span className="opacity-60">Aura (Soon)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-white flex-shrink-0" /> Support
@@ -2559,9 +3087,13 @@ const App = () => {
               <button 
                 onClick={() => handlePurchase(PLANS.KREATOR.id)}
                 disabled={purchaseLoading === PLANS.KREATOR.id}
-                className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer flex justify-center items-center"
+                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === PLANS.KREATOR.id 
+                    ? "bg-surface2 text-text-muted" 
+                    : "bg-terracotta hover:bg-trdark text-white"
+                }`}
               >
-                {purchaseLoading === PLANS.KREATOR.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
+                {purchaseLoading === PLANS.KREATOR.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
               </button>
             </div>
             {/* Produktif */}
@@ -2602,9 +3134,13 @@ const App = () => {
               <button 
                 onClick={() => handlePurchase(PLANS.PRODUKTIF.id)}
                 disabled={purchaseLoading === PLANS.PRODUKTIF.id}
-                className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer flex justify-center items-center"
+                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === PLANS.PRODUKTIF.id 
+                    ? "bg-surface2 text-text-muted" 
+                    : "bg-terracotta hover:bg-trdark text-white"
+                }`}
               >
-                {purchaseLoading === PLANS.PRODUKTIF.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
+                {purchaseLoading === PLANS.PRODUKTIF.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
               </button>
             </div>
             {/* Bisnis */}
@@ -2635,7 +3171,7 @@ const App = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Akses Eksklusif Aura Flagship
+                  <span className="opacity-60">Akses Eksklusif Aura Flagship (Soon)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" /> WA
@@ -2645,10 +3181,45 @@ const App = () => {
               <button 
                 onClick={() => handlePurchase(PLANS.BISNIS.id)}
                 disabled={purchaseLoading === PLANS.BISNIS.id}
-                className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer flex justify-center items-center"
+                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === PLANS.BISNIS.id 
+                    ? "bg-surface2 text-text-muted" 
+                    : "bg-terracotta hover:bg-trdark text-white"
+                }`}
               >
-                {purchaseLoading === PLANS.BISNIS.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
+                {purchaseLoading === PLANS.BISNIS.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
               </button>
+            </div>
+          </div>
+          
+          {/* Top-Up Section */}
+          <div className="mt-20">
+            <div className="text-center mb-10">
+              <h3 className="text-2xl font-black text-white">Butuh Kredit Tambahan?</h3>
+              <p className="text-text-muted mt-2 text-sm">Beli top-up satu kali untuk kredit ekstra tanpa perlu upgrade paket bulanan.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {[PLANS.TOPUP_RECEH, PLANS.TOPUP_AMAN, PLANS.TOPUP_DARURAT].map((pack) => (
+                <div key={pack.id} className="bg-surface2/30 border border-surface2 p-6 rounded-2xl hover:border-terracotta/30 transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-bold text-white group-hover:text-terracotta transition-colors">{pack.name}</h4>
+                      <p className="text-xs text-text-muted mt-1">{pack.credits.toLocaleString("id-ID")} Kredit</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-black text-white">Rp {(pack.price/1000)}rb</div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handlePurchase(pack.id)}
+                    disabled={true}
+                    className="w-full py-2.5 rounded-xl bg-surface2 text-gray-500 font-bold text-sm transition-all border border-transparent cursor-not-allowed flex justify-center items-center"
+                  >
+                    Menunggu Verifikasi
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -2656,13 +3227,15 @@ const App = () => {
         {/* FAQ Section */}
         <section id="faq" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-black mb-4 text-text">Pertanyaan Populer</h2>
+            <h2 className="text-4xl font-black mb-4 text-text">{t('nav.faq')}</h2>
             <p className="text-text-muted">
-              Segala hal yang perlu Anda ketahui tentang Shinerva.id
+              {language === 'ID' 
+                ? 'Segala hal yang perlu Anda ketahui tentang Shinerva.id' 
+                : 'Everything you need to know about Shinerva.id'}
             </p>
           </div>
           <div className="space-y-4">
-            {FAQS.map((faq, index) => (
+            {(FAQS[language] || FAQS['ID']).map((faq, index) => (
               <div
                 key={index}
                 className="bg-surface border border-surface2 rounded-2xl p-6 hover:border-terracotta/50 transition-colors shadow-sm"
@@ -2713,14 +3286,14 @@ const App = () => {
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center gap-4 mb-6">
                   <ShinervaLogo className="w-12 h-12 text-terracotta" />
-                  <span className="font-black text-3xl tracking-tight text-text">
-                    Shinerva<span className="text-terracotta">.id</span>
+                  <span className="font-black text-2xl tracking-tight text-text">
+                    SHINERVA AI <br className="sm:hidden" />
+                    <span className="text-sm block text-text-muted font-bold -mt-1 uppercase tracking-[0.2em]">Text To Speech</span>
                   </span>
                 </div>
                 <p className="text-text-muted max-w-sm">
-                  Solusi AI Text-to-Speech khusus Bahasa Indonesia dengan
-                  kualitas manusiawi tersertifikasi untuk berbagai kebutuhan
-                  konten.
+                   Southeast Asia’s Emotional AI Voice Platform. 
+                   Transforming text into human-like cinematic narrations for a digital-first world.
                 </p>
               </div>
               <div>
@@ -2728,10 +3301,10 @@ const App = () => {
                 <ul className="space-y-4 text-text-muted text-sm">
                   <li>
                     <a
-                      href="#aura"
+                      href="#"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Aura
+                      {t('nav.home')}
                     </a>
                   </li>
                   <li>
@@ -2739,7 +3312,7 @@ const App = () => {
                       href="#packs"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Content Packs
+                      {t('nav.packs')}
                     </a>
                   </li>
                   <li>
@@ -2747,7 +3320,7 @@ const App = () => {
                       href="#pricing"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Pricing
+                      {t('nav.pricing')}
                     </a>
                   </li>
                   <li>
@@ -2755,7 +3328,7 @@ const App = () => {
                       href="#faq"
                       className="hover:text-terracotta transition-colors"
                     >
-                      FAQ
+                      {t('nav.faq')}
                     </a>
                   </li>
                   <li>
@@ -2763,7 +3336,7 @@ const App = () => {
                       href="#contact"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Hubungi Kami
+                      {t('nav.contact')}
                     </a>
                   </li>
                 </ul>
@@ -2799,7 +3372,7 @@ const App = () => {
               </div>
             </div>
                     <div className="flex flex-col md:flex-row justify-between items-center pt-10 border-t border-surface2 text-text-muted text-xs gap-4">
-              <p>© 2024 Shinerva Text To Speech. All rights reserved.</p>
+              <p>© 2024 Shinerva AI Text To Speech. All rights reserved.</p>
               <div className="flex gap-6">
                 <a href="#" className="hover:text-text transition-colors">
                   Privacy Policy
@@ -2910,25 +3483,16 @@ const App = () => {
               <div className="w-20 h-20 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle className="w-10 h-10 text-terracotta" />
               </div>
-              <h3 className="text-2xl font-black text-text mb-4">Aktivasi Aura Narration</h3>
+              <h3 className="text-2xl font-black text-text mb-4">Aktivasi Aura Narration (Segera Hadir)</h3>
               <p className="text-text-muted mb-8 leading-relaxed">
-                Anda akan menggunakan <span className="text-text font-bold">Suara Aura Flagship</span>. Operasi ini membutuhkan <span className="text-terracotta font-black text-lg">40x Kredit</span> karena kualitas pemrosesan yang sangat tinggi. Lanjutkan?
+                Fitur <span className="text-text font-bold">Suara Aura Flagship</span> saat ini sedang dalam pemeliharaan dan akan segera kembali. Fitur ini membutuhkan <span className="text-terracotta font-black text-lg">40x Kredit</span>. Harap pilih teknologi lain sementara waktu.
               </p>
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => {
-                    setIsStudioWarningOpen(false);
-                    proceedWithGenerate();
-                  }}
+                  onClick={() => setIsStudioWarningOpen(false)}
                   className="w-full bg-terracotta hover:bg-trdark text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-terracotta/20 border-none cursor-pointer"
                 >
-                  Ya, Lanjutkan
-                </button>
-                <button
-                  onClick={() => setIsStudioWarningOpen(false)}
-                  className="w-full bg-surface2/50 hover:bg-surface2 text-text font-bold py-4 rounded-xl transition-all border-none cursor-pointer"
-                >
-                  Batal
+                  Paham, Kembali
                 </button>
               </div>
             </div>
