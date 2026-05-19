@@ -1,7 +1,7 @@
 
 export const PLAYGROUND_VOICES = [
   {
-    tier: "Standard",
+    tier: "Basic",
     badge: "FREE",
     color: "gray",
     voices: [
@@ -33,7 +33,7 @@ export const PLAYGROUND_VOICES = [
     ]
   },
   {
-    tier: "Wavenet",
+    tier: "Flow",
     badge: "PLUS",
     color: "blue",
     voices: [
@@ -65,7 +65,7 @@ export const PLAYGROUND_VOICES = [
     ]
   },
   {
-    tier: "Neural2",
+    tier: "Pulse",
     badge: "PRO",
     color: "purple",
     voices: [
@@ -97,7 +97,7 @@ export const PLAYGROUND_VOICES = [
     ]
   },
   {
-    tier: "Studio",
+    tier: "Aura",
     badge: "ULTRA",
     color: "terracotta",
     voices: [

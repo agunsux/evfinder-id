@@ -306,10 +306,6 @@ const App = () => {
   const [authMode, setAuthMode] = useState("login"); // login, signup
   const [user, setUser] = useState(null);
 
-  const switchAuthMode = (mode) => {
-    setAuthMode(mode);
-  };
-
   const getRemainingCredits = () => {
     if (!user) return 0;
     return Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0));
@@ -568,9 +564,12 @@ const App = () => {
       try {
         const res = await fetch("/api/auth/diag");
         const data = await res.json();
+        
         if (!data.firebaseAdminInitialized && !user) {
-          console.warn("[System] Firebase Admin is not initialized on server.", data.initError || "");
-          setInitError(data.initError || "Backend initialization incomplete.");
+          // If server failed but returned null for initError, use a default string
+          const serverError = (data.initError && data.initError !== "null") ? data.initError : "Backend initialization incomplete or credentials missing.";
+          console.warn("[System] Firebase Admin is not initialized on server.", serverError);
+          setInitError(serverError);
         } else {
           setInitError(null);
         }
@@ -814,22 +813,20 @@ const App = () => {
   }, [audioUrl]);
 
   const handlePreviewVoice = async () => {
+    if (!user) {
+      toast.error("Silakan login untuk mencoba suara.");
+      return;
+    }
+    
     setTestLoading(true);
     try {
-      const headers = {
-        "Content-Type": "application/json"
-      };
-
-      if (auth?.currentUser) {
-        const idToken = await auth.currentUser.getIdToken();
-        if (idToken) {
-          headers.Authorization = `Bearer ${idToken}`;
-        }
-      }
-
+      const idToken = await auth.currentUser.getIdToken();
       const options = {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
         body: JSON.stringify({
           voice,
           speed,
@@ -858,6 +855,37 @@ const App = () => {
       }
     } finally {
       setTestLoading(false);
+    }
+  };
+
+  const generateSample = async (sampleText, voiceId) => {
+    try {
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          text: sampleText, 
+          voice: voiceId, 
+          isSample: true 
+        }),
+      };
+
+      const res = await fetch("/api/tts/sample", options);
+      if (!res.ok) throw new Error("Gagal mengambil sampel suara");
+      const data = await res.json();
+      
+      if (data.audioContent) {
+        const isGemini = voiceId && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voiceId);
+        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        return URL.createObjectURL(blob);
+      }
+      return null;
+    } catch (err) {
+      console.error("[Playground] Sample failed:", err);
+      return null;
     }
   };
 
@@ -2357,6 +2385,7 @@ const App = () => {
         {/* Voice Playground Showcase */}
         <section id="playground" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
           <VoicePlayground 
+            generateSample={generateSample}
             onUpgrade={() => {
               const element = document.getElementById('pricing');
               if (element) element.scrollIntoView({ behavior: 'smooth' });
