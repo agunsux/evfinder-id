@@ -16,3 +16,4 @@ firebase-adminsdk*.json
 !package-lock.json
 !components.json
 !firebase-blueprint.json
+!firebase-applet-config.json

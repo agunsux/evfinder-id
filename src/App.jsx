@@ -408,18 +408,20 @@ const App = () => {
    const isCappedByQuota = estimatedCost > remainingCredits;
 
   const base64ToBlob = (base64, mime) => {
-    const byteCharacters = atob(base64);
-    const byteArrays = [];
-    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-      const slice = byteCharacters.slice(offset, offset + 512);
-      const byteNumbers = new Array(slice.length);
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
+    try {
+      if (!base64) return null;
+      // Clean the base64 string from any potential whitespace or headers
+      const cleanBase64 = base64.trim().replace(/^data:audio\/\w+;base64,/, "").replace(/\s/g, "");
+      const byteCharacters = atob(cleanBase64);
+      const byteNumbers = new Uint8Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
+      return new Blob([byteNumbers], { type: mime });
+    } catch (e) {
+      console.error("[base64ToBlob] Conversion error:", e);
+      return null;
     }
-    return new Blob(byteArrays, { type: mime });
   };
    const isCappedByRequest = text.length > currentMaxRequestChars;
    const isNearLimit = (text.length > 0) && (text.length > currentMaxRequestChars * 0.9 || (remainingCredits > 0 && estimatedCost > remainingCredits * 0.9) || (remainingCredits < 500));
@@ -887,13 +889,16 @@ const App = () => {
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
       if (data.audioContent) {
-        const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
-        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
+        const mimeType = 'audio/mpeg';
         const blob = base64ToBlob(data.audioContent, mimeType);
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.play();
-        toast.success(`Berhasil memutar contoh suara ${voice}`);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audio.play().catch(e => console.error("[Preview] Play error:", e));
+          toast.success(`Berhasil memutar contoh suara ${getVoiceDisplayName(voice)}`);
+        } else {
+          toast.error("Gagal memproses data suara.");
+        }
       }
     } catch (err) {
       console.error("Preview error:", err?.message || err);
@@ -926,10 +931,9 @@ const App = () => {
       const data = await res.json();
       
       if (data.audioContent) {
-        const isGemini = voiceId && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voiceId);
-        const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
+        const mimeType = 'audio/mpeg';
         const blob = base64ToBlob(data.audioContent, mimeType);
-        return URL.createObjectURL(blob);
+        return blob ? URL.createObjectURL(blob) : null;
       }
       return null;
     } catch (err) {
@@ -1013,17 +1017,21 @@ const App = () => {
         const mimeType = 'audio/mpeg';
         
         let url;
-        try {
-          const blob = base64ToBlob(data.audioContent, mimeType);
-          url = URL.createObjectURL(blob);
-          
-          // Clean up previous blob URL
-          if (audioUrl && audioUrl.startsWith('blob:')) {
-            URL.revokeObjectURL(audioUrl);
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        if (blob) {
+          try {
+            url = URL.createObjectURL(blob);
+            
+            // Clean up previous blob URL
+            if (audioUrl && audioUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(audioUrl);
+            }
+          } catch (blobErr) {
+            console.error("[TTS] Object URL creation failed:", blobErr);
+            url = `data:${mimeType};base64,${data.audioContent}`;
           }
-        } catch (blobErr) {
-          console.error("[TTS] Blob conversion failed:", blobErr);
-          // Fallback to data URI if blob fails
+        } else {
+          console.warn("[TTS] Blob creation failed, falling back to data URI");
           url = `data:${mimeType};base64,${data.audioContent}`;
         }
 
@@ -2200,8 +2208,8 @@ const App = () => {
                   </div>
                   {audioUrl && (
                     <audio
+                      key={audioUrl}
                       ref={audioRef}
-                      src={audioUrl}
                       onEnded={() => {
                         setIsPlaying(false);
                         setCurrentTime(0);
@@ -2209,7 +2217,9 @@ const App = () => {
                       onTimeUpdate={updateProgress}
                       onLoadedMetadata={updateProgress}
                       className="hidden"
-                    />
+                    >
+                      <source src={audioUrl} type="audio/mpeg" />
+                    </audio>
                   )}
 
                   {isAudioVisible && (

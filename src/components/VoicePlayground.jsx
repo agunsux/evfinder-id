@@ -258,11 +258,14 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
                 >
                   {/* Audio Element (Hidden) */}
                   <audio
+                    key={loadedUrls[sample.id] || sample.url}
                     ref={el => audioRefs.current[sample.id] = el}
-                    src={sample.url}
                     onTimeUpdate={() => handleTimeUpdate(sample.id)}
                     onEnded={() => handleEnded(sample.id)}
-                  />
+                    className="hidden"
+                  >
+                    <source src={loadedUrls[sample.id] || sample.url} type="audio/mpeg" />
+                  </audio>
 
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">

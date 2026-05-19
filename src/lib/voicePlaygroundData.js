@@ -63,8 +63,8 @@ export const PLAYGROUND_VOICES = {
       badge: "PRO",
       color: "purple",
       voices: [
-        { id: "id-ID-Neural2-A", gender: "Wanita", name: "Siti" },
-        { id: "id-ID-Neural2-B", gender: "Pria", name: "Agus" }
+        { id: "id-ID-Wavenet-A", gender: "Wanita", name: "Siti" },
+        { id: "id-ID-Wavenet-B", gender: "Pria", name: "Agus" }
       ],
       categories: [
         {
@@ -75,7 +75,7 @@ export const PLAYGROUND_VOICES = {
             {
               id: "neu_f_tiktok_1_id",
               title: "Lifestyle VLOG",
-              voiceId: "id-ID-Neural2-A",
+              voiceId: "id-ID-Wavenet-A",
               script: "A Day in My Life as a Content Creator! Hari ini produktif banget, mulai dari shooting konten bareng tim, sampai mampir ke cafe baru yang lagi viral. Keren banget tempatnya!",
               url: "https://storage.googleapis.com/shinerva-assets/playground/neu_f_tiktok_1.mp3"
             }
@@ -88,8 +88,8 @@ export const PLAYGROUND_VOICES = {
       badge: "ULTRA",
       color: "terracotta",
       voices: [
-        { id: "Charon", gender: "Pria", name: "Eko" },
-        { id: "Kore", gender: "Wanita", name: "Maya" }
+        { id: "id-ID-Wavenet-A", gender: "Pria", name: "Eko" },
+        { id: "id-ID-Wavenet-C", gender: "Wanita", name: "Maya" }
       ],
       categories: [
         {
@@ -100,7 +100,7 @@ export const PLAYGROUND_VOICES = {
             {
               id: "stu_f_gossip_expressive_id",
               title: "Gossip Expressive",
-              voiceId: "Kore",
+              voiceId: "id-ID-Wavenet-C",
               script: "Gila parah banget sih! Eh, serius deh... gue tuh langsung bengong pas denger berita itu. Kayak... kok bisa gitu lho? Dan yang bikin gue kesel, dia tuh pura-pura gak tau apa-apa. Anjir... parah banget!",
               url: "https://storage.googleapis.com/shinerva-assets/playground/stu_f_gossip_expressive.mp3"
             }
@@ -140,8 +140,8 @@ export const PLAYGROUND_VOICES = {
       badge: "PRO",
       color: "purple",
       voices: [
-        { id: "en-US-Neural2-F", gender: "Wanita", name: "Sarah" },
-        { id: "en-US-Neural2-J", gender: "Pria", name: "James" }
+        { id: "en-US-Wavenet-A", gender: "Wanita", name: "Sarah" },
+        { id: "en-US-Wavenet-B", gender: "Pria", name: "James" }
       ],
       categories: [
         {
@@ -152,7 +152,7 @@ export const PLAYGROUND_VOICES = {
             {
               id: "neu_f_social_en",
               title: "Travel Vlog",
-              voiceId: "en-US-Neural2-F",
+              voiceId: "en-US-Wavenet-A",
               script: "Guess where I am today! This hidden gem is absolutely breathtaking. You guys won't believe the view from up here. Make sure to check out my latest guide!",
               url: "https://storage.googleapis.com/shinerva-assets/playground/neu_f_social_en.mp3"
             }

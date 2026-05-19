@@ -8,6 +8,17 @@ import cors from 'cors';
 import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
 import { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
+import { fileURLToPath } from 'url';
+
+const getFilename = () => {
+  try {
+    return fileURLToPath(import.meta.url);
+  } catch (e) {
+    return path.resolve(process.argv[1] || 'server.js');
+  }
+};
+const __filename = getFilename();
+const __dirname = path.dirname(__filename);
 import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 
 // --- Startup Check ---
@@ -848,10 +859,14 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         processedText = processedText.replace(regex, pron);
       });
 
-      const ssmlText = `<speak>${processedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva titik ey ay.</prosody>' : ''}</speak>`;
+      const finalProcessedText = (processedText || "").trim() || "Halo.";
+      const ssmlText = `<speak>${finalProcessedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva titik ey ay.</prosody>' : ''}</speak>`;
       const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
       
-      console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode})`);
+      console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode}). SSML Length: ${ssmlText.length}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[Google TTS] Payload: ${ssmlText.slice(0, 200)}...`);
+      }
       
       const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
         method: 'POST',
@@ -1002,12 +1017,23 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Server] Listening on http://0.0.0.0:${PORT} (Express, API, and Frontend ready)`);
-  });
+  return app;
 }
 
-createServer().catch(err => {
+let app;
+const appPromise = createServer();
+
+appPromise.then(resolvedApp => {
+  app = resolvedApp;
+  const isMain = process.argv[1] && (path.resolve(process.argv[1]) === path.resolve(__filename));
+  if (isMain) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`[Server] Listening on http://0.0.0.0:${PORT} (Express, API, and Frontend ready)`);
+    });
+  }
+}).catch(err => {
   console.error("CRITICAL: Server failed to start:", err);
   process.exit(1);
 });
+
+export default appPromise;
