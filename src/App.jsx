@@ -306,6 +306,10 @@ const App = () => {
   const [authMode, setAuthMode] = useState("login"); // login, signup
   const [user, setUser] = useState(null);
 
+  const switchAuthMode = (mode) => {
+    setAuthMode(mode);
+  };
+
   const getRemainingCredits = () => {
     if (!user) return 0;
     return Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0));
