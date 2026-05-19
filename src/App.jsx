@@ -154,9 +154,14 @@ const PACKS = {
 const FAQS = {
   ID: [
     {
+      question: "Apa itu Shinerva AI TTS?",
+      answer:
+        "Shinerva AI TTS adalah teknologi yang mengubah tulisan menjadi suara manusia yang sangat natural menggunakan kecerdasan buatan (AI). Sederhananya, ini adalah suara robot yang kini sudah semanusiawi aslinya—lengkap dengan emosi, intonasi, dan napas—sehingga cocok untuk mengisi suara video Anda tanpa perlu rekam suara sendiri.",
+    },
+    {
       question: "Apa itu Shinerva?",
       answer:
-        "Shinerva adalah platform AI Voice emosional pertama di Asia Tenggara. Kami melampaui Text-to-Speech (TTS) biasa dengan memberikan jiwa, emosi, dan karakter pada setiap narasi untuk kreator modern.",
+        "Shinerva adalah platform AI Voice emosional pertama di Asia Tenggara. Kami melampaui Text To Speech (TTS) biasa dengan memberikan jiwa, emosi, dan karakter pada setiap narasi untuk kreator modern.",
     },
     {
       question: "Apakah kredit saya bisa hangus?",
@@ -181,9 +186,14 @@ const FAQS = {
   ],
   EN: [
     {
+      question: "What is Shinerva AI TTS?",
+      answer:
+        "Shinerva AI TTS is a technology that transforms written text into highly natural human speech using Artificial Intelligence. Simply put, it's a 'robot voice' that now sounds as human as the real thing—complete with emotions, intonations, and breaths—making it perfect for voiceovers without needing to record yourself.",
+    },
+    {
       question: "What is Shinerva?",
       answer:
-        "Shinerva is the first emotional AI Voice platform in Southeast Asia. We go beyond standard Text-to-Speech (TTS) by giving soul, emotion, and character to every narration for modern creators.",
+        "Shinerva is the first emotional AI Voice platform in Southeast Asia. We go beyond standard Text To Speech (TTS) by giving soul, emotion, and character to every narration for modern creators.",
     },
     {
       question: "Will my credits expire?",
@@ -1656,8 +1666,9 @@ const App = () => {
           <div className="flex justify-between h-24 items-center">
             <div className="flex items-center gap-4">
               <ShinervaLogo className="w-12 h-12 text-terracotta" />
-              <span className="font-black text-3xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer">
-                Shinerva <span className="text-terracotta">TTS</span>
+              <span className="font-black text-2xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer flex flex-col leading-tight">
+                SHINERVA AI
+                <span className="text-[10px] text-terracotta uppercase tracking-[0.3em] font-black">Text To Speech</span>
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -3257,8 +3268,9 @@ const App = () => {
               <div className="col-span-1 md:col-span-2">
                 <div className="flex items-center gap-4 mb-6">
                   <ShinervaLogo className="w-12 h-12 text-terracotta" />
-                  <span className="font-black text-3xl tracking-tight text-text">
-                    SHINERVA
+                  <span className="font-black text-2xl tracking-tight text-text">
+                    SHINERVA AI <br className="sm:hidden" />
+                    <span className="text-sm block text-text-muted font-bold -mt-1 uppercase tracking-[0.2em]">Text To Speech</span>
                   </span>
                 </div>
                 <p className="text-text-muted max-w-sm">
@@ -3282,7 +3294,7 @@ const App = () => {
                       href="#packs"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Content Packs
+                      {t('nav.packs')}
                     </a>
                   </li>
                   <li>
@@ -3290,7 +3302,7 @@ const App = () => {
                       href="#pricing"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Pricing
+                      {t('nav.pricing')}
                     </a>
                   </li>
                   <li>
@@ -3298,7 +3310,7 @@ const App = () => {
                       href="#faq"
                       className="hover:text-terracotta transition-colors"
                     >
-                      FAQ
+                      {t('nav.faq')}
                     </a>
                   </li>
                   <li>
@@ -3306,7 +3318,7 @@ const App = () => {
                       href="#contact"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Hubungi Kami
+                      {t('nav.contact')}
                     </a>
                   </li>
                 </ul>
@@ -3342,7 +3354,7 @@ const App = () => {
               </div>
             </div>
                     <div className="flex flex-col md:flex-row justify-between items-center pt-10 border-t border-surface2 text-text-muted text-xs gap-4">
-              <p>© 2024 Shinerva Text To Speech. All rights reserved.</p>
+              <p>© 2024 Shinerva AI Text To Speech. All rights reserved.</p>
               <div className="flex gap-6">
                 <a href="#" className="hover:text-text transition-colors">
                   Privacy Policy
