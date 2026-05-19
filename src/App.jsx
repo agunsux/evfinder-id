@@ -2857,7 +2857,7 @@ const App = () => {
             </div>
 
             {/* Supported Payment Methods */}
-            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mb-16 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2 shadow-2xl">
+            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mb-8 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2 shadow-2xl">
                <div className="text-xs font-black text-terracotta uppercase tracking-[0.3em] w-full text-center mb-6">Metode Pembayaran Instan & Otomatis:</div>
                <div className="flex flex-wrap justify-center items-center gap-x-10 gap-y-6">
                   <div className="flex flex-col items-center">
@@ -2888,6 +2888,15 @@ const App = () => {
                   </div>
                </div>
             </div>
+            
+            {/* Comparison Text */}
+            <div className="flex justify-center mb-16">
+              <div className="bg-surface2/50 backdrop-blur-sm px-6 py-3 rounded-2xl border border-surface2 flex items-center gap-3 shadow-lg">
+                <span className="text-[10px] sm:text-xs font-black text-text-muted uppercase tracking-widest">Premium quality</span>
+                <div className="h-4 w-[1px] bg-surface2"></div>
+                <span className="text-xs sm:text-sm font-bold text-white">Vs ElevenLabs (Rp 300rb+/bln) — Shinerva 5x Lebih Hemat</span>
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {/* Free */}
@@ -2899,21 +2908,21 @@ const App = () => {
                   /mo
                 </span>
               </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                 Entry-level emotional voices for creators.
+              <div className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg mb-6 font-medium">
+                 Eksperimen awal. Kualitas suara terbatas & watermark audio.
               </div>
               <ul className="space-y-4 mb-8 flex-grow text-text-muted text-xs">
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  10.000 Credits / mo
+                  10.000 Kredit / mo (Reset tiap tgl 1)
+                </li>
+                <li className="flex items-center gap-2 line-through opacity-50">
+                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
+                  Premium Neural Voices
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Tier 1 (Fungsional) Voices
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Limited Daily generations
+                  Max 20x Generate / hari
                 </li>
               </ul>
               <button
@@ -2964,7 +2973,10 @@ const App = () => {
               </button>
             </div>
             {/* Kreator */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
+            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col relative">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white text-black text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-xl whitespace-nowrap z-10 border border-black">
+                Most Popular
+              </div>
               <h3 className="text-lg font-bold mb-2 text-text">Kreator</h3>
               <div className="mb-6">
                 {billingCycle === 'monthly' ? (
