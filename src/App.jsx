@@ -176,7 +176,7 @@ const FAQS = {
     {
       question: "Apa perbedaan teknologi Basic dan Aura?",
       answer:
-        "Basic adalah teknologi standar untuk narasi fungsional. Pulse menambahkan ekspresi emosional, sementara Aura adalah teknologi flagship multimodal kami yang menghasilkan tekstur suara, napas, dan intonasi yang hampir mustahil dibedakan dari rekaman manusia.",
+        "Basic adalah teknologi standar untuk narasi fungsional. Pulse (Segera Hadir) menambahkan ekspresi emosional, sementara Aura (Segera Hadir) adalah teknologi flagship multimodal kami yang menghasilkan tekstur suara, napas, dan intonasi yang hampir mustahil dibedakan dari rekaman manusia.",
     },
     {
       question: "Bagaimana cara menghubungi bantuan?",
@@ -208,7 +208,7 @@ const FAQS = {
     {
       question: "What is the difference between Basic and Aura technology?",
       answer:
-        "Basic is standard technology for functional narration. Pulse adds emotional expression, while Aura is our flagship multimodal technology that produces voice textures, breaths, and intonations almost indistinguishable from human recordings.",
+        "Basic is standard technology for functional narration. Pulse (Coming Soon) adds emotional expression, while Aura (Coming Soon) is our flagship multimodal technology that produces voice textures, breaths, and intonations almost indistinguishable from human recordings.",
     },
     {
       question: "How do I contact support?",
@@ -227,7 +227,7 @@ const TRANSLATIONS = {
   ID: {
     nav: {
       home: "Beranda",
-      packs: "Paket Konten",
+      packs: "Harga Paket",
       pricing: "Harga",
       faq: "Tanya Jawab",
       contact: "Hubungi Kami",
@@ -281,7 +281,7 @@ const TRANSLATIONS = {
       preview: "Tes Suara",
       download: "Unduh",
       share: "Bagikan",
-      unlock_aura: "Unlock Aura Flagship — Tekstur emosi paling manusiawi untuk konten Anda.",
+      unlock_aura: "Aura Flagship (Segera Hadir) — Tekstur emosi paling manusiawi untuk konten Anda.",
       view_packs: "Lihat Paket"
     },
     pricing: {
@@ -301,7 +301,7 @@ const TRANSLATIONS = {
       tech: "Pilih Teknologi",
       variants: "Varian Suara",
       quality_title: "Kualitas Flagship yang Tak Terkalahkan",
-      quality_desc: "Algoritma Aura kami tidak hanya mengubah teks menjadi suara, tapi memberikan 'jiwa' di setiap suku kata.",
+      quality_desc: "Aura (Segera Hadir) menggunakan algoritma canggih untuk memberikan 'jiwa' di setiap suku kata.",
       join: "Bergabung dengan",
       creators: "Kreator",
       upgraded: "yang sudah upgrade."
@@ -364,7 +364,7 @@ const TRANSLATIONS = {
       preview: "Test Voice",
       download: "Download",
       share: "Share",
-      unlock_aura: "Unlock Aura Flagship — The most human emotional texture for your content.",
+      unlock_aura: "Aura Flagship (Coming Soon) — The most human emotional texture for your content.",
       view_packs: "View Packs"
     },
     pricing: {
@@ -384,7 +384,7 @@ const TRANSLATIONS = {
       tech: "Select Technology",
       variants: "Voice Variants",
       quality_title: "Unbeatable Flagship Quality",
-      quality_desc: "Our Aura algorithm doesn't just turn text to voice, it gives 'soul' to every syllable.",
+      quality_desc: "Aura (Coming Soon) is our next-gen engine that mimics human vocal fry, breaths, and deep emotion.",
       join: "Join over",
       creators: "Creators",
       upgraded: "who have upgraded."
@@ -412,12 +412,13 @@ const VOICES = {
         useCase: "Berita & Pengumuman"
       },
     ],
-    "Pulse (Ekspresif)": [
+    "Pulse (Segera Hadir)": [
       { 
         id: "id-ID-Wavenet-A", 
         name: "Siti (Emotional Storytelling)", 
         type: "Wavenet", 
         premium: true, 
+        comingSoon: true,
         tier: "STARTER",
         desc: "Suara emosional dengan penekanan pada kata-kata penting. Sangat cocok untuk narasi.",
         useCase: "Narasi YouTube & Storytelling"
@@ -427,6 +428,7 @@ const VOICES = {
         name: "Agus (Dynamic Creator)", 
         type: "Wavenet", 
         premium: true, 
+        comingSoon: true,
         tier: "STARTER",
         desc: "Energik dan punchy. Dibangun khusus untuk video pendek yang butuh perhatian instan.",
         useCase: "Video Pendek & Komedi"
@@ -452,13 +454,14 @@ const VOICES = {
         useCase: "Misteri & Dokumenter"
       },
     ],
-    "Aura Flagship (Aspirational)": [
+    "Aura Flagship (Segera Hadir)": [
       { 
         id: "id-ID-Wavenet-A", 
         name: "Eko (Curated Soul)", 
         type: "Wavenet", 
         premium: true, 
         glow: true, 
+        comingSoon: true,
         tier: "BISNIS",
         desc: "Tekstur emosi yang dioptimalkan untuk narasi sinematik.",
         useCase: "Iklan High-End & Cinematic"
@@ -469,6 +472,7 @@ const VOICES = {
         type: "Wavenet", 
         premium: true, 
         glow: true, 
+        comingSoon: true,
         tier: "BISNIS",
         desc: "Penuh nuansa emosi halus, napas alami, dan kejernihan sinematik.",
         useCase: "Berita & Konten Storytelling"
@@ -494,12 +498,13 @@ const VOICES = {
         useCase: "News & Announcements"
       },
     ],
-    "Pulse (Starter/Kreator)": [
+    "Pulse (Coming Soon)": [
       { 
         id: "en-US-Wavenet-A", 
         name: "Sarah (Expressive)", 
         type: "Wavenet", 
         premium: true, 
+        comingSoon: true,
         tier: "STARTER",
         desc: "Emotionally rich English female narration.",
         useCase: "YouTube & Storytelling"
@@ -509,6 +514,7 @@ const VOICES = {
         name: "James (Dynamic)", 
         type: "Wavenet", 
         premium: true, 
+        comingSoon: true,
         tier: "STARTER",
         desc: "Engaging English male voice.",
         useCase: "Marketing & Shorts"
@@ -534,13 +540,14 @@ const VOICES = {
         useCase: "Presentations & Business"
       },
     ],
-    "Aura International": [
+    "Aura International (Coming Soon)": [
       { 
         id: "en-US-Wavenet-I", 
         name: "Arthur (London Aura)", 
         type: "Wavenet", 
         premium: true, 
         glow: true, 
+        comingSoon: true,
         tier: "BISNIS",
         desc: "Ultra-natural English presence.",
         useCase: "Branding & International High-End"
@@ -558,12 +565,13 @@ const VOICES = {
         useCase: "Educational Content"
       },
     ],
-    "Pulse (Starter/Kreator)": [
+    "Pulse (Coming Soon)": [
       { 
         id: "cmn-CN-Wavenet-C", 
         name: "Lao Wang (Male)", 
         type: "Wavenet", 
         premium: true, 
+        comingSoon: true,
         tier: "STARTER",
         desc: "Warm and deep Mandarin male voice.",
         useCase: "Storytelling & News"
@@ -915,8 +923,8 @@ const App = () => {
         
         if (!data.firebaseAdminInitialized && !user) {
           // If server failed but returned null for initError, use a default string
-          const serverError = (data.initError !== undefined && data.initError !== null && data.initError !== "" && data.initError !== "null") 
-            ? data.initError 
+          const serverError = (data.initError) 
+            ? (data.initError === "null" ? "Backend initialization incomplete or credentials missing." : data.initError)
             : "Backend initialization incomplete or credentials missing.";
           console.warn("[System] Firebase Admin is not initialized on server.", serverError);
           setInitError(serverError);
@@ -1598,7 +1606,7 @@ const App = () => {
     }
   };
 
-  if (!isConfigValid) {
+  if (!isConfigValid || (initError && !user)) {
     return (
       <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-4 text-center">
         <div className="w-16 h-16 bg-terracotta/20 rounded-full flex items-center justify-center mb-6">
@@ -1623,11 +1631,11 @@ const App = () => {
 
           <h3 className="text-xs font-black text-blue-400 uppercase mb-2 border-t border-surface/50 pt-4 mt-4">Saran Perbaikan:</h3>
           <ul className="text-xs text-text-muted list-disc pl-4 space-y-2">
-            <li>Buka <b>Settings</b> &gt; <b>Secrets</b>.</li>
-            <li>Pastikan <b>VITE_FIREBASE_API_KEY</b> berisi API Key yang valid (diawali AIza...).</li>
-            <li>Pastikan <b>VITE_FIREBASE_PROJECT_ID</b> bernilai <code>practical-gecko-476621-q4</code>.</li>
-            <li>Jika Anda meremote project lain, pastikan kedua nilai tersebut berasal dari project yang sama di Firebase Console.</li>
-            <li>Hapus tanda kutip jika ada di nilai secret tersebut.</li>
+            <li>Buka <b>Settings</b> &gt; <b>Secrets</b> di AI Studio.</li>
+            <li>Pastikan <b>FIREBASE_PROJECT_ID</b>, <b>FIREBASE_CLIENT_EMAIL</b>, dan <b>FIREBASE_PRIVATE_KEY</b> sudah diisi untuk sisi server.</li>
+            <li>Buka Firebase Console &gt; Project Settings &gt; <b>Service Accounts</b> untuk mendapatkan kredensial tersebut.</li>
+            <li>Pastikan <b>Cloud Firestore</b> sudah diaktifkan di Firebase Console.</li>
+            <li>Jika Anda baru saja mengaktifkannya, tunggu 1-2 menit lalu muat ulang halaman.</li>
           </ul>
         </div>
         <button 
@@ -2202,7 +2210,7 @@ const App = () => {
                                         const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
                                         const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
                                         const isUserFree = userTierIndex < 1;
-                                        const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
+                                        const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree) || v.comingSoon;
                                         const isSelected = voice === v.id;
                                         const isStudio = v.type === 'Studio' || v.glow;
 
@@ -2222,15 +2230,25 @@ const App = () => {
                                             <div className="flex flex-col relative z-20">
                                               <div className="flex items-center gap-2">
                                                 <span className={`text-sm font-bold ${isSelected ? 'text-terracotta' : 'text-text'}`}>
-                                                  {isLocked && "🔒 "}{v.name}
+                                                  {isLocked && !v.comingSoon && "🔒 "}{v.name}
                                                 </span>
-                                                {isStudio && (
+                                                {v.comingSoon && (
+                                                  <span className="text-[8px] font-black bg-surface2 text-gray-400 px-1.5 py-0.5 rounded border border-white/5 uppercase">
+                                                    SOON
+                                                  </span>
+                                                )}
+                                                {isStudio && !v.comingSoon && (
                                                   <span className="text-[8px] font-black bg-terracotta text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(231,76,60,0.5)]">
                                                     AURA
                                                   </span>
                                                 )}
                                               </div>
-                                              <span className="text-[10px] text-gray-500 font-medium">Beban: {voiceConfig.tiers[v.type] || 1}x Kredit</span>
+                                              <span className="text-[10px] text-gray-500 font-medium">
+                                                {v.comingSoon 
+                                                  ? (language === 'ID' ? 'Segera Hadir' : 'Coming Soon')
+                                                  : `Beban: ${voiceConfig.tiers[v.type] || 1}x Kredit`
+                                                }
+                                              </span>
                                             </div>
                                             
                                             {isStudio && (
@@ -3007,8 +3025,8 @@ const App = () => {
                   /topup
                 </span>
               </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                 Experience expressive emotional voices.
+              <div className="text-xs text-text-muted bg-surface2 px-3 py-2 rounded-lg mb-6 font-medium">
+                 Expressive voices (Pulse) are coming soon.
               </div>
               <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
                 <li className="flex items-center gap-2">
@@ -3017,7 +3035,7 @@ const App = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                   Unlock Pulse & Flow Voices
+                   Unlock Flow Voices <span className="text-[10px] opacity-60">(Pulse soon)</span>
                 </li>
               </ul>
               <button 
@@ -3059,7 +3077,7 @@ const App = () => {
                   Kredit
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Basic, Flow, Pulse & Aura
+                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Basic, Flow, <span className="opacity-60">Pulse (Soon)</span> & <span className="opacity-60">Aura (Soon)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-white flex-shrink-0" /> Support
@@ -3153,7 +3171,7 @@ const App = () => {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Akses Eksklusif Aura Flagship
+                  <span className="opacity-60">Akses Eksklusif Aura Flagship (Soon)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" /> WA
@@ -3465,25 +3483,16 @@ const App = () => {
               <div className="w-20 h-20 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <AlertCircle className="w-10 h-10 text-terracotta" />
               </div>
-              <h3 className="text-2xl font-black text-text mb-4">Aktivasi Aura Narration</h3>
+              <h3 className="text-2xl font-black text-text mb-4">Aktivasi Aura Narration (Segera Hadir)</h3>
               <p className="text-text-muted mb-8 leading-relaxed">
-                Anda akan menggunakan <span className="text-text font-bold">Suara Aura Flagship</span>. Operasi ini membutuhkan <span className="text-terracotta font-black text-lg">40x Kredit</span> karena kualitas pemrosesan yang sangat tinggi. Lanjutkan?
+                Fitur <span className="text-text font-bold">Suara Aura Flagship</span> saat ini sedang dalam pemeliharaan dan akan segera kembali. Fitur ini membutuhkan <span className="text-terracotta font-black text-lg">40x Kredit</span>. Harap pilih teknologi lain sementara waktu.
               </p>
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => {
-                    setIsStudioWarningOpen(false);
-                    proceedWithGenerate();
-                  }}
+                  onClick={() => setIsStudioWarningOpen(false)}
                   className="w-full bg-terracotta hover:bg-trdark text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-terracotta/20 border-none cursor-pointer"
                 >
-                  Ya, Lanjutkan
-                </button>
-                <button
-                  onClick={() => setIsStudioWarningOpen(false)}
-                  className="w-full bg-surface2/50 hover:bg-surface2 text-text font-bold py-4 rounded-xl transition-all border-none cursor-pointer"
-                >
-                  Batal
+                  Paham, Kembali
                 </button>
               </div>
             </div>
