@@ -914,7 +914,11 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
       }
       const finalAudioContent = data.audioContent;
-      console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}`);
+      if (finalAudioContent) {
+        console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}. Length: ${finalAudioContent.length}. Start: ${finalAudioContent.substring(0, 20)}...`);
+      } else {
+        console.warn(`[Google TTS] Warning: Empty audioContent returned for ${actualVoice}`);
+      }
 
       if (!isSample) {
         user.used_chars += totalCharCost;
@@ -959,7 +963,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
   app.get("/api/auth/diag", (req, res) => {
     const diag = {
       firebaseAdminInitialized: !!authAdmin,
-      initError: initErrorMsg || (authAdmin ? "None" : "Backend initialization incomplete or credentials missing."),
+      initError: initErrorMsg || (authAdmin ? null : "Backend initialization incomplete or credentials missing."),
       projectId: process.env.FIREBASE_PROJECT_ID || "(missing)",
       hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
       hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,

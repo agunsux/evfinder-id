@@ -247,7 +247,6 @@ const TRANSLATIONS = {
     nav: {
       home: "Beranda",
       packs: "Harga Paket",
-      pricing: "Harga",
       faq: "Tanya Jawab",
       contact: "Hubungi Kami",
       pronunciation: "Aturan Pengucapan",
@@ -329,8 +328,7 @@ const TRANSLATIONS = {
   EN: {
     nav: {
       home: "Home",
-      packs: "Content Packs",
-      pricing: "Pricing",
+      packs: "Pricing",
       faq: "FAQ",
       contact: "Contact Us",
       pronunciation: "Pronunciation Rules",
@@ -766,16 +764,22 @@ const App = () => {
   const base64ToBlob = (base64, mime) => {
     try {
       if (!base64) return null;
-      // Clean the base64 string from any potential whitespace or headers
+      
+      // Clean the base64 string
+      // Google TTS returns a pure base64 string, but just in case there's a prefix
       const cleanBase64 = base64.trim().replace(/^data:audio\/\w+;base64,/, "").replace(/\s/g, "");
-      const byteCharacters = atob(cleanBase64);
-      const byteNumbers = new Uint8Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      
+      // Use efficient conversion
+      const binaryString = window.atob(cleanBase64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
-      return new Blob([byteNumbers], { type: mime });
+      
+      return new Blob([bytes], { type: mime || 'audio/mpeg' });
     } catch (e) {
-      console.error("[base64ToBlob] Conversion error:", e);
+      console.error("[base64ToBlob] Conversion failed:", e);
       return null;
     }
   };
@@ -972,12 +976,12 @@ const App = () => {
         const res = await fetch("/api/auth/diag");
         const data = await res.json();
         
-        if (data.firebaseAdminInitialized || data.initError === "None") {
+        if (data.firebaseAdminInitialized || !data.initError) {
           // Server is healthy, clear any server-side init error
           setInitError(null);
         } else if (!user) {
           // Server failed and user is not logged in
-          const serverError = data.initError && data.initError !== "null" && data.initError !== "None"
+          const serverError = data.initError && data.initError !== "null"
             ? data.initError 
             : "Backend initialization incomplete or credentials missing.";
           
@@ -1120,8 +1124,18 @@ const App = () => {
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
       if (data.audioContent) {
-        const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
-        audio.play();
+        const mimeType = 'audio/mpeg';
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audio.play().catch(e => {
+            console.error("[Pronunciation Test] Playback failed:", e);
+            toast.error("Gagal memutar suara contoh pengucapan.");
+          });
+        } else {
+          toast.error("Gagal memproses contoh suara.");
+        }
       }
     } catch (err) {
       handleApiError(err, "Gagal mencoba suara.");
@@ -1732,9 +1746,9 @@ const App = () => {
           </p>
           
           <div className="mt-4 p-3 bg-black/20 rounded border border-white/5 font-mono text-[10px] space-y-1">
-            <div className="flex justify-between"><span className="text-gray-500">Client Config:</span> <span className="text-blue-300">{isConfigValid ? "Valid" : "Invalid"}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Client Error:</span> <span className="text-blue-300">{clientInitError || "None"}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Server Error:</span> <span className="text-blue-300">{initError || "None"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Client Config:</span> <span className="text-green-400 font-bold">{isConfigValid ? "Healthy" : "Invalid"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Client Error:</span> <span className={clientInitError ? "text-red-400" : "text-green-400"}>{clientInitError || "Healthy"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Server Error:</span> <span className={initError ? "text-red-400" : "text-green-400"}>{initError || "Healthy"}</span></div>
             <div className="flex justify-between border-t border-white/5 mt-1 pt-1"><span className="text-gray-500">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">API Key:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_API_KEY ? (import.meta.env.VITE_FIREBASE_API_KEY.slice(0, 6) + "...") : "Missing"}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">App ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_APP_ID ? "Present" : "Missing"}</span></div>
@@ -1798,16 +1812,10 @@ const App = () => {
                 {t('nav.home')}
               </a>
               <a
-                href="#packs"
-                className="text-text-muted hover:text-text font-medium transition-colors"
-              >
-                {t('nav.packs')}
-              </a>
-              <a
                 href="#pricing"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                {t('nav.pricing')}
+                {t('nav.packs')}
               </a>
               <a
                 href="#faq"
@@ -2635,16 +2643,27 @@ const App = () => {
                     <audio
                       key={audioUrl}
                       ref={audioRef}
+                      src={audioUrl}
                       onEnded={() => {
                         setIsPlaying(false);
                         setCurrentTime(0);
                       }}
                       onTimeUpdate={updateProgress}
                       onLoadedMetadata={updateProgress}
+                      onError={(e) => {
+                        const error = e.target.error;
+                        console.error("[Audio] Playback error details:", {
+                          code: error?.code,
+                          message: error?.message,
+                          src: audioUrl.slice(0, 50) + "..."
+                        });
+                        // If blob URL fails, try to show error or fallback if needed
+                        if (error?.code === 4) { // MEDIA_ERR_SRC_NOT_SUPPORTED
+                           toast.error("Format audio tidak didukung atau sumber data rusak.");
+                        }
+                      }}
                       className="hidden"
-                    >
-                      <source src={audioUrl} type="audio/mpeg" />
-                    </audio>
+                    />
                   )}
 
                   {isAudioVisible && (
@@ -2838,8 +2857,8 @@ const App = () => {
             </div>
 
             {/* Supported Payment Methods */}
-            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mb-16 px-6 py-10 bg-surface2/20 rounded-[2.5rem] border border-surface2/50 shadow-2xl">
-               <div className="text-xs font-black text-text-muted uppercase tracking-[0.2em] w-full text-center mb-4">Pilihan Pembayaran Terlengkap:</div>
+            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mb-16 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2 shadow-2xl">
+               <div className="text-xs font-black text-terracotta uppercase tracking-[0.3em] w-full text-center mb-6">Metode Pembayaran Instan & Otomatis:</div>
                <div className="flex flex-wrap justify-center items-center gap-x-10 gap-y-6">
                   <div className="flex flex-col items-center">
                     <span className="text-lg font-black text-blue-400 tracking-tighter">DANA</span>
@@ -3414,18 +3433,10 @@ const App = () => {
                   </li>
                   <li>
                     <a
-                      href="#packs"
-                      className="hover:text-terracotta transition-colors"
-                    >
-                      {t('nav.packs')}
-                    </a>
-                  </li>
-                  <li>
-                    <a
                       href="#pricing"
                       className="hover:text-terracotta transition-colors"
                     >
-                      {t('nav.pricing')}
+                      {t('nav.packs')}
                     </a>
                   </li>
                   <li>

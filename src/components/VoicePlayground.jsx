@@ -342,12 +342,14 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                   <audio
                     key={loadedUrls[sample.id] || sample.url}
                     ref={el => audioRefs.current[sample.id] = el}
+                    src={loadedUrls[sample.id] || sample.url}
                     onTimeUpdate={() => handleTimeUpdate(sample.id)}
                     onEnded={() => handleEnded(sample.id)}
+                    onError={(e) => {
+                      console.error(`[Playground Audio] Error for ${sample.id}:`, e.target.error);
+                    }}
                     className="hidden"
-                  >
-                    <source src={loadedUrls[sample.id] || sample.url} type="audio/mpeg" />
-                  </audio>
+                  />
 
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
