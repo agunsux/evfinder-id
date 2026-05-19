@@ -150,6 +150,24 @@ async function createServer() {
     }
 
     const authHeader = req.headers.authorization;
+    if ((!authHeader || !authHeader.startsWith('Bearer ')) && req.body?.isSample) {
+      console.log('[Auth] Anonymous sample voice preview allowed');
+      req.user = {
+        id: 'anonymous-sample',
+        name: 'Guest',
+        email: 'guest@shinerva.local',
+        tier: 'FREE',
+        signup_bonus_chars: 0,
+        monthly_chars: 0,
+        earned_chars: 0,
+        used_chars: 0,
+        generation_count: 0,
+        pronunciations: {},
+        history: []
+      };
+      return next();
+    }
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Auth token missing' });
     }

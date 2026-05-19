@@ -814,20 +814,22 @@ const App = () => {
   }, [audioUrl]);
 
   const handlePreviewVoice = async () => {
-    if (!user) {
-      toast.error("Silakan login untuk mencoba suara.");
-      return;
-    }
-    
     setTestLoading(true);
     try {
-      const idToken = await auth.currentUser.getIdToken();
+      const headers = {
+        "Content-Type": "application/json"
+      };
+
+      if (auth?.currentUser) {
+        const idToken = await auth.currentUser.getIdToken();
+        if (idToken) {
+          headers.Authorization = `Bearer ${idToken}`;
+        }
+      }
+
       const options = {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${idToken}`
-        },
+        headers,
         body: JSON.stringify({
           voice,
           speed,
