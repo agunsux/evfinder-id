@@ -64,7 +64,7 @@ try {
 } catch (error) {
   console.error("[Firebase] Fatal Initialization Error:", error.message);
   isConfigValid = false;
-  initError = error.message;
+  initError = error.message || "Unknown error during Firebase initialization.";
 }
 
 export { app, auth, db, initError };

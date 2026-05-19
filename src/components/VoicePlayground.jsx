@@ -17,7 +17,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { PLAYGROUND_VOICES } from "../lib/voicePlaygroundData";
 
-const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
+const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLanguage }) => {
   const [activeTierIdx, setActiveTierIdx] = useState(0); 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null); // id of playing sample
@@ -39,6 +39,8 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
         quality_desc_aura: "Aura Voice menggunakan pemrosesan audio tingkat lanjut untuk menghasilkan nuansa emosi, slang perkotaan, dan dinamika bicara yang tidak bisa dibedakan dengan manusia asli.",
         quality_title_pulse: "Teknologi Pulse (Segera Hadir)",
         quality_desc_pulse: "Pulse Voice memberikan ekspresi emosional yang mendalam dan intonasi yang dinamis untuk konten video pendek serta storytelling yang memikat.",
+        quality_title_cloning: "Instant Voice Cloning (Eksperimental)",
+        quality_desc_cloning: "Cukup rekam 30 detik suara Anda, dan biarkan AI kami mengkloningnya dengan akurasi yang luar biasa. Sangat cocok untuk konsistensi brand.",
         quality_cta: "Segera hadir untuk semua kreator.",
         join: "Bergabung dengan",
         creators: "2.5k+ Kreator",
@@ -46,6 +48,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
         pricing: "Lihat Paket Harga",
         activate_aura: "Daftar Tunggu Aura Premium",
         activate_pulse: "Daftar Tunggu Pulse Pro",
+        activate_cloning: "Daftar Tunggu Voice Cloning",
         coming_soon: "Segera Hadir"
       },
       EN: {
@@ -58,6 +61,8 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
         quality_desc_aura: "Aura Voice uses advanced audio processing to generate emotional nuances, urban slang, and speech dynamics indistinguishable from real humans.",
         quality_title_pulse: "Pulse Technology (Coming Soon)",
         quality_desc_pulse: "Pulse Voice delivers deep emotional expressions and dynamic intonations for short video content and engaging storytelling.",
+        quality_title_cloning: "Instant Voice Cloning (Experimental)",
+        quality_desc_cloning: "Just record 30 seconds of your voice, and let our AI clone it with incredible accuracy. Perfect for brand consistency.",
         quality_cta: "Coming soon for all creators.",
         join: "Join over",
         creators: "2.5k+ Creators",
@@ -65,6 +70,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
         pricing: "View Pricing Plans",
         activate_aura: "Aura Premium Waitlist",
         activate_pulse: "Pulse Pro Waitlist",
+        activate_cloning: "Voice Cloning Waitlist",
         coming_soon: "Coming Soon"
       }
     };
@@ -157,6 +163,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
       case 'flow': return <Ghost className="w-4 h-4" />;
       case 'pulse': return <TrendingUp className="w-4 h-4" />;
       case 'aura': return <Sparkles className="w-4 h-4" />;
+      case 'cloning': return <ShieldCheck className="w-4 h-4" />;
       default: return <Volume2 className="w-4 h-4" />;
     }
   };
@@ -171,9 +178,32 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
               <h2 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
                 {t('title')} <Sparkles className="text-terracotta w-6 h-6 animate-pulse" />
               </h2>
-              <p className="text-gray-400 mt-2 text-sm max-w-xl font-medium leading-relaxed">
-                {t('subtitle')}
-              </p>
+              <div className="flex items-center gap-4 mt-2">
+                <p className="text-gray-400 text-sm font-medium leading-relaxed">
+                  {t('subtitle')}
+                </p>
+                {setLanguage && (
+                  <div className="flex bg-dark/40 p-1 rounded-xl border border-surface2 ml-auto">
+                    {[
+                      { code: "ID", flag: "🇮🇩", name: "ID" },
+                      { code: "EN", flag: "🇺🇸", name: "EN" }
+                    ].map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => setLanguage(lang.code)}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest transition-all border-none cursor-pointer ${
+                          language === lang.code 
+                          ? "bg-terracotta text-white shadow-lg shadow-terracotta/20" 
+                          : "text-gray-500 hover:text-white"
+                        }`}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <button 
@@ -212,11 +242,12 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
                 </div>
                 <div className="text-left">
                   <p className={`font-bold text-sm ${activeTierIdx === idx ? 'text-white' : 'text-gray-400'}`}>{tier.tier}</p>
-                  <p className="text-[10px] text-gray-500 font-medium">{(tier.tier === 'Aura' || tier.tier === 'Pulse') ? t('coming_soon') : `${tier.voices.length} ${t('variants')}`}</p>
+                  <p className="text-[10px] text-gray-500 font-medium">{(tier.tier === 'Aura' || tier.tier === 'Pulse' || tier.tier === 'Cloning') ? t('coming_soon') : `${tier.voices.length} ${t('variants')}`}</p>
                 </div>
               </div>
               <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
                 tier.badge === 'ULTRA' ? 'bg-terracotta/20 text-terracotta' :
+                tier.badge === 'EXOTIC' ? 'bg-emerald-500/20 text-emerald-400' :
                 tier.badge === 'PRO' ? 'bg-purple-500/20 text-purple-400' :
                 tier.badge === 'PLUS' ? 'bg-blue-500/20 text-blue-400' :
                 'bg-gray-500/20 text-gray-400'
@@ -229,21 +260,31 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
 
         {/* Content Area */}
         <div className="flex-1 p-8 bg-dark/20 relative">
-          {(activeTier.tier === 'Aura' || activeTier.tier === 'Pulse') && (
+          {(activeTier.tier === 'Aura' || activeTier.tier === 'Pulse' || activeTier.tier === 'Cloning') && (
             <div className="absolute inset-0 z-10 bg-dark/60 backdrop-blur-sm flex items-center justify-center p-8 text-center">
               <div className="max-w-md">
                 <div className="w-20 h-20 bg-terracotta/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-terracotta/30">
-                  {activeTier.tier === 'Aura' ? <Sparkles className="w-10 h-10 text-terracotta animate-pulse" /> : <TrendingUp className="w-10 h-10 text-terracotta animate-pulse" />}
+                  {activeTier.tier === 'Aura' ? <Sparkles className="w-10 h-10 text-terracotta animate-pulse" /> : 
+                   activeTier.tier === 'Pulse' ? <TrendingUp className="w-10 h-10 text-terracotta animate-pulse" /> :
+                   <ShieldCheck className="w-10 h-10 text-terracotta animate-pulse" />}
                 </div>
-                <h3 className="text-2xl font-black text-white mb-4">{activeTier.tier === 'Aura' ? t('quality_title_aura') : t('quality_title_pulse')}</h3>
+                <h3 className="text-2xl font-black text-white mb-4">
+                  {activeTier.tier === 'Aura' ? t('quality_title_aura') : 
+                   activeTier.tier === 'Pulse' ? t('quality_title_pulse') : 
+                   t('quality_title_cloning')}
+                </h3>
                 <p className="text-gray-400 text-sm leading-relaxed mb-8">
-                  {activeTier.tier === 'Aura' ? t('quality_desc_aura') : t('quality_desc_pulse')}
+                  {activeTier.tier === 'Aura' ? t('quality_desc_aura') : 
+                   activeTier.tier === 'Pulse' ? t('quality_desc_pulse') : 
+                   t('quality_desc_cloning')}
                 </p>
                 <button 
                   onClick={onUpgrade}
                   className="bg-terracotta text-white px-8 py-3 rounded-xl font-black text-sm"
                 >
-                  {activeTier.tier === 'Aura' ? t('activate_aura') : t('activate_pulse')}
+                  {activeTier.tier === 'Aura' ? t('activate_aura') : 
+                   activeTier.tier === 'Pulse' ? t('activate_pulse') : 
+                   t('activate_cloning')}
                 </button>
               </div>
             </div>

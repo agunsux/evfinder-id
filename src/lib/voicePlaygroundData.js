@@ -38,8 +38,8 @@ export const PLAYGROUND_VOICES = {
       badge: "PLUS",
       color: "blue",
       voices: [
-        { id: "id-ID-Wavenet-A", gender: "Wanita", name: "Lestari" },
-        { id: "id-ID-Wavenet-B", gender: "Pria", name: "Joko" }
+        { id: "id-ID-Wavenet-D", gender: "Wanita", name: "Lestari" },
+        { id: "id-ID-Wavenet-C", gender: "Pria", name: "Joko" }
       ],
       categories: [
         {
@@ -50,7 +50,7 @@ export const PLAYGROUND_VOICES = {
             {
               id: "wav_m_horror_1_id",
               title: "Misteri Tengah Malam",
-              voiceId: "id-ID-Wavenet-B",
+              voiceId: "id-ID-Wavenet-C",
               script: "Pintu itu... berderit pelan. Di balik kegelapan yang pekat, sepasang mata merah menatap tajam. Keheningan ini... hanyalah awal dari sesuatu yang jauh lebih mengerikan.",
               url: "https://storage.googleapis.com/shinerva-assets/playground/wav_m_horror_1.mp3"
             }
@@ -88,8 +88,8 @@ export const PLAYGROUND_VOICES = {
       badge: "ULTRA",
       color: "terracotta",
       voices: [
-        { id: "id-ID-Wavenet-A", gender: "Pria", name: "Eko" },
-        { id: "id-ID-Wavenet-C", gender: "Wanita", name: "Maya" }
+        { id: "id-ID-Wavenet-C", gender: "Pria", name: "Eko" },
+        { id: "id-ID-Wavenet-D", gender: "Wanita", name: "Maya" }
       ],
       categories: [
         {
@@ -100,11 +100,25 @@ export const PLAYGROUND_VOICES = {
             {
               id: "stu_f_gossip_expressive_id",
               title: "Gossip Expressive",
-              voiceId: "id-ID-Wavenet-C",
+              voiceId: "id-ID-Wavenet-D",
               script: "Gila parah banget sih! Eh, serius deh... gue tuh langsung bengong pas denger berita itu. Kayak... kok bisa gitu lho? Dan yang bikin gue kesel, dia tuh pura-pura gak tau apa-apa. Anjir... parah banget!",
               url: "https://storage.googleapis.com/shinerva-assets/playground/stu_f_gossip_expressive.mp3"
             }
           ]
+        }
+      ]
+    },
+    {
+      tier: "Cloning",
+      badge: "EXOTIC",
+      color: "emerald",
+      voices: [],
+      categories: [
+        {
+          slug: "cloning",
+          name: "Voice Cloning",
+          description: "Kloning suara Anda sendiri hanya dengan sampel 30 detik. Akurasi 99%.",
+          samples: []
         }
       ]
     }
@@ -157,6 +171,36 @@ export const PLAYGROUND_VOICES = {
               url: "https://storage.googleapis.com/shinerva-assets/playground/neu_f_social_en.mp3"
             }
           ]
+        }
+      ]
+    },
+    {
+      tier: "Aura",
+      badge: "ULTRA",
+      color: "terracotta",
+      voices: [
+        { id: "en-GB-Wavenet-B", gender: "Pria", name: "Arthur" }
+      ],
+      categories: [
+        {
+          slug: "branding",
+          name: "High-End Branding",
+          description: "Ultra-natural British voice for premium content.",
+          samples: []
+        }
+      ]
+    },
+    {
+      tier: "Cloning",
+      badge: "EXOTIC",
+      color: "emerald",
+      voices: [],
+      categories: [
+        {
+          slug: "cloning",
+          name: "Voice Cloning",
+          description: "Clone your own voice with just a 30-second sample. 99% accuracy.",
+          samples: []
         }
       ]
     }

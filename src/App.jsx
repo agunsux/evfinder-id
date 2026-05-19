@@ -10,7 +10,10 @@ import {
   loginWithGoogle 
 } from './lib/authService';
 import {
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
 } from 'firebase/auth';
 import {
   Waves,
@@ -174,6 +177,11 @@ const FAQS = {
         "Sangat bisa! Suara emosional kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Kami membantu cerita Anda terasa lebih manusiawi dan mengonversi audiens lebih baik.",
     },
     {
+      question: "Apa itu Voice Cloning?",
+      answer:
+        "Voice Cloning adalah teknologi canggih yang memungkinkan Anda membuat versi digital dari suara Anda sendiri hanya dengan mengunggah sampel rekaman berdurasi 30 detik. Suara hasil kloning ini dapat digunakan untuk menghasilkan narasi apa pun dengan tingkat kemiripan hingga 99%.",
+    },
+    {
       question: "Apa perbedaan teknologi Basic dan Aura?",
       answer:
         "Basic adalah teknologi standar untuk narasi fungsional. Pulse (Segera Hadir) menambahkan ekspresi emosional, sementara Aura (Segera Hadir) adalah teknologi flagship multimodal kami yang menghasilkan tekstur suara, napas, dan intonasi yang hampir mustahil dibedakan dari rekaman manusia.",
@@ -206,6 +214,11 @@ const FAQS = {
         "Absolutely! Our emotional voices are specifically designed to pass monetization verification on social media (YouTube/TikTok/Reels). We help your stories feel more human and convert audiences better.",
     },
     {
+      question: "What is Voice Cloning?",
+      answer:
+        "Voice Cloning is advanced technology that allows you to create a digital version of your own voice just by uploading a 30-second recording sample. The cloned voice can then be used to generate any narration with up to 99% accuracy.",
+    },
+    {
       question: "What is the difference between Basic and Aura technology?",
       answer:
         "Basic is standard technology for functional narration. Pulse (Coming Soon) adds emotional expression, while Aura (Coming Soon) is our flagship multimodal technology that produces voice textures, breaths, and intonations almost indistinguishable from human recordings.",
@@ -222,6 +235,12 @@ const LANGUAGES = [
   { code: "ID", name: "Indonesia", flag: "🇮🇩" },
   { code: "EN", name: "English", flag: "🇺🇸" }
 ];
+
+const DEFAULT_VOICES = {
+  "ID": "id-ID-Standard-A",
+  "EN": "en-US-Standard-C",
+  "CMN": "cmn-CN-Standard-A"
+};
 
 const TRANSLATIONS = {
   ID: {
@@ -281,7 +300,7 @@ const TRANSLATIONS = {
       preview: "Tes Suara",
       download: "Unduh",
       share: "Bagikan",
-      unlock_aura: "Aura Flagship (Segera Hadir) — Tekstur emosi paling manusiawi untuk konten Anda.",
+      unlock_aura: "Aura Flagship & Voice Cloning (Segera Hadir) — Tekstur emosi paling manusiawi & kloning suara Anda sendiri.",
       view_packs: "Lihat Paket"
     },
     pricing: {
@@ -436,7 +455,7 @@ const VOICES = {
     ],
     "Flow (Cinematic)": [
       { 
-        id: "id-ID-Wavenet-C", 
+        id: "id-ID-Wavenet-D", 
         name: "Lestari (Smooth & Elegant)", 
         type: "Wavenet", 
         premium: true, 
@@ -445,18 +464,18 @@ const VOICES = {
         useCase: "Audiobook & Meditasi"
       },
       { 
-        id: "id-ID-Wavenet-D", 
+        id: "id-ID-Standard-C", 
         name: "Joko (Dramatic Deep)", 
-        type: "Wavenet", 
+        type: "Standard", 
         premium: true, 
         tier: "PRODUKTIF",
-        desc: "Deep dan berwibawa, ideal untuk narasi dokumenter intens.",
+        desc: "Gaya bicara formal dan berwibawa, ideal untuk narasi dokumenter intens.",
         useCase: "Misteri & Dokumenter"
       },
     ],
     "Aura Flagship (Segera Hadir)": [
       { 
-        id: "id-ID-Wavenet-A", 
+        id: "id-ID-Wavenet-C", 
         name: "Eko (Curated Soul)", 
         type: "Wavenet", 
         premium: true, 
@@ -467,7 +486,7 @@ const VOICES = {
         useCase: "Iklan High-End & Cinematic"
       },
       { 
-        id: "id-ID-Wavenet-C", 
+        id: "id-ID-Wavenet-D", 
         name: "Maya (Curated Breath)", 
         type: "Wavenet", 
         premium: true, 
@@ -478,6 +497,18 @@ const VOICES = {
         useCase: "Berita & Konten Storytelling"
       },
     ],
+    "Voice Cloning (Enterprise)": [
+      {
+        id: "cloning-custom",
+        name: "Kloning Suara Kustom",
+        type: "Studio",
+        premium: true,
+        comingSoon: true,
+        tier: "BISNIS",
+        desc: "Gunakan identitas suara Anda sendiri untuk branding konsisten.",
+        useCase: "Personal Branding & Corporate"
+      }
+    ]
   },
   "EN": {
     "Basic (Free)": [
@@ -500,7 +531,7 @@ const VOICES = {
     ],
     "Pulse (Coming Soon)": [
       { 
-        id: "en-US-Wavenet-A", 
+        id: "en-US-Wavenet-C", 
         name: "Sarah (Expressive)", 
         type: "Wavenet", 
         premium: true, 
@@ -531,7 +562,7 @@ const VOICES = {
         useCase: "Audiobooks & Meditations"
       },
       { 
-        id: "en-US-Wavenet-G", 
+        id: "en-US-Wavenet-D", 
         name: "George (Formal)", 
         type: "Wavenet", 
         premium: true, 
@@ -542,16 +573,28 @@ const VOICES = {
     ],
     "Aura International (Coming Soon)": [
       { 
-        id: "en-US-Wavenet-I", 
+        id: "en-GB-Wavenet-B", 
         name: "Arthur (London Aura)", 
         type: "Wavenet", 
         premium: true, 
         glow: true, 
         comingSoon: true,
         tier: "BISNIS",
-        desc: "Ultra-natural English presence.",
+        desc: "Ultra-natural English presence with a sophisticated London accent.",
         useCase: "Branding & International High-End"
       },
+    ],
+    "Voice Cloning (Enterprise)": [
+      {
+        id: "cloning-custom-en",
+        name: "Custom Voice Cloning",
+        type: "Studio",
+        premium: true,
+        comingSoon: true,
+        tier: "BISNIS",
+        desc: "Use your own vocal identity for consistent global branding.",
+        useCase: "Personal Branding & Corporate"
+      }
     ]
   },
   "CMN": {
@@ -615,6 +658,17 @@ const App = () => {
     return result;
   };
 
+  const handleLanguageChange = (newLang) => {
+    setLanguage(newLang);
+    // Auto-select default voice for the new language
+    if (DEFAULT_VOICES[newLang]) {
+      setVoice(DEFAULT_VOICES[newLang]);
+    } else {
+      const firstVoice = Object.values(VOICES[newLang]).flat().find(v => !v.comingSoon);
+      if (firstVoice) setVoice(firstVoice.id);
+    }
+  };
+
   const LanguageSelector = () => (
     <div className="relative group">
       <button 
@@ -628,10 +682,7 @@ const App = () => {
         {LANGUAGES.map((lang) => (
           <button
             key={lang.code}
-            onClick={() => {
-              setLanguage(lang.code);
-              // Force some UI updates if needed
-            }}
+            onClick={() => handleLanguageChange(lang.code)}
             className={`w-full flex items-center gap-2 px-4 py-2 text-xs font-medium hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-left ${language === lang.code ? 'text-terracotta bg-terracotta/5' : 'text-text-muted'}`}
           >
             <span>{lang.flag}</span>
@@ -921,15 +972,17 @@ const App = () => {
         const res = await fetch("/api/auth/diag");
         const data = await res.json();
         
-        if (!data.firebaseAdminInitialized && !user) {
-          // If server failed but returned null for initError, use a default string
-          const serverError = (data.initError) 
-            ? (data.initError === "null" ? "Backend initialization incomplete or credentials missing." : data.initError)
+        if (data.firebaseAdminInitialized) {
+          // Server is healthy, clear any server-side init error
+          setInitError(null);
+        } else if (!user) {
+          // Server failed and user is not logged in
+          const serverError = data.initError && data.initError !== "null" 
+            ? data.initError 
             : "Backend initialization incomplete or credentials missing.";
+          
           console.warn("[System] Firebase Admin is not initialized on server.", serverError);
           setInitError(serverError);
-        } else {
-          setInitError(null);
         }
       } catch (e) {
         console.warn("[System] Could not fetch diagnostics:", e);
@@ -1208,7 +1261,7 @@ const App = () => {
         }
       }
     } catch (err) {
-      console.error("Preview error:", err?.message || err);
+      console.error(`[TTS Preview] Generation failed for voice: ${voice}`, err?.message || err);
       if (err.data && err.data.error) {
         toast.error(`Gagal: ${err.data.error}`);
       } else {
@@ -1234,7 +1287,10 @@ const App = () => {
       };
 
       const res = await fetch("/api/tts/sample", options);
-      if (!res.ok) throw new Error("Gagal mengambil sampel suara");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Gagal mengambil sampel suara (${res.status})`);
+      }
       const data = await res.json();
       
       if (data.audioContent) {
@@ -1244,7 +1300,8 @@ const App = () => {
       }
       return null;
     } catch (err) {
-      console.error("[Playground] Sample failed:", err?.message || err);
+      console.error("[Playground] Sample failed for voice:", voiceId, "Error:", err?.message || err);
+      toast.error(`Gagal memuat pratinjau suara: ${err?.message || 'Kesalahan jaringan'}`);
       return null;
     }
   };
@@ -1293,7 +1350,7 @@ const App = () => {
     const startTime = Date.now();
 
     try {
-      if (!auth?.currentUser) throw new Error("Anda harus login untuk melakukan generasi.");
+      if (!auth?.currentUser) throw new Error(" Anda harus login untuk melakukan generasi.");
       
       const idTokenBuffer = await auth.currentUser.getIdToken(true);
       
@@ -1313,6 +1370,7 @@ const App = () => {
         }),
       };
 
+      console.log(`[TTS] Requesting voice: ${voice} for user: ${auth.currentUser.uid}`);
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
 
@@ -1503,6 +1561,56 @@ const App = () => {
     // document.getElementById('studio').scrollIntoView({ behavior: 'smooth' });
   };
 
+  const [authEmail, setAuthEmail] = useState("");
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [isMagicLoading, setIsMagicLoading] = useState(false);
+
+  const handleMagicLinkSignIn = async (e) => {
+    e.preventDefault();
+    if (!authEmail) return toast.error("Masukkan email Anda");
+    
+    setIsMagicLoading(true);
+    const actionCodeSettings = {
+      url: window.location.href, // Returns to original page
+      handleCodeInApp: true,
+    };
+
+    try {
+      await sendSignInLinkToEmail(auth, authEmail, actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', authEmail);
+      setMagicLinkSent(true);
+      toast.success("Link masuk dikirim! Cek inbox/spam email Anda.");
+    } catch (error) {
+      console.error("Magic link error:", error);
+      toast.error(error.message);
+    } finally {
+      setIsMagicLoading(false);
+    }
+  };
+
+  // Handle incoming magic link
+  useEffect(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = window.localStorage.getItem('emailForSignIn');
+      if (!email) {
+        email = window.prompt('Harap masukkan email Anda kembali untuk verifikasi');
+      }
+      
+      if (email) {
+        signInWithEmailLink(auth, email, window.location.href)
+          .then((result) => {
+            window.localStorage.removeItem('emailForSignIn');
+            toast.success("Berhasil masuk!");
+            setIsAuthOpen(false);
+          })
+          .catch((error) => {
+            console.error("Link verification error:", error);
+            toast.error("Link tidak valid atau sudah kedaluwarsa.");
+          });
+      }
+    }
+  }, []);
+
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
@@ -1624,7 +1732,10 @@ const App = () => {
           </p>
           
           <div className="mt-4 p-3 bg-black/20 rounded border border-white/5 font-mono text-[10px] space-y-1">
-            <div className="flex justify-between"><span className="text-gray-500">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Client Config:</span> <span className="text-blue-300">{isConfigValid ? "Valid" : "Invalid"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Client Error:</span> <span className="text-blue-300">{clientInitError || "None"}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Server Error:</span> <span className="text-blue-300">{initError || "None"}</span></div>
+            <div className="flex justify-between border-t border-white/5 mt-1 pt-1"><span className="text-gray-500">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">API Key:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_API_KEY ? (import.meta.env.VITE_FIREBASE_API_KEY.slice(0, 6) + "...") : "Missing"}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">App ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_APP_ID ? "Present" : "Missing"}</span></div>
           </div>
@@ -2158,12 +2269,7 @@ const App = () => {
                       {LANGUAGES.map((lang) => (
                         <button
                           key={lang.code}
-                          onClick={() => {
-                            setLanguage(lang.code);
-                            // Set first voice in new language
-                            const firstVoice = Object.values(VOICES[lang.code]).flat()[0];
-                            if (firstVoice) setVoice(firstVoice.id);
-                          }}
+                          onClick={() => handleLanguageChange(lang.code)}
                           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black transition-all border-none cursor-pointer ${
                             language === lang.code 
                             ? "bg-terracotta text-white shadow-lg shadow-terracotta/20" 
@@ -2852,6 +2958,7 @@ const App = () => {
         <section id="playground" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
           <VoicePlayground 
             language={language}
+            setLanguage={handleLanguageChange}
             generateSample={generateSample}
             onUpgrade={() => {
               const element = document.getElementById('pricing');
@@ -3172,6 +3279,10 @@ const App = () => {
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
                   <span className="opacity-60">Akses Eksklusif Aura Flagship (Soon)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
+                  <span className="opacity-60">Professional Voice Cloning (Soon)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" /> WA
@@ -3571,6 +3682,56 @@ const App = () => {
                   </>
                 )}
               </button>
+
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-surface2"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase tracking-widest font-black">
+                  <span className="bg-surface px-4 text-text-muted">Atau pakai Email</span>
+                </div>
+              </div>
+
+              {!magicLinkSent ? (
+                <form onSubmit={handleMagicLinkSignIn} className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                      placeholder="nama@email.com"
+                      className="w-full bg-surface2 border border-surface2 focus:border-terracotta text-text px-6 py-4 rounded-2xl outline-none transition-all font-medium"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isMagicLoading}
+                    className="w-full bg-terracotta/20 hover:bg-terracotta/30 text-terracotta py-4 rounded-2xl font-black transition-all border border-terracotta/20 cursor-pointer flex justify-center items-center gap-2"
+                  >
+                    {isMagicLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      "Kirim Link Masuk (Magic Link)"
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <div className="bg-terracotta/10 border border-terracotta/20 rounded-2xl p-6 text-center">
+                  <CheckCircle className="w-12 h-12 text-terracotta mx-auto mb-4" />
+                  <h3 className="text-lg font-black text-white mb-2 text-center">Cek Email Anda!</h3>
+                  <p className="text-sm text-text-muted leading-relaxed">
+                    Kami telah mengirimkan link masuk ke <b>{authEmail}</b>. 
+                    Klik link di email tersebut untuk masuk secara otomatis.
+                  </p>
+                  <button 
+                    onClick={() => setMagicLinkSent(false)}
+                    className="mt-4 text-xs text-terracotta hover:underline font-bold bg-transparent border-none cursor-pointer"
+                  >
+                    Ganti email?
+                  </button>
+                </div>
+              )}
 
               <div className="bg-terracotta/10 border border-terracotta/20 rounded-2xl p-4 flex gap-4 mt-8">
                 <Gift className="w-6 h-6 text-terracotta flex-shrink-0" />

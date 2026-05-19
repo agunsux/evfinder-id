@@ -184,28 +184,12 @@ async function createServer() {
   });
 
   const authenticate = async (req, res, next) => {
-    // Anonymous Sample Preview BYPASS - check first before Firebase requirement
-    const isSample = req.body?.isSample === true;
-    const authHeader = req.headers.authorization;
-    
-    if ((!authHeader || !authHeader.startsWith('Bearer ')) && isSample) {
-      console.log('[Auth] Anonymous sample voice preview allowed');
-      req.user = {
-        id: 'anonymous-sample',
-        name: 'Guest',
-        email: 'guest@shinerva.local',
-        tier: 'FREE',
-        signup_bonus_chars: 0,
-        monthly_chars: 0,
-        earned_chars: 0,
-        used_chars: 0,
-        generation_count: 0,
-        pronunciations: {},
-        history: []
-      };
-      return next();
+    if (!authAdmin) {
+      console.error("[Firebase Admin] Auth is not initialized. Check server environment variables.");
+      return res.status(503).json({ error: 'Sistem autentikasi sementara tidak tersedia.' });
     }
 
+    const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Auth token missing' });
     }
@@ -232,6 +216,15 @@ async function createServer() {
       
       const currentEmailVerified = !!decodedToken.email_verified;
       const lowerEmail = email.toLowerCase();
+      
+      // Rungu's Anti-Clone Protection: Block disposable emails
+      const disposableDomains = ['10minutemail.com', 'temp-mail.org', 'guerrillamail.com', 'sharklasers.com', 'mailinator.com'];
+      const emailDomain = lowerEmail.split('@')[1];
+      
+      if (disposableDomains.includes(emailDomain)) {
+        console.warn(`[Security] Blocked signup attempt from disposable email: ${lowerEmail}`);
+        return res.status(403).json({ error: 'Harap gunakan alamat email asli (Gmail/Outlook/Yahoo dsb).' });
+      }
 
       // Migration: If not found by UID, try finding by email
       if (!user) {
@@ -369,7 +362,17 @@ async function createServer() {
 
   app.get('/api/user/me', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-    res.json({ user: req.user });
+    
+    // Rungu's Helper: Calculate total current balance
+    const totalAvailable = (req.user.monthly_chars || 0) + (req.user.signup_bonus_chars || 0) + (req.user.earned_chars || 0);
+    const currentCredits = Math.max(0, totalAvailable - (req.user.used_chars || 0));
+    
+    res.json({ 
+      user: {
+        ...req.user,
+        current_credits: currentCredits
+      } 
+    });
   });
 
   app.get('/api/user/referrals', authenticate, (req, res) => {
@@ -530,87 +533,88 @@ async function createServer() {
 
   app.post('/api/payment/webhook', async (req, res) => {
     const notification = req.body;
+    
+    // Rungu's Security Measure: Verify Signature Key
+    const serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-YOUR_KEY';
+    const signatureKey = crypto.createHash('sha512')
+      .update(notification.order_id + notification.status_code + notification.gross_amount + serverKey)
+      .digest('hex');
+
+    if (signatureKey !== notification.signature_key) {
+      console.error(`[Security Warning] Invalid signature key for Order ID: ${notification.order_id}`);
+      return res.status(403).json({ error: 'Invalid signature key' });
+    }
+
     try {
       const statusResponse = await snap.transaction.notification(notification);
       const orderId = statusResponse.order_id;
       const transactionStatus = statusResponse.transaction_status;
       const fraudStatus = statusResponse.fraud_status;
 
-      console.log(`Transaction notification received. Order ID: ${orderId}. Status: ${transactionStatus}. Fraud: ${fraudStatus}`);
+      console.log(`[Midtrans] Verified Notification received. Order ID: ${orderId}. Status: ${transactionStatus}`);
 
       if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
         if (fraudStatus === 'challenge') {
-          console.warn(`Transaction challenge: ${orderId}`);
+          console.warn(`[Midtrans] Transaction challenge: ${orderId}`);
         } else {
-          // SUCCESS
+          // SUCCESS - TRANSACTION ATOMIC UPDATE logic (simplified via helper)
           const parts = orderId.split('-');
           const uid = parts[1];
           const planIdFromOrderId = parts[2];
           
+          if (!uid) {
+            console.error("[Midtrans] Missing UID in Order ID:", orderId);
+            return res.status(400).send('Missing UID');
+          }
+
           let user = await getUser(uid);
 
           if (user) {
             const amount = parseInt(statusResponse.gross_amount);
-            
-            // Find plan either by id or price
-            const matchedPlan = Object.values(PLANS).find(p => p.id === planIdFromOrderId.toLowerCase() || p.price === amount || p.yearlyPrice === amount);
+            const matchedPlan = Object.values(PLANS).find(p => 
+              p.id === planIdFromOrderId.toLowerCase() || 
+              p.price === amount || 
+              p.yearlyPrice === amount
+            );
             
             if (matchedPlan) {
               const updates = {};
               const now = Date.now();
               
               if (matchedPlan.type === 'topup') {
-                user.earned_chars = (user.earned_chars || 0) + matchedPlan.credits;
-                updates.earned_chars = user.earned_chars;
+                updates.earned_chars = admin.firestore.FieldValue.increment(matchedPlan.credits);
                 
-                // STARTER specific: also sets tier and expiry for 30 days
                 if (matchedPlan.id === 'starter') {
-                  user.tier = 'STARTER';
-                  user.monthly_chars = matchedPlan.credits; // Reset monthly allowance to 50k for this month
+                  updates.tier = 'STARTER';
+                  updates.monthly_chars = matchedPlan.credits;
                   const currentExpiry = user.subscription_expires_at || now;
                   const startPoint = currentExpiry > now ? currentExpiry : now;
-                  user.subscription_expires_at = startPoint + (30 * 24 * 60 * 60 * 1000);
-                  
-                  updates.tier = user.tier;
-                  updates.monthly_chars = user.monthly_chars;
-                  updates.subscription_expires_at = user.subscription_expires_at;
-                  console.log(`[Payment] Starter success: Added credits and set STARTER tier for ${user.email}`);
-                } else {
-                  console.log(`[Payment] Success: Added ${matchedPlan.credits} credits to ${user.email}`);
+                  updates.subscription_expires_at = startPoint + (30 * 24 * 60 * 60 * 1000);
                 }
               } else {
-                user.tier = matchedPlan.tier;
-                user.monthly_chars = matchedPlan.credits;
-                // Subscriptions last 30 days (standard) or 365 days
+                updates.tier = matchedPlan.tier;
+                updates.monthly_chars = matchedPlan.credits;
                 const isYearly = amount === matchedPlan.yearlyPrice;
                 const durationDays = isYearly ? 365 : 30;
-                
-                // If already has active subscription, extend it, otherwise start from now
                 const currentExpiry = user.subscription_expires_at || now;
                 const startPoint = currentExpiry > now ? currentExpiry : now;
-                
-                user.subscription_expires_at = startPoint + (durationDays * 24 * 60 * 60 * 1000);
-                
-                updates.tier = user.tier;
-                updates.monthly_chars = user.monthly_chars;
-                updates.subscription_expires_at = user.subscription_expires_at;
-                console.log(`[Payment] Success: User ${user.email} upgraded to ${matchedPlan.tier}. Expires: ${new Date(user.subscription_expires_at).toISOString()}`);
+                updates.subscription_expires_at = startPoint + (durationDays * 24 * 60 * 60 * 1000);
               }
               
-              user.last_payment_at = now;
-              user.last_order_id = orderId;
-              updates.last_payment_at = user.last_payment_at;
+              updates.last_payment_at = now;
               updates.last_order_id = orderId;
               
-              await saveUser(uid, updates);
+              // We use dbAdmin directly for atomic merge if possible
+              await dbAdmin.collection('users').doc(uid).set(updates, { merge: true });
+              console.log(`[Payment SUCCESS] Credits added for ${user.email} from Order ${orderId}`);
             }
           }
         }
       }
       res.status(200).send('OK');
     } catch (error) {
-      console.error('Webhook Error:', error);
-      res.status(500).send('Error');
+      console.error('[Midtrans Webhook] Error:', error);
+      res.status(500).send('Internal Server Error');
     }
   });
 
@@ -808,11 +812,6 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       }
 
       if (!apiKey) {
-        if (isSample) {
-          console.log('[TTS] Sample preview requested but no API key - generating demo audio');
-          const demoBase64 = 'UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==';
-          return res.json({ audioContent: demoBase64, voice: voice || 'id-ID-Standard-A' });
-        }
         console.error('[TTS Configuration Error] Missing API Key. GOOGLE_API_KEY or GEMINI_API_KEY must be set.');
         return res.status(503).json({ error: 'Layanan TTS sedang dalam pemeliharaan (Konfigurasi API tidak ditemukan).' });
       }
