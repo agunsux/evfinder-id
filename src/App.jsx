@@ -403,6 +403,8 @@ const App = () => {
   const [pitch, setPitch] = useState(0);
   const [volume, setVolume] = useState(0);
   const [status, setStatus] = useState("idle"); // idle, loading, success
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [showFallback, setShowFallback] = useState(false);
   const [isAudioVisible, setIsAudioVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [notification, setNotification] = useState(null);
@@ -999,18 +1001,19 @@ const App = () => {
 
   const handleGenerate = async () => {
     if (!auth?.currentUser) {
-      setNotification("anda belum sign up/log in");
-      setTimeout(() => setNotification(null), 3000);
+      toast.error("Silakan masuk/daftar terlebih dahulu untuk melakukan generasi suara.");
+      setAuthMode("login");
+      setIsAuthOpen(true);
       return;
     }
 
     if (!text.trim()) {
-      alert("Silakan tulis naskah terlebih dahulu.");
+      toast.error("Silakan tulis naskah terlebih dahulu.");
       return;
     }
 
     if (isCappedByRequest) {
-      toast.error(`Naskah terlalu panjang! Batas maksimum untuk paket ${user.tier} adalah ${currentMaxRequestChars.toLocaleString("id-ID")} karakter.`);
+      toast.error(`Naskah terlalu panjang! Batas maksimum untuk paket ${user?.tier || 'FREE'} adalah ${currentMaxRequestChars.toLocaleString("id-ID")} karakter.`);
       return;
     }
 
@@ -1020,7 +1023,7 @@ const App = () => {
     }
 
     if (cooldown > 0) {
-      alert(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
+      toast.error(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
       return;
     }
 
@@ -1035,11 +1038,16 @@ const App = () => {
 
   const proceedWithGenerate = async () => {
     setStatus("loading");
+    setLoadingMessage("Menghubungkan ke Rungu Engine...");
+    setShowFallback(false);
+    const startTime = Date.now();
 
     try {
       if (!auth?.currentUser) throw new Error("Anda harus login untuk melakukan generasi.");
       
       const idTokenBuffer = await auth.currentUser.getIdToken(true);
+      
+      setLoadingMessage("Mensintesis gelombang audio...");
       const options = {
         method: "POST",
         headers: {
@@ -1059,48 +1067,71 @@ const App = () => {
       const data = await checkResponse(res, 0, options);
 
       if (data.audioContent) {
-        console.log(`[TTS] Received audio content. Size: ${Math.round(data.audioContent.length / 1024)} KB`);
+        setLoadingMessage("Mengunduh hasil...");
+        const generationTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[TTS] Synthesis successful in ${generationTime}s. Audio Size: ${Math.round(data.audioContent.length / 1024)} KB`);
         
         const isGemini = voice && ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
         const mimeType = isGemini ? 'audio/wav' : 'audio/mpeg';
-        const blob = base64ToBlob(data.audioContent, mimeType);
-        const url = URL.createObjectURL(blob);
         
-        // Clean up previous blob URL to prevent memory leaks
-        if (audioUrl && audioUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(audioUrl);
+        let url;
+        try {
+          const blob = base64ToBlob(data.audioContent, mimeType);
+          url = URL.createObjectURL(blob);
+          
+          // Clean up previous blob URL
+          if (audioUrl && audioUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(audioUrl);
+          }
+        } catch (blobErr) {
+          console.error("[TTS] Blob conversion failed:", blobErr);
+          // Fallback to data URI if blob fails
+          url = `data:${mimeType};base64,${data.audioContent}`;
         }
 
         setAudioUrl(url);
         setGeneratedInfo({
           duration: data.duration,
-          voice: data.voice
+          voice: data.voice,
+          time: generationTime
         });
         setIsTeaser(data.isTeaser || false);
-        // setUser will trigger re-render, and useEffect will pick up audioUrl to play
         setStatus("success");
         setIsAudioVisible(true);
         
-        // Success: Trigger cooldown on client side too
+        // Cooldown management
         const cdTime = (!user || user.tier === 'FREE') ? 15 : 2;
         setCooldown(cdTime);
 
+        toast.success(`Suara berhasil dibuat dalam ${generationTime} detik!`, { icon: '✨' });
+        
         setTimeout(() => setStatus("idle"), 3000);
         refreshUser();
         
-        // Growth Prompt: Share your creation
-        if (user.generation_count % 3 === 0) {
-            toast.success("Share your creation & tag @rungu.id to get +30k characters!", { duration: 5000 });
+        if (user?.generation_count && user.generation_count % 3 === 0) {
+            toast("Share kreasi Anda & tag @rungu.id untuk bonus karakter!", { icon: '🎁', duration: 6000 });
         }
       } else {
-        throw new Error("No audio content returned");
+        throw new Error("Gagal menerima data suara dari server.");
       }
     } catch (err) {
+      console.error("[TTS] Critical error in proceedWithGenerate:", err);
       setStatus("idle");
+      setLoadingMessage("");
+      setShowFallback(true);
+      
       if (err.status === 429 && err.data?.cooldownRemaining) {
         setCooldown(err.data.cooldownRemaining);
       }
-      handleApiError(err, "Gagal menghasilkan suara.");
+      
+      // Special handling for specific text errors
+      if (err.message?.includes("naskah terlalu panjang")) {
+         toast.error("Naskah melebihi batas karakter.");
+      } else if (err.message?.includes("kredit tidak mencukupi")) {
+         toast.error("Kredit karakter Anda habis.");
+      } else {
+         handleApiError(err, "Gagal memproses suara. Pastikan naskah dan pilihan suara sudah benar.");
+      }
     }
   };
 
@@ -1269,6 +1300,8 @@ const App = () => {
   };
 
   const handlePurchase = async (planId) => {
+    toast.info("Layanan pembayaran sedang ditangguhkan sementara menunggu verifikasi Midtrans. Silakan cek kembali nanti.");
+    return;
     if (!auth?.currentUser) {
       setAuthMode("signup");
       setIsAuthOpen(true);
@@ -2318,7 +2351,7 @@ const App = () => {
                   <button
                     onClick={handleGenerate}
                     disabled={status === "loading" || status === "success" || cooldown > 0 || isCappedByRequest || isCappedByQuota}
-                    className={`w-full py-4 rounded-xl font-bold flex justify-center items-center gap-2 transition-all shadow-lg border-none cursor-pointer 
+                    className={`w-full py-4 rounded-xl font-bold flex flex-col justify-center items-center transition-all shadow-lg border-none cursor-pointer 
                       ${
                         status === "success"
                           ? "bg-green-600 text-white"
@@ -2329,38 +2362,71 @@ const App = () => {
                               : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-white"
                       }`}
                   >
-                    {status === "idle" && cooldown === 0 && (
-                      isCappedByRequest ? (
+                    <div className="flex items-center gap-2">
+                      {status === "idle" && cooldown === 0 && (
+                        isCappedByRequest ? (
+                          <>
+                             <AlertTriangle className="w-5 h-5" /> Naskah Terlalu Panjang
+                          </>
+                        ) : isCappedByQuota ? (
+                          <>
+                             <AlertCircle className="w-5 h-5" /> Kredit Tidak Cukup
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-5 h-5" /> Hasilkan Suara Sekarang
+                          </>
+                        )
+                      )}
+                      {status === "idle" && cooldown > 0 && (
                         <>
-                           <AlertTriangle className="w-5 h-5" /> Naskah Terlalu Panjang
+                          <Loader2 className="w-5 h-5 animate-spin" /> Tunggu {cooldown}s...
                         </>
-                      ) : isCappedByQuota ? (
+                      )}
+                      {status === "loading" && (
                         <>
-                           <AlertCircle className="w-5 h-5" /> Kredit Tidak Cukup
+                          <Loader2 className="w-5 h-5 animate-spin" /> Sedang Proses...
                         </>
-                      ) : (
+                      )}
+                      {status === "success" && (
                         <>
-                          <Mic className="w-5 h-5" /> Hasilkan Suara Sekarang
+                          <CheckCircle className="w-5 h-5" /> Suara Berhasil Dibuat
                         </>
-                      )
-                    )}
-                    {status === "idle" && cooldown > 0 && (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" /> Tunggu {cooldown}s...
-                      </>
-                    )}
-                    {status === "loading" && (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" /> Memproses
-                        Suara...
-                      </>
-                    )}
-                    {status === "success" && (
-                      <>
-                        <CheckCircle className="w-5 h-5" /> Selesai!
-                      </>
+                      )}
+                    </div>
+                    {status === "loading" && loadingMessage && (
+                      <span className="text-[10px] font-medium opacity-80 mt-1 animate-pulse">{loadingMessage}</span>
                     )}
                   </button>
+
+                  {showFallback && (
+                    <div className="mt-4 p-4 bg-terracotta/10 border border-terracotta/20 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+                       <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-terracotta shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                             <p className="text-xs font-bold text-text">Gagal Menghasilkan Suara?</p>
+                             <p className="text-[11px] text-text-muted mt-1">Kami mengalami kendala teknis sementara. Anda bisa mencoba lagi atau gunakan Browser TTS gratis sebagai cadangan.</p>
+                             <div className="flex gap-2 mt-3">
+                                <button 
+                                  onClick={handleGenerate}
+                                  className="text-[11px] font-bold bg-terracotta text-white px-3 py-1.5 rounded-lg border-none cursor-pointer"
+                                >
+                                  Coba Lagi
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    fallbackTTS();
+                                    setShowFallback(false);
+                                  }}
+                                  className="text-[11px] font-bold bg-surface2 text-text px-3 py-1.5 rounded-lg border border-surface3 cursor-pointer"
+                                >
+                                  Browser TTS (Cepat)
+                                </button>
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2675,10 +2741,10 @@ const App = () => {
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.STARTER.id)}
-                disabled={purchaseLoading === PLANS.STARTER.id}
-                className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer flex justify-center items-center"
+                disabled={true}
+                className="w-full bg-surface2 text-gray-500 font-bold py-3 text-sm rounded-xl transition-all cursor-not-allowed flex justify-center items-center"
               >
-                {purchaseLoading === PLANS.STARTER.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
+                Menunggu Verifikasi
               </button>
             </div>
             {/* Kreator */}
@@ -2717,10 +2783,10 @@ const App = () => {
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.KREATOR.id)}
-                disabled={purchaseLoading === PLANS.KREATOR.id}
-                className="w-full bg-terracotta hover:bg-trdark text-white font-bold py-3 text-sm rounded-xl transition-all border-none cursor-pointer flex justify-center items-center"
+                disabled={true}
+                className="w-full bg-surface2 text-gray-500 font-bold py-3 text-sm rounded-xl transition-all cursor-not-allowed flex justify-center items-center"
               >
-                {purchaseLoading === PLANS.KREATOR.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
+                Menunggu Verifikasi
               </button>
             </div>
             {/* Produktif */}
@@ -2760,10 +2826,10 @@ const App = () => {
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.PRODUKTIF.id)}
-                disabled={purchaseLoading === PLANS.PRODUKTIF.id}
-                className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer flex justify-center items-center"
+                disabled={true}
+                className="w-full bg-surface2 text-gray-500 font-bold py-3 text-sm rounded-xl transition-all cursor-not-allowed flex justify-center items-center"
               >
-                {purchaseLoading === PLANS.PRODUKTIF.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
+                Menunggu Verifikasi
               </button>
             </div>
             {/* Bisnis */}
@@ -2803,11 +2869,42 @@ const App = () => {
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.BISNIS.id)}
-                disabled={purchaseLoading === PLANS.BISNIS.id}
-                className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer flex justify-center items-center"
+                disabled={true}
+                className="w-full bg-surface2 text-gray-500 font-bold py-3 text-sm rounded-xl transition-all cursor-not-allowed flex justify-center items-center"
               >
-                {purchaseLoading === PLANS.BISNIS.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pilih Paket"}
+                Menunggu Verifikasi
               </button>
+            </div>
+          </div>
+          
+          {/* Top-Up Section */}
+          <div className="mt-20">
+            <div className="text-center mb-10">
+              <h3 className="text-2xl font-black text-white">Butuh Kredit Tambahan?</h3>
+              <p className="text-text-muted mt-2 text-sm">Beli top-up satu kali untuk kredit ekstra tanpa perlu upgrade paket bulanan.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {[PLANS.TOPUP_RECEH, PLANS.TOPUP_AMAN, PLANS.TOPUP_DARURAT].map((pack) => (
+                <div key={pack.id} className="bg-surface2/30 border border-surface2 p-6 rounded-2xl hover:border-terracotta/30 transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-bold text-white group-hover:text-terracotta transition-colors">{pack.name}</h4>
+                      <p className="text-xs text-text-muted mt-1">{pack.credits.toLocaleString("id-ID")} Kredit</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-black text-white">Rp {(pack.price/1000)}rb</div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => handlePurchase(pack.id)}
+                    disabled={true}
+                    className="w-full py-2.5 rounded-xl bg-surface2 text-gray-500 font-bold text-sm transition-all border border-transparent cursor-not-allowed flex justify-center items-center"
+                  >
+                    Menunggu Verifikasi
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </section>

@@ -138,15 +138,24 @@ export const authAdmin = app ? admin.auth(app) : null;
 export const getFirestoreDb = (databaseId) => {
   if (!app) return null;
   try {
-    const dbId = (!databaseId || databaseId === "(default)") ? undefined : databaseId;
+    const dbId = (!databaseId || databaseId === "(default)" || databaseId === "") ? undefined : databaseId;
     return admin.firestore(app, dbId);
   } catch (err) {
-    console.error("[Firebase Admin] Failed to get Firestore instance:", err.message);
+    console.warn("[Firebase Admin] Firestore instance warning (might be offline):", err.message);
+    // If it fails because of databaseId, try (default)
+    if (databaseId && databaseId !== "(default)") {
+      console.log("[Firebase Admin] Retrying with (default) database...");
+      try {
+        return admin.firestore(app);
+      } catch (e2) {
+        return null;
+      }
+    }
     return null;
   }
 };
 
-export let dbAdmin = getFirestoreDb(firebaseConfig.firestoreDatabaseId);
+export let dbAdmin = getFirestoreDb(firebaseConfig.firestoreDatabaseId || "(default)");
 
 export const setDbAdmin = (newDb) => {
   dbAdmin = newDb;

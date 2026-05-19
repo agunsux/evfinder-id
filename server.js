@@ -65,26 +65,52 @@ let voiceConfig = {
   }
 };
 
+function generateId() {
+  return crypto.randomBytes(8).toString('hex');
+}
+function generateRefCode() {
+  return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
 async function loadInitialConfig() {
-  if (!dbAdmin) return;
+  if (!dbAdmin) {
+    console.warn("[Firebase] Skipping initial config: dbAdmin is null.");
+    return;
+  }
   
-  // Handshake to verify database existence
+  const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
+  console.log(`[Firebase] Handshake with database: ${dbId}`);
+  
   try {
-    const docRef = dbAdmin.collection('_system_').doc('health');
-    await docRef.get(); // This will throw 5 NOT_FOUND if the database itself is missing
+    // Attempt a light operation to verify database access
+    await dbAdmin.collection('_system_').doc('health').get(); 
     console.log("[Firebase] Database connection verified.");
   } catch (err) {
-    if (err.code === 5 || err.message.includes("NOT_FOUND") || err.message.includes("not-found")) {
-      const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
+    const isNotFound = err.code === 5 || err.code === 'not-found' || 
+                      String(err.message).includes("NOT_FOUND") || 
+                      String(err.message).includes("not-found") ||
+                      String(err.message).includes("5");
+
+    if (isNotFound) {
       if (dbId !== "(default)") {
-        console.warn(`[Firebase] Named database '${dbId}' not found. Falling back to (default).`);
+        console.warn(`[Firebase] ERROR 5: Named database '${dbId}' not found. Falling back to (default)...`);
         const fallbackDb = getFirestoreDb("(default)");
         if (fallbackDb) {
           setDbAdmin(fallbackDb);
+          try {
+            await fallbackDb.collection('_system_').doc('health').get();
+            console.log("[Firebase] Fallback to (default) database successful.");
+          } catch (fallbackErr) {
+            console.error("[Firebase] Fallback database also unreachable. App will run with limited profile features.");
+            setDbAdmin(null);
+          }
         }
+      } else {
+        console.error("[Firebase] ERROR 5: The (default) database is missing. App will run in limited mode.");
+        setDbAdmin(null);
       }
     } else {
-      console.warn("[Firebase] Initial handshake warning:", err.message);
+      console.warn("[Firebase] Handshake warning (non-fatal):", err.message);
     }
   }
 
@@ -97,27 +123,18 @@ async function loadInitialConfig() {
         console.log("[Firebase] Global voice config loaded.");
       }
     } catch (err) {
-      console.warn("[Firebase] Could not load global config (might be missing doc).");
+      console.warn("[Firebase] Could not load global config doc (config/voices), using defaults.");
     }
   }
 }
-loadInitialConfig();
 
-function generateId() {
-  return crypto.randomBytes(8).toString('hex');
-}
-function generateRefCode() {
-  return crypto.randomBytes(4).toString('hex').toUpperCase();
-}
-
-// --- FIRESTORE HELPERS ---
 async function getUser(uid) {
   if (!dbAdmin) return null;
   try {
     const doc = await dbAdmin.collection('users').doc(uid).get();
     return doc.exists ? doc.data() : null;
   } catch (err) {
-    console.error(`[Firestore] Error getting user ${uid}:`, err);
+    console.error(`[Firestore] getUser error for ${uid}:`, err.message);
     return null;
   }
 }
@@ -127,7 +144,7 @@ async function saveUser(uid, userData) {
   try {
     await dbAdmin.collection('users').doc(uid).set(userData, { merge: true });
   } catch (err) {
-    console.error(`[Firestore] Error saving user ${uid}:`, err);
+    console.error(`[Firestore] saveUser error for ${uid}:`, err.message);
   }
 }
 
@@ -137,12 +154,15 @@ async function findUserByEmail(email) {
     const snapshot = await dbAdmin.collection('users').where('email', '==', email).limit(1).get();
     return snapshot.empty ? null : snapshot.docs[0].data();
   } catch (err) {
-    console.error(`[Firestore] Error finding user by email ${email}:`, err);
+    console.error(`[Firestore] findUserByEmail error for ${email}:`, err.message);
     return null;
   }
 }
 
 async function createServer() {
+  console.log("[Server] Initializing...");
+  await loadInitialConfig();
+  
   const app = express();
   app.use(cors());
   app.use(express.json());
@@ -267,11 +287,25 @@ async function createServer() {
         await saveUser(uid, { tier: 'ENTERPRISE', monthly_chars: 1000000 });
       }
 
-      // Monthly Credits Reset Check
+      // Subscription Expiration & Monthly Credits Reset Check
       const now = new Date();
+      let userUpdated = false;
+      const updates = {};
+
+      if (user.subscription_expires_at && now.getTime() > user.subscription_expires_at) {
+        console.log(`[Subscription] User ${user.email} subscription expired. Downgrading to FREE.`);
+        user.tier = 'FREE';
+        user.monthly_chars = 10000;
+        user.subscription_expires_at = null;
+        updates.tier = 'FREE';
+        updates.monthly_chars = 10000;
+        updates.subscription_expires_at = null;
+        userUpdated = true;
+      }
+
       const lastCheck = user.last_reset_check ? new Date(user.last_reset_check) : new Date(user.signup_date);
       if (now.getMonth() !== lastCheck.getMonth() || now.getFullYear() !== lastCheck.getFullYear()) {
-         // Reset monthly allowance based on tier
+         // Reset monthly allowance based on current tier (after potential downgrade)
          const tierLimits = {
            'FREE': 10000,
            'STARTER': 50000,
@@ -281,8 +315,17 @@ async function createServer() {
            'ENTERPRISE': 5000000
          };
          user.monthly_chars = tierLimits[user.tier] || 10000;
+         user.used_chars = 0; // Reset usage for new month
          user.last_reset_check = Date.now();
-         await saveUser(uid, { monthly_chars: user.monthly_chars, last_reset_check: user.last_reset_check });
+         updates.monthly_chars = user.monthly_chars;
+         updates.used_chars = 0;
+         updates.last_reset_check = user.last_reset_check;
+         userUpdated = true;
+         console.log(`[Server] Monthly credits reset for ${user.email} (${user.tier})`);
+      }
+
+      if (userUpdated) {
+        await saveUser(uid, updates);
       }
 
       req.user = user;
@@ -427,7 +470,7 @@ async function createServer() {
     }
 
     const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
-    const orderId = `ORDER-${user.id}-${generateId().substring(0, 4)}-${Date.now()}`;
+    const orderId = `ORDER-${user.id}-${planId}-${Date.now()}`;
 
     const parameter = {
       transaction_details: {
@@ -443,10 +486,15 @@ async function createServer() {
         id: plan.id,
         price: price,
         quantity: 1,
-        name: `Paket ${plan.name} (${billingCycle || 'One-time'})`
+        name: `Shinerva ${plan.name} (${billingCycle || 'One-time'})`
       }],
+      metadata: {
+        uid: user.id,
+        plan_id: planId,
+        billing_cycle: billingCycle
+      },
       callbacks: {
-        finish: `${req.protocol}://${req.get('host')}`
+        finish: `${req.protocol}://${req.get('host')}/settings`
       }
     };
 
@@ -472,46 +520,69 @@ async function createServer() {
 
       if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
         if (fraudStatus === 'challenge') {
-          // TODO: handle challenge case
+          console.warn(`Transaction challenge: ${orderId}`);
         } else {
           // SUCCESS
-          // Extract UID from orderId if we saved it, or we need to find user by some other way
-          // Actually, we should have passed UID in metadata or something.
-          // Let's use a simple lookup for now or pass custom field.
-          // For now, let's assume we can get it from item_details or custom_field
-          
-          // Re-fetch custom fields if available
-          // Since we didn't use custom_field in createTransaction, let's look at how we can identify the user.
-          // Better: include user UID in orderId prefix or use metadata.
-          
           const parts = orderId.split('-');
           const uid = parts[1];
-          const user = await getUser(uid);
+          const planIdFromOrderId = parts[2];
+          
+          let user = await getUser(uid);
 
           if (user) {
-            const planId = statusResponse.item_details ? statusResponse.item_details[0].id : null;
             const amount = parseInt(statusResponse.gross_amount);
             
-            const matchedPlan = Object.values(PLANS).find(p => p.price === amount || p.yearlyPrice === amount);
+            // Find plan either by id or price
+            const matchedPlan = Object.values(PLANS).find(p => p.id === planIdFromOrderId.toLowerCase() || p.price === amount || p.yearlyPrice === amount);
             
             if (matchedPlan) {
               const updates = {};
+              const now = Date.now();
+              
               if (matchedPlan.type === 'topup') {
-                user.earned_chars += matchedPlan.credits;
+                user.earned_chars = (user.earned_chars || 0) + matchedPlan.credits;
                 updates.earned_chars = user.earned_chars;
+                
+                // STARTER specific: also sets tier and expiry for 30 days
+                if (matchedPlan.id === 'starter') {
+                  user.tier = 'STARTER';
+                  user.monthly_chars = matchedPlan.credits; // Reset monthly allowance to 50k for this month
+                  const currentExpiry = user.subscription_expires_at || now;
+                  const startPoint = currentExpiry > now ? currentExpiry : now;
+                  user.subscription_expires_at = startPoint + (30 * 24 * 60 * 60 * 1000);
+                  
+                  updates.tier = user.tier;
+                  updates.monthly_chars = user.monthly_chars;
+                  updates.subscription_expires_at = user.subscription_expires_at;
+                  console.log(`[Payment] Starter success: Added credits and set STARTER tier for ${user.email}`);
+                } else {
+                  console.log(`[Payment] Success: Added ${matchedPlan.credits} credits to ${user.email}`);
+                }
               } else {
                 user.tier = matchedPlan.tier;
                 user.monthly_chars = matchedPlan.credits;
+                // Subscriptions last 30 days (standard) or 365 days
+                const isYearly = amount === matchedPlan.yearlyPrice;
+                const durationDays = isYearly ? 365 : 30;
+                
+                // If already has active subscription, extend it, otherwise start from now
+                const currentExpiry = user.subscription_expires_at || now;
+                const startPoint = currentExpiry > now ? currentExpiry : now;
+                
+                user.subscription_expires_at = startPoint + (durationDays * 24 * 60 * 60 * 1000);
+                
                 updates.tier = user.tier;
                 updates.monthly_chars = user.monthly_chars;
+                updates.subscription_expires_at = user.subscription_expires_at;
+                console.log(`[Payment] Success: User ${user.email} upgraded to ${matchedPlan.tier}. Expires: ${new Date(user.subscription_expires_at).toISOString()}`);
               }
-              user.last_payment_at = Date.now();
+              
+              user.last_payment_at = now;
               user.last_order_id = orderId;
               updates.last_payment_at = user.last_payment_at;
               updates.last_order_id = orderId;
               
               await saveUser(uid, updates);
-              console.log(`User ${user.email} upgraded to ${matchedPlan.tier} / received ${matchedPlan.credits} credits`);
             }
           }
         }
@@ -733,7 +804,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
       const userTierIndex = tierOrder.indexOf(tier);
 
-      if (!isSample && text.length >= 150) {
+      if (!isSample) {
         if (isStudioVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
           return res.status(403).json({ error: 'Suara Premium ini hanya tersedia untuk paket BISNIS ke atas. Silakan upgrade paket Anda.' });
         }
@@ -803,24 +874,37 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
 
       let finalAudioContent = "";
       if (isGeminiVoice) {
-        const response = await genAI.models.generateContent({
-          model: "gemini-3.1-flash-tts-preview",
-          contents: [{ parts: [{ text: processedText }] }],
-          config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: voice },
+        try {
+          // Use Gemini 1.5 Flash for reliable multimodal generation
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+          const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: processedText }] }],
+            generationConfig: {
+              responseModalities: ["audio"],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: voice },
+                },
               },
             },
-          },
-        });
-        const pcmBase64 = response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (!pcmBase64) throw new Error("Gemini TTS returned no audio data");
-        finalAudioContent = pcmToWav(pcmBase64, 24000);
+          });
+          const pcmBase64 = result?.response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+          if (!pcmBase64) {
+            console.error(`[Gemini TTS] No audio data returned for voice: ${voice}`);
+            throw new Error(`Gemini TTS (${voice}) returned no audio data. Please ensure your API key supports multimodal output.`);
+          }
+          finalAudioContent = pcmToWav(pcmBase64, 24000);
+          console.log(`[Gemini TTS] Success: Generated audio for ${voice}`);
+        } catch (geminiErr) {
+          console.error(`[Gemini TTS] Error:`, geminiErr.message);
+          throw new Error(`Gagal memproses suara Aura (${voice}): ${geminiErr.message}`);
+        }
       } else {
         const ssmlText = `<speak>${processedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva dot ai di.</prosody>' : ''}</speak>`;
         const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
+        
+        console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode})`);
+        
         const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -833,9 +917,17 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
             }
           })
         });
+        
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error?.message || 'Google TTS Error');
+        if (!response.ok) {
+          console.error(`[Google TTS] Error Status ${response.status}:`, data.error);
+          if (data.error?.message?.includes("API key not valid")) {
+             throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
+          }
+          throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
+        }
         finalAudioContent = data.audioContent;
+        console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}`);
       }
 
       if (!isSample) {
