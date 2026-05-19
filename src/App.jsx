@@ -46,91 +46,341 @@ import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
 import VoicePlayground from "./components/VoicePlayground";
 
-const PACKS = [
-  {
-    id: 1,
-    tag: "Epic Storytelling",
-    title: "Cinematic Narrator",
-    desc: "Narasi berbobot tinggi untuk dokumenter, sejarah, atau video pendek dramatis.",
-    content:
-      "Di balik kabut pagi yang menyelimuti Jakarta, sebuah rahasia besar terkubur selama puluhan tahun. Kini, saatnya dunia mendengarkan kebenaran yang selama ini dibisikkan oleh angin.",
-  },
-  {
-    id: 2,
-    tag: "Viral Tech",
-    title: "The Explainer",
-    desc: "Gaya bicara jernih, persuasif, dan modern untuk breakdown konten teknologi atau tren global.",
-    content:
-      "Kenapa desain Apple selalu terasa berbeda? Ini bukan soal minimalisme biasa. Ini soal bagaimana sebuah produk memahami cara kerja pikiran manusia sebelum kita menyadarinya sendiri.",
-  },
-  {
-    id: 3,
-    tag: "TikTok & Reels",
-    title: "Human Fast-Paced",
-    trending: true,
-    desc: "Energik, natural, dan penuh emosi. Didesain untuk menahan audiens agar tidak scroll ke video lain.",
-    content:
-      "Tunggu sebentar! Kalian sadar nggak kalau cara kita bikin konten selama ini salah total? Sini gue spill rahasianya cuma dalam lima belas detik biar video kalian langsung FYP!",
-  },
-  {
-    id: 4,
-    tag: "Audiobook",
-    title: "Emotional Storyteller",
-    desc: "Deep breaths, smooth transitions, and emotional layers for books and long-form content.",
-    content:
-      "Dia berjalan menyusuri lorong yang sepi itu, merasakan detak jantungnya sendiri yang berdegup kencang. 'Apakah ini akhirnya?' tanyanya dalam hati, sambil menatap cahaya di ujung jalan.",
-  },
-  {
-    id: 5,
-    tag: "Marketing",
-    title: "Premium Branding",
-    desc: "Mewah, elegan, dan meyakinkan. Sangat cocok untuk brand high-end yang menginginkan otoritas.",
-    content:
-      "Kemewahan sejati bukanlah tentang apa yang Anda lihat, melainkan tentang apa yang Anda rasakan. Rasakan kenyamanan tanpa kompromi dengan koleksi terbaru kami.",
-  },
-  {
-    id: 6,
-    tag: "Podcast",
-    title: "The Intimate Host",
-    desc: "Santai, dekat, dan hangat. Memberikan kesan obrolan asli di pagi hari.",
-    content:
-      "Halo semuanya, selamat datang kembali di podcast gue. Hari ini kita bakal ngobrol santai soal gimana caranya tetap tenang di tengah hiruk pikuk kehidupan kota besar.",
-  },
-];
+const PACKS = {
+  ID: [
+    {
+      id: 1,
+      tag: "Epic Storytelling",
+      title: "Cinematic Narrator",
+      desc: "Narasi berbobot tinggi untuk dokumenter, sejarah, atau video pendek dramatis.",
+      content:
+        "Di balik kabut pagi yang menyelimuti Jakarta, sebuah rahasia besar terkubur selama puluhan tahun. Kini, saatnya dunia mendengarkan kebenaran yang selama ini dibisikkan oleh angin.",
+    },
+    {
+      id: 2,
+      tag: "Viral Tech",
+      title: "The Explainer",
+      desc: "Gaya bicara jernih, persuasif, dan modern untuk breakdown konten teknologi atau tren global.",
+      content:
+        "Kenapa desain Apple selalu terasa berbeda? Ini bukan soal minimalisme biasa. Ini soal bagaimana sebuah produk memahami cara kerja pikiran manusia sebelum kita menyadarinya sendiri.",
+    },
+    {
+      id: 3,
+      tag: "TikTok & Reels",
+      title: "Human Fast-Paced",
+      trending: true,
+      desc: "Energik, natural, dan penuh emosi. Didesain untuk menahan audiens agar tidak scroll ke video lain.",
+      content:
+        "Tunggu sebentar! Kalian sadar nggak kalau cara kita bikin konten selama ini salah total? Sini gue spill rahasianya cuma dalam lima belas detik biar video kalian langsung FYP!",
+    },
+    {
+      id: 4,
+      tag: "Audiobook",
+      title: "Emotional Storyteller",
+      desc: "Deep breaths, smooth transitions, and emotional layers for books and long-form content.",
+      content:
+        "Dia berjalan menyusuri lorong yang sepi itu, merasakan detak jantungnya sendiri yang berdegup kencang. 'Apakah ini akhirnya?' tanyanya dalam hati, sambil menatap cahaya di ujung jalan.",
+    },
+    {
+      id: 5,
+      tag: "Marketing",
+      title: "Premium Branding",
+      desc: "Mewah, elegan, dan meyakinkan. Sangat cocok untuk brand high-end yang menginginkan otoritas.",
+      content:
+        "Kemewahan sejati bukanlah tentang apa yang Anda lihat, melainkan tentang apa yang Anda rasakan. Rasakan kenyamanan tanpa kompromi dengan koleksi terbaru kami.",
+    },
+    {
+      id: 6,
+      tag: "Podcast",
+      title: "The Intimate Host",
+      desc: "Santai, dekat, dan hangat. Memberikan kesan obrolan asli di pagi hari.",
+      content:
+        "Halo semuanya, selamat datang kembali di podcast gue. Hari ini kita bakal ngobrol santai soal gimana caranya tetap tenang di tengah hiruk pikuk kehidupan kota besar.",
+    },
+  ],
+  EN: [
+    {
+      id: 1,
+      tag: "Epic Storytelling",
+      title: "Cinematic Narrator",
+      desc: "High-stakes narration for documentaries, history, or dramatic short videos.",
+      content:
+        "Behind the morning mist that covers London, a great secret has been buried for decades. Now, it's time for the world to hear the truth that has been whispered by the wind.",
+    },
+    {
+      id: 2,
+      tag: "Viral Tech",
+      title: "The Explainer",
+      desc: "Clear, persuasive, and modern speaking style for breaking down tech content or global trends.",
+      content:
+        "Why does Apple's design always feel different? It's not just about simple minimalism. It's about how a product understands the way the human mind works before we even realize it ourselves.",
+    },
+    {
+      id: 3,
+      tag: "TikTok & Reels",
+      title: "Human Fast-Paced",
+      trending: true,
+      desc: "Energetic, natural, and full of emotion. Designed to keep viewers from scrolling past.",
+      content:
+        "Wait a second! Do you realize that the way we've been making content is completely wrong? Here's the secret in just fifteen seconds so your videos can go viral instantly!",
+    },
+    {
+      id: 4,
+      tag: "Audiobook",
+      title: "Emotional Storyteller",
+      desc: "Deep breaths, smooth transitions, and emotional layers for books and long-form content.",
+      content:
+        "He walked down the quiet hallway, feeling his own heart beating fast. 'Is this the end?' he asked himself, while staring at the light at the end of the road.",
+    },
+    {
+      id: 5,
+      tag: "Marketing",
+      title: "Premium Branding",
+      desc: "Luxurious, elegant, and persuasive. Perfect for high-end brands wanting authority.",
+      content:
+        "True luxury is not about what you see, but what you feel. Experience uncompromising comfort with our latest collection.",
+    },
+    {
+      id: 6,
+      tag: "Podcast",
+      title: "The Intimate Host",
+      desc: "Relaxed, close, and warm. Gives the impression of a real morning conversation.",
+      content:
+        "Hi everyone, welcome back to my podcast. Today we're going to have a relaxed chat about how to stay calm amidst the hustle and bustle of big city life.",
+    },
+  ]
+};
 
-const FAQS = [
-  {
-    question: "Apa itu Shinerva?",
-    answer:
-      "Shinerva adalah platform AI Voice emosional pertama di Asia Tenggara. Kami melampaui Text-to-Speech (TTS) biasa dengan memberikan jiwa, emosi, dan karakter pada setiap narasi untuk kreator modern.",
-  },
-  {
-    question: "Apakah kredit saya bisa hangus?",
-    answer:
-      "Tergantung paket Anda. Kredit dari paket Top-Up tidak akan pernah hangus. Untuk paket bulanan (Kreator ke atas), sisa kredit akan rollover ke bulan berikutnya. Namun untuk paket FREE, kuota akan diperbarui setiap bulan.",
-  },
-  {
-    question: "Apakah suara AI ini bisa dipakai di TikTok atau YouTube?",
-    answer:
-      "Sangat bisa! Suara emosional kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Kami membantu cerita Anda terasa lebih manusiawi dan mengonversi audiens lebih baik.",
-  },
-  {
-    question: "Apa perbedaan teknologi Basic dan Aura?",
-    answer:
-      "Basic adalah teknologi standar untuk narasi fungsional. Pulse menambahkan ekspresi emosional, sementara Aura adalah teknologi flagship multimodal kami yang menghasilkan tekstur suara, napas, dan intonasi yang hampir mustahil dibedakan dari rekaman manusia.",
-  },
-  {
-    question: "Bagaimana cara menghubungi bantuan?",
-    answer:
-      "Anda bisa menghubungi tim kami melalui WhatsApp atau Email untuk bantuan teknis, kerja sama agency, atau kebutuhan integrasi API khusus.",
-  },
-];
+const FAQS = {
+  ID: [
+    {
+      question: "Apa itu Shinerva?",
+      answer:
+        "Shinerva adalah platform AI Voice emosional pertama di Asia Tenggara. Kami melampaui Text-to-Speech (TTS) biasa dengan memberikan jiwa, emosi, dan karakter pada setiap narasi untuk kreator modern.",
+    },
+    {
+      question: "Apakah kredit saya bisa hangus?",
+      answer:
+        "Tergantung paket Anda. Kredit dari paket Top-Up tidak akan pernah hangus. Untuk paket bulanan (Kreator ke atas), sisa kredit akan rollover ke bulan berikutnya. Namun untuk paket FREE, kuota akan diperbarui setiap bulan.",
+    },
+    {
+      question: "Apakah suara AI ini bisa dipakai di TikTok atau YouTube?",
+      answer:
+        "Sangat bisa! Suara emosional kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Kami membantu cerita Anda terasa lebih manusiawi dan mengonversi audiens lebih baik.",
+    },
+    {
+      question: "Apa perbedaan teknologi Basic dan Aura?",
+      answer:
+        "Basic adalah teknologi standar untuk narasi fungsional. Pulse menambahkan ekspresi emosional, sementara Aura adalah teknologi flagship multimodal kami yang menghasilkan tekstur suara, napas, dan intonasi yang hampir mustahil dibedakan dari rekaman manusia.",
+    },
+    {
+      question: "Bagaimana cara menghubungi bantuan?",
+      answer:
+        "Anda bisa menghubungi tim kami melalui WhatsApp atau Email untuk bantuan teknis, kerja sama agency, atau kebutuhan integrasi API khusus.",
+    },
+  ],
+  EN: [
+    {
+      question: "What is Shinerva?",
+      answer:
+        "Shinerva is the first emotional AI Voice platform in Southeast Asia. We go beyond standard Text-to-Speech (TTS) by giving soul, emotion, and character to every narration for modern creators.",
+    },
+    {
+      question: "Will my credits expire?",
+      answer:
+        "It depends on your plan. Credits from Top-Up packs never expire. For monthly plans (Creator and above), unused credits roll over to the next month. For FREE plans, the quota is refreshed every month.",
+    },
+    {
+      question: "Can these AI voices be used on TikTok or YouTube?",
+      answer:
+        "Absolutely! Our emotional voices are specifically designed to pass monetization verification on social media (YouTube/TikTok/Reels). We help your stories feel more human and convert audiences better.",
+    },
+    {
+      question: "What is the difference between Basic and Aura technology?",
+      answer:
+        "Basic is standard technology for functional narration. Pulse adds emotional expression, while Aura is our flagship multimodal technology that produces voice textures, breaths, and intonations almost indistinguishable from human recordings.",
+    },
+    {
+      question: "How do I contact support?",
+      answer:
+        "You can contact our team via WhatsApp or Email for technical assistance, agency partnerships, or custom API integration needs.",
+    },
+  ]
+};
 
 const LANGUAGES = [
   { code: "ID", name: "Indonesia", flag: "🇮🇩" },
-  { code: "EN", name: "English", flag: "🇺🇸" },
-  { code: "CMN", name: "Mandarin", flag: "🇨🇳" }
+  { code: "EN", name: "English", flag: "🇺🇸" }
 ];
+
+const TRANSLATIONS = {
+  ID: {
+    nav: {
+      home: "Beranda",
+      packs: "Paket Konten",
+      pricing: "Harga",
+      faq: "Tanya Jawab",
+      contact: "Hubungi Kami",
+      pronunciation: "Aturan Pengucapan",
+      referral: "Bonus Referral",
+      profile: "Profil Akun",
+      history_voices: "Riwayat Suara",
+      referral_bonus: "Referral & Bonus",
+      subscription: "Langganan & Paket",
+      dev_console: "Voice Dev Console",
+      logout: "Keluar Sekarang",
+      login: "Masuk",
+      signup: "Mulai Gratis",
+      account: "Akun Saya",
+      remaining: "Karakter Tersisa"
+    },
+    hero: {
+      tag: "Platform AI Voice Emosional Pertama di Asia Tenggara",
+      title_part1: "Suara AI yang",
+      title_accent: "Sangat Manusiawi",
+      subtitle: "Beri jiwa pada konten Anda. Platform AI Voice pertama yang mengutamakan tekstur emosi, napas, dan intonasi manusiawi untuk kreator.",
+      cta_primary: "Mulai Kreasi — Gratis",
+      cta_secondary: "Dengarkan Sampel"
+    },
+    welcome: {
+      title: "Selamat Datang!",
+      subtitle: "Kamu dapat 10.000 karakter gratis untuk memulai (~6 menit audio).",
+      cta: "Siap!"
+    },
+    studio: {
+      title: "Rungu Engine Studio",
+      label: "Editor Naskah",
+      placeholder: "Ketik atau tempel naskah Anda di sini...",
+      generate: "Hasilkan Suara",
+      generating: "Sedang Memproses...",
+      sample: "Tes Suara",
+      voicesSelection: "Bahasa & Suara",
+      settings: "Pengaturan Pro",
+      speed: "Kecepatan",
+      pitch: "Nada",
+      volume: "Volume",
+      remaining: "Sisa Kredit",
+      cost: "Beban",
+      cost_est: "Estimasi Biaya",
+      chars: "Karakter",
+      limit_reached: "Batas Request Tercapai!",
+      insufficient: "Kredit Tidak Mencukupi!",
+      near_limit: "Hampir Mencapai Batas!",
+      length: "Panjang Naskah",
+      quota: "Kuota Harian",
+      preview: "Tes Suara",
+      download: "Unduh",
+      share: "Bagikan",
+      unlock_aura: "Unlock Aura Flagship — Tekstur emosi paling manusiawi untuk konten Anda.",
+      view_packs: "Lihat Paket"
+    },
+    pricing: {
+      title: "Pilih Paket Keajaiban Anda",
+      subtitle: "Akses teknologi AI Voice tercanggih di Asia Tenggara. Hemat hingga 40% dengan paket tahunan.",
+      monthly: "Bulanan",
+      yearly: "Tahunan",
+      current: "Paket Saat Ini",
+      upgrade: "Upgrade Sekarang",
+      cta: "Pilih Paket",
+      save: "Hemat"
+    },
+    playground: {
+      title: "Voice Playground",
+      subtitle: "Eksplorasi kualitas suara AI terbaik kami dalam berbagai bahasa. Dengar perbedaannya dan pilih karakter yang paling cocok.",
+      upgrade: "Upgrade Sekarang",
+      tech: "Pilih Teknologi",
+      variants: "Varian Suara",
+      quality_title: "Kualitas Flagship yang Tak Terkalahkan",
+      quality_desc: "Algoritma Aura kami tidak hanya mengubah teks menjadi suara, tapi memberikan 'jiwa' di setiap suku kata.",
+      join: "Bergabung dengan",
+      creators: "Kreator",
+      upgraded: "yang sudah upgrade."
+    }
+  },
+  EN: {
+    nav: {
+      home: "Home",
+      packs: "Content Packs",
+      pricing: "Pricing",
+      faq: "FAQ",
+      contact: "Contact Us",
+      pronunciation: "Pronunciation Rules",
+      referral: "Referral Bonus",
+      profile: "Account Profile",
+      history_voices: "Voice History",
+      referral_bonus: "Referral & Bonus",
+      subscription: "Subscription & Plans",
+      dev_console: "Voice Dev Console",
+      logout: "Logout Now",
+      login: "Login",
+      signup: "Start for Free",
+      account: "My Account",
+      remaining: "Credits Remaining"
+    },
+    hero: {
+      tag: "Southeast Asia’s Emotional AI Voice Platform",
+      title_part1: "AI Voices That",
+      title_accent: "Actually Feel Human",
+      subtitle: "Give soul to your content. The first AI voice platform prioritizing emotional texture, breath, and human-like intonation for creators.",
+      cta_primary: "Start Creation — Free",
+      cta_secondary: "Listen to Samples"
+    },
+    welcome: {
+      title: "Welcome!",
+      subtitle: "You got 10,000 free credits to start (~6 minutes of audio).",
+      cta: "Ready!"
+    },
+    studio: {
+      title: "Rungu Engine Studio",
+      label: "Script Editor",
+      placeholder: "Type or paste your script here...",
+      generate: "Generate Voice",
+      generating: "Generating Audio...",
+      sample: "Test Voice",
+      voicesSelection: "Language & Voice",
+      settings: "Pro Settings",
+      speed: "Speed",
+      pitch: "Pitch",
+      volume: "Volume",
+      remaining: "Credits Left",
+      cost: "Cost",
+      cost_est: "Cost Estimate",
+      chars: "Characters",
+      limit_reached: "Request Limit Reached!",
+      insufficient: "Insufficient Credits!",
+      near_limit: "Near Request Limit!",
+      length: "Script Length",
+      quota: "Daily Quota",
+      preview: "Test Voice",
+      download: "Download",
+      share: "Share",
+      unlock_aura: "Unlock Aura Flagship — The most human emotional texture for your content.",
+      view_packs: "View Packs"
+    },
+    pricing: {
+      title: "Choose Your Magic Plan",
+      subtitle: "Access the most advanced AI Voice technology in Southeast Asia. Save up to 40% with annual plans.",
+      monthly: "Monthly",
+      yearly: "Yearly",
+      current: "Current Plan",
+      upgrade: "Upgrade Now",
+      cta: "Select Plan",
+      save: "Save"
+    },
+    playground: {
+      title: "Voice Playground",
+      subtitle: "Explore our best AI voices across multiple languages. Hear the difference and choose your character.",
+      upgrade: "Upgrade Now",
+      tech: "Select Technology",
+      variants: "Voice Variants",
+      quality_title: "Unbeatable Flagship Quality",
+      quality_desc: "Our Aura algorithm doesn't just turn text to voice, it gives 'soul' to every syllable.",
+      join: "Join over",
+      creators: "Creators",
+      upgraded: "who have upgraded."
+    }
+  }
+};
 
 const VOICES = {
   "ID": {
@@ -336,6 +586,43 @@ const formatDuration = (seconds) => {
 
 const App = () => {
   const [language, setLanguage] = useState("ID");
+
+  const t = (path) => {
+    const keys = path.split('.');
+    let result = TRANSLATIONS[language];
+    for (const key of keys) {
+      if (!result || result[key] === undefined) return path;
+      result = result[key];
+    }
+    return result;
+  };
+
+  const LanguageSelector = () => (
+    <div className="relative group">
+      <button 
+        className="flex items-center gap-1.5 bg-surface2 hover:bg-surface3 border border-surface2 px-2.5 py-1.5 rounded-full transition-all cursor-pointer text-xs font-bold text-text-muted hover:text-text"
+      >
+        <span>{LANGUAGES.find(l => l.code === language)?.flag}</span>
+        <span className="hidden sm:inline">{LANGUAGES.find(l => l.code === language)?.code}</span>
+        <ChevronDown className="w-3 h-3" />
+      </button>
+      <div className="absolute right-0 mt-2 w-32 bg-surface border border-surface2 rounded-xl shadow-xl overflow-hidden z-[80] invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
+        {LANGUAGES.map((lang) => (
+          <button
+            key={lang.code}
+            onClick={() => {
+              setLanguage(lang.code);
+              // Force some UI updates if needed
+            }}
+            className={`w-full flex items-center gap-2 px-4 py-2 text-xs font-medium hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-left ${language === lang.code ? 'text-terracotta bg-terracotta/5' : 'text-text-muted'}`}
+          >
+            <span>{lang.flag}</span>
+            <span>{lang.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
   const [text, setText] = useState("");
   const [voice, setVoice] = useState("id-ID-Wavenet-A");
   const [speed, setSpeed] = useState(1);
@@ -618,7 +905,9 @@ const App = () => {
         
         if (!data.firebaseAdminInitialized && !user) {
           // If server failed but returned null for initError, use a default string
-          const serverError = (data.initError && data.initError !== "null") ? data.initError : "Backend initialization incomplete or credentials missing.";
+          const serverError = (data.initError !== undefined && data.initError !== null && data.initError !== "" && data.initError !== "null") 
+            ? data.initError 
+            : "Backend initialization incomplete or credentials missing.";
           console.warn("[System] Firebase Admin is not initialized on server.", serverError);
           setInitError(serverError);
         } else {
@@ -1246,12 +1535,10 @@ const App = () => {
   };
 
   const handlePurchase = async (planId) => {
-    toast.info("Layanan pembayaran sedang ditangguhkan sementara menunggu verifikasi Midtrans. Silakan cek kembali nanti.");
-    return;
     if (!auth?.currentUser) {
       setAuthMode("signup");
       setIsAuthOpen(true);
-      toast.error("Silakan login terlebih dahulu untuk melakukan pembelian.");
+      toast.error(language === 'ID' ? "Silakan login terlebih dahulu untuk melakukan pembelian." : "Please login first to make a purchase.");
       return;
     }
 
@@ -1314,7 +1601,9 @@ const App = () => {
         </p>
         <div className="bg-surface2 p-4 rounded-xl border border-surface2 text-left w-full max-w-md">
           <h3 className="text-xs font-black text-terracotta uppercase mb-2">Pesan Kesalahan:</h3>
-          <p className="text-xs font-mono text-text-muted break-all mb-4">{initError || clientInitError || "Firebase configuration missing or project mismatch."}</p>
+          <p className="text-xs font-mono text-text-muted break-all mb-4">
+            {initError || clientInitError || "Konfigurasi Firebase ditemukan namun terjadi kegagalan saat inisialisasi layanan (Check Console for details)."}
+          </p>
           
           <div className="mt-4 p-3 bg-black/20 rounded border border-white/5 font-mono text-[10px] space-y-1">
             <div className="flex justify-between"><span className="text-gray-500">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
@@ -1373,34 +1662,34 @@ const App = () => {
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a
-                href="#aura"
+                href="#"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Aura
+                {t('nav.home')}
               </a>
               <a
                 href="#packs"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Content Packs
+                {t('nav.packs')}
               </a>
               <a
                 href="#pricing"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Pricing
+                {t('nav.pricing')}
               </a>
               <a
                 href="#faq"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                FAQ
+                {t('nav.faq')}
               </a>
               <a
                 href="#contact"
                 className="text-text-muted hover:text-text font-medium transition-colors"
               >
-                Hubungi Kami
+                {t('nav.contact')}
               </a>
               {user && (
                 <>
@@ -1408,14 +1697,14 @@ const App = () => {
                     href="#pronunciation"
                     className="text-text-muted hover:text-text font-medium transition-colors"
                   >
-                    Aturan Pengucapan
+                    {t('nav.pronunciation')}
                   </a>
                   <button
                     onClick={handleReferralClick}
                     className="flex items-center gap-2 text-terracotta hover:text-trdark font-bold transition-all border-none bg-transparent cursor-pointer relative"
                   >
                     <Gift className="w-4 h-4" /> 
-                    Bonus Referral
+                    {t('nav.referral')}
                     {user && (user.valid_referrals > 0) && (
                       <span className="absolute -top-1 -right-1 flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-terracotta opacity-75"></span>
@@ -1438,6 +1727,8 @@ const App = () => {
                   <Moon className="w-5 h-5" />
                 )}
               </button>
+
+              <LanguageSelector />
 
               {user ? (
                 <div className="relative">
@@ -1465,7 +1756,7 @@ const App = () => {
                     >
                       <div className="p-4 border-b border-surface2 bg-surface2/30">
                         <div className="flex items-center justify-between mb-1">
-                           <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Akun Saya</p>
+                           <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{t('nav.account')}</p>
                            <button onClick={() => setIsUserMenuOpen(false)} className="text-text-muted hover:text-text bg-transparent border-none cursor-pointer p-1">
                              <X className="w-3 h-3" />
                            </button>
@@ -1476,7 +1767,7 @@ const App = () => {
                              {user.tier}
                            </span>
                            <span className="text-[10px] font-bold text-text-muted">
-                             {remainingCredits.toLocaleString("id-ID")} Karakter Tersisa
+                             {remainingCredits.toLocaleString(language === 'ID' ? "id-ID" : "en-US")} {t('nav.remaining')}
                            </span>
                         </div>
                       </div>
@@ -1490,7 +1781,7 @@ const App = () => {
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
                         >
                           <UserCircle className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">Profil Akun</span>
+                          <span className="text-sm font-bold">{t('nav.profile')}</span>
                         </button>
                         
                         <button 
@@ -1501,7 +1792,7 @@ const App = () => {
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
                         >
                           <History className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">Riwayat Suara</span>
+                          <span className="text-sm font-bold">{t('nav.history_voices')}</span>
                         </button>
 
                         <button 
@@ -1512,7 +1803,7 @@ const App = () => {
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
                         >
                           <UserPlus className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">Referral & Bonus</span>
+                          <span className="text-sm font-bold">{t('nav.referral_bonus')}</span>
                         </button>
                         
                         <button 
@@ -1523,7 +1814,7 @@ const App = () => {
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
                         >
                           <Settings className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">Langganan & Paket</span>
+                          <span className="text-sm font-bold">{t('nav.subscription')}</span>
                         </button>
 
                         {user.tier === 'ENTERPRISE' && (
@@ -1564,7 +1855,7 @@ const App = () => {
                     }}
                     className="text-text-muted hover:text-text font-bold text-sm tracking-tight transition-colors border-none bg-transparent cursor-pointer px-3 py-2 rounded-lg hover:bg-surface2 hidden xs:block"
                   >
-                    Masuk
+                    {t('nav.login')}
                   </button>
                   <button
                     onClick={() => {
@@ -1573,7 +1864,7 @@ const App = () => {
                     }}
                     className="bg-terracotta hover:bg-trdark text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-full font-bold text-[11px] sm:text-sm transition-all transform hover:scale-105 shadow-lg shadow-terracotta/20 border-none cursor-pointer whitespace-nowrap"
                   >
-                    Mulai Gratis (10k Karakter)
+                    {t('nav.signup')}
                   </button>
                 </div>
               )}
@@ -1593,8 +1884,8 @@ const App = () => {
       {user && user.generation_count === 0 && !hasSeenWelcome && (
         <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[60] bg-dark border border-terracotta p-6 rounded-2xl shadow-2xl max-w-sm text-center">
              <div className="text-4xl mb-4">🎉</div>
-             <h3 className="font-black text-xl mb-2">Selamat Datang!</h3>
-             <p className="text-gray-400 text-sm mb-4">Kamu dapat 10.000 karakter gratis untuk memulai (~6 menit audio).</p>
+             <h3 className="font-black text-xl mb-2">{t('welcome.title')}</h3>
+             <p className="text-gray-400 text-sm mb-4">{t('welcome.subtitle')}</p>
              <button 
                onClick={() => {
                  setHasSeenWelcome(true);
@@ -1603,7 +1894,7 @@ const App = () => {
                }} 
                className="bg-terracotta px-6 py-2 rounded-full font-bold text-sm border-none cursor-pointer text-white"
              >
-               Siap!
+               {t('welcome.cta')}
              </button>
         </div>
       )}
@@ -1659,12 +1950,11 @@ const App = () => {
             </span>
           </div>
           <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-6 leading-tight text-text">
-            AI Voices That <br />
-            <span className="gradient-text">Actually Feel Human</span>
+            {t('hero.title_part1')} <br />
+            <span className="gradient-text">{t('hero.title_accent')}</span>
           </h1>
           <p className="text-xl text-text-muted mb-10 max-w-3xl mx-auto font-medium">
-            Generate emotionally expressive AI voiceovers for TikTok, YouTube, stories, and cinematic social content. 
-            Built for modern storytellers and the Southeast Asian creator economy.
+            {t('hero.subtitle')}
           </p>
           <div className="flex justify-center gap-4">
              <button
@@ -1674,7 +1964,7 @@ const App = () => {
                 }}
                 className="bg-terracotta hover:bg-trdark text-white px-8 py-4 rounded-full font-black text-lg transition-all transform hover:scale-105 shadow-2xl shadow-terracotta/30 border-none cursor-pointer"
               >
-                Mulai Kreasi — Gratis
+                {t('hero.cta_primary')}
               </button>
           </div>
         </section>
@@ -1788,19 +2078,19 @@ const App = () => {
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <label className="font-bold text-text-muted">
-                      Editor Naskah
+                      {t('studio.label')}
                     </label>
                     <div className="flex flex-col items-end">
                       <div className="flex items-center gap-2">
                         {estimatedCost > 0 && (
                           <span className="text-[10px] font-bold text-text-muted bg-surface2 px-2 py-0.5 rounded">
-                            Beban: {estimatedCost.toLocaleString("id-ID")} Kredit
+                            {t('studio.cost')}: {estimatedCost.toLocaleString(language === 'ID' ? "id-ID" : "en-US")} {language === 'ID' ? 'Kredit' : 'Credits'}
                           </span>
                         )}
                       </div>
                       {(isCappedByRequest || isCappedByQuota) && (
                         <span className="text-[10px] text-terracotta font-bold mt-1 animate-pulse">
-                          {isCappedByRequest ? "Batas Request Tercapai!" : "Kredit Tidak Mencukupi!"}
+                          {isCappedByRequest ? t('studio.limit_reached') : t('studio.insufficient')}
                         </span>
                       )}
                       {!isCappedByRequest && !isCappedByQuota && isNearLimit && (
@@ -1815,19 +2105,19 @@ const App = () => {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     className={`w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${(isNearLimit || isCappedByRequest || isCappedByQuota) ? "border-terracotta ring-1 ring-terracotta" : ""}`}
-                    placeholder="Ketik naskah Anda di sini..."
+                    placeholder={t('studio.placeholder')}
                   />
                   {user && (
                     <div className="mt-2 flex justify-between items-center text-[10px] font-bold">
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5 text-text-muted">
-                          <span>Panjang Naskah:</span>
+                          <span>{t('studio.length')}:</span>
                           <span className={`${isCappedByRequest ? "text-terracotta" : "text-text"} font-mono`}>
                             {text.length.toLocaleString("id-ID")} / {currentMaxRequestChars.toLocaleString("id-ID")}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 text-text-muted border-l border-surface2/30 pl-4">
-                          <span>Sisa Kredit:</span>
+                          <span>{t('studio.remaining')}:</span>
                           <span className={remainingCredits < 1000 ? "text-terracotta" : "text-text"}>
                             {remainingCredits.toLocaleString("id-ID")}
                           </span>
@@ -1835,7 +2125,7 @@ const App = () => {
                       </div>
                       {user.tier === 'FREE' && (
                         <div className="text-terracotta bg-terracotta/5 px-2 py-0.5 rounded border border-terracotta/10">
-                          Kuota Harian: {Math.max(0, 20 - user.generation_count)} / 20
+                          {t('studio.quota')}: {Math.max(0, 20 - user.generation_count)} / 20
                         </div>
                       )}
                     </div>
@@ -1843,7 +2133,7 @@ const App = () => {
                 </div>
                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <label className="block text-sm font-bold text-text-muted">
-                      Bahasa & Suara Pilihan
+                      {t('studio.voicesSelection')}
                     </label>
                     <div className="flex bg-dark p-1 rounded-xl border border-surface2">
                       {LANGUAGES.map((lang) => (
@@ -2035,7 +2325,7 @@ const App = () => {
                     {(!user || user.tier === 'FREE') && (
                       <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20">
                         <Gift className="w-3 h-3" />
-                        <span className="font-bold">Unlock Aura Flagship — Tekstur emosi paling manusiawi untuk konten Anda. <a href="#pricing" className="underline">Lihat Paket</a></span>
+                        <span className="font-bold">{t('studio.unlock_aura')} <a href="#pricing" className="underline">{t('studio.view_packs')}</a></span>
                       </div>
                     )}
                   </div>
@@ -2532,6 +2822,7 @@ const App = () => {
         {/* Voice Playground Showcase */}
         <section id="playground" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
           <VoicePlayground 
+            language={language}
             generateSample={generateSample}
             onUpgrade={() => {
               const element = document.getElementById('pricing');
@@ -2547,18 +2838,19 @@ const App = () => {
         >
           <div className="text-center mb-16">
             <div className="inline-block bg-terracotta/20 text-terracotta px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-4">
-              Feature Update
+              {language === 'ID' ? 'Pembaruan Fitur' : 'Feature Update'}
             </div>
             <h2 className="text-3xl md:text-4xl font-black mb-4 text-text">
-              Content Packs <span className="text-text-muted">(Coming Soon)</span>
+              {t('nav.packs')} <span className="text-text-muted">({language === 'ID' ? 'Segera Hadir' : 'Coming Soon'})</span>
             </h2>
             <p className="text-text-muted mx-auto max-w-2xl">
-              Template naskah siap pakai dengan gaya bacaan yang sudah
-              dioptimasi AI. Segera hadir untuk membantu produktivitas Anda.
+              {language === 'ID' 
+                ? 'Template naskah siap pakai dengan gaya bacaan yang sudah dioptimasi AI. Segera hadir untuk membantu produktivitas Anda.' 
+                : 'Ready-to-use script templates with AI-optimized reading styles. Coming soon to help your productivity.'}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {PACKS.map((pack) => (
+            {(PACKS[language] || PACKS['ID']).map((pack) => (
               <div
                 key={pack.id}
                 className={`bg-surface rounded-2xl p-6 border transition-colors flex flex-col items-start relative group opacity-60 ${pack.trending ? "border-terracotta/30 shadow-[0_0_15px_rgba(226,114,91,0.1)]" : "border-surface2"}`}
@@ -2581,7 +2873,7 @@ const App = () => {
                   disabled
                   className="w-full bg-dark/50 border border-gray-700 text-gray-500 font-bold py-2.5 rounded-lg transition-all text-sm cursor-not-allowed"
                 >
-                  Activate Pack
+                  {language === 'ID' ? 'Aktifkan Paket' : 'Activate Pack'}
                 </button>
               </div>
             ))}
@@ -2595,16 +2887,15 @@ const App = () => {
         >
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black mb-4">
-               The Core Subscription
+               {t('pricing.title')}
             </h2>
             <p className="text-text-muted max-w-2xl mx-auto mb-8 text-lg">
-               Choose the plan that suits your creative scale. 
-               Experience high-fidelity emotional narration today.
+               {t('pricing.subtitle')}
             </p>
 
             {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-4 mb-12">
-              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-text-muted'}`}>Bulanan</span>
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-text-muted'}`}>{t('pricing.monthly')}</span>
               <button 
                 onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
                 className="w-14 h-7 bg-surface2 rounded-full relative p-1 transition-colors cursor-pointer border-none"
@@ -2612,9 +2903,48 @@ const App = () => {
                 <div className={`w-5 h-5 bg-terracotta rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'}`}></div>
               </button>
               <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-text-muted'}`}>Tahunan</span>
-                <span className="bg-green-500/20 text-green-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Hemat 27%</span>
+                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-text-muted'}`}>{t('pricing.yearly')}</span>
+                <span className="bg-green-500/20 text-green-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">{t('pricing.save')} 27%</span>
               </div>
+            </div>
+
+            {/* Supported Payment Methods */}
+            <div className="flex flex-wrap justify-center items-center gap-6 mb-12 opacity-70 hover:opacity-100 transition-opacity">
+               <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mr-2">Metode Pembayaran:</div>
+               <div className="flex items-center gap-4 grayscale hover:grayscale-0 transition-all">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-400">DANA</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-orange-500">ShopeePay</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-purple-600">OVO</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-600">GoPay</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-red-600">LinkAja</span>
+                  </div>
+                  <div className="h-4 w-[1px] bg-surface2"></div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-text font-serif">QRIS</span>
+                  </div>
+                  <div className="h-4 w-[1px] bg-surface2"></div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-800">VA BCA</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-orange-600">VA BNI</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-500">VA BRI</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-black text-blue-900 font-mono">Mandiri</span>
+                  </div>
+               </div>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
@@ -2651,7 +2981,7 @@ const App = () => {
                 }}
                 className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer"
               >
-                Coba Sekarang
+                {t('hero.cta_primary')}
               </button>
             </div>
             {/* Starter */}
@@ -2681,10 +3011,14 @@ const App = () => {
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.STARTER.id)}
-                disabled={true}
-                className="w-full bg-surface2 text-gray-500 font-bold py-3 text-sm rounded-xl transition-all cursor-not-allowed flex justify-center items-center"
+                disabled={purchaseLoading === PLANS.STARTER.id}
+                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === PLANS.STARTER.id 
+                    ? "bg-surface2 text-text-muted" 
+                    : "bg-terracotta hover:bg-trdark text-white"
+                }`}
               >
-                Menunggu Verifikasi
+                {purchaseLoading === PLANS.STARTER.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
               </button>
             </div>
             {/* Kreator */}
@@ -2723,10 +3057,14 @@ const App = () => {
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.KREATOR.id)}
-                disabled={true}
-                className="w-full bg-surface2 text-gray-500 font-bold py-3 text-sm rounded-xl transition-all cursor-not-allowed flex justify-center items-center"
+                disabled={purchaseLoading === PLANS.KREATOR.id}
+                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === PLANS.KREATOR.id 
+                    ? "bg-surface2 text-text-muted" 
+                    : "bg-terracotta hover:bg-trdark text-white"
+                }`}
               >
-                Menunggu Verifikasi
+                {purchaseLoading === PLANS.KREATOR.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
               </button>
             </div>
             {/* Produktif */}
@@ -2766,10 +3104,14 @@ const App = () => {
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.PRODUKTIF.id)}
-                disabled={true}
-                className="w-full bg-surface2 text-gray-500 font-bold py-3 text-sm rounded-xl transition-all cursor-not-allowed flex justify-center items-center"
+                disabled={purchaseLoading === PLANS.PRODUKTIF.id}
+                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === PLANS.PRODUKTIF.id 
+                    ? "bg-surface2 text-text-muted" 
+                    : "bg-terracotta hover:bg-trdark text-white"
+                }`}
               >
-                Menunggu Verifikasi
+                {purchaseLoading === PLANS.PRODUKTIF.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
               </button>
             </div>
             {/* Bisnis */}
@@ -2809,10 +3151,14 @@ const App = () => {
               </ul>
               <button 
                 onClick={() => handlePurchase(PLANS.BISNIS.id)}
-                disabled={true}
-                className="w-full bg-surface2 text-gray-500 font-bold py-3 text-sm rounded-xl transition-all cursor-not-allowed flex justify-center items-center"
+                disabled={purchaseLoading === PLANS.BISNIS.id}
+                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === PLANS.BISNIS.id 
+                    ? "bg-surface2 text-text-muted" 
+                    : "bg-terracotta hover:bg-trdark text-white"
+                }`}
               >
-                Menunggu Verifikasi
+                {purchaseLoading === PLANS.BISNIS.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
               </button>
             </div>
           </div>
@@ -2852,13 +3198,15 @@ const App = () => {
         {/* FAQ Section */}
         <section id="faq" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-black mb-4 text-text">Pertanyaan Populer</h2>
+            <h2 className="text-4xl font-black mb-4 text-text">{t('nav.faq')}</h2>
             <p className="text-text-muted">
-              Segala hal yang perlu Anda ketahui tentang Shinerva.id
+              {language === 'ID' 
+                ? 'Segala hal yang perlu Anda ketahui tentang Shinerva.id' 
+                : 'Everything you need to know about Shinerva.id'}
             </p>
           </div>
           <div className="space-y-4">
-            {FAQS.map((faq, index) => (
+            {(FAQS[language] || FAQS['ID']).map((faq, index) => (
               <div
                 key={index}
                 className="bg-surface border border-surface2 rounded-2xl p-6 hover:border-terracotta/50 transition-colors shadow-sm"
@@ -2923,10 +3271,10 @@ const App = () => {
                 <ul className="space-y-4 text-text-muted text-sm">
                   <li>
                     <a
-                      href="#aura"
+                      href="#"
                       className="hover:text-terracotta transition-colors"
                     >
-                      Aura
+                      {t('nav.home')}
                     </a>
                   </li>
                   <li>

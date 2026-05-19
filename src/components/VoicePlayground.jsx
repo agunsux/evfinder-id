@@ -17,8 +17,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { PLAYGROUND_VOICES } from "../lib/voicePlaygroundData";
 
-const VoicePlayground = ({ onUpgrade, generateSample }) => {
-  const [language, setLanguage] = useState("ID");
+const VoicePlayground = ({ onUpgrade, generateSample, language = "ID" }) => {
   const [activeTierIdx, setActiveTierIdx] = useState(0); 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null); // id of playing sample
@@ -27,6 +26,42 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
   const [loadingIds, setLoadingIds] = useState({});
   
   const audioRefs = useRef({});
+
+  const t = (key) => {
+    const translations = {
+      ID: {
+        title: "Voice Playground",
+        subtitle: "Eksplorasi kualitas suara AI terbaik kami dalam berbagai bahasa. Dengar perbedaannya dan pilih karakter yang paling cocok.",
+        upgrade: "Upgrade Sekarang",
+        tech: "Pilih Teknologi",
+        variants: "Varian Suara",
+        quality_title: "Kualitas Flagship yang Tak Terkalahkan",
+        quality_desc: "Aura Voice menggunakan pemrosesan audio tingkat lanjut untuk menghasilkan nuansa emosi, slang perkotaan, dan dinamika bicara yang tidak bisa dibedakan dengan manusia asli.",
+        quality_cta: "Sangat cocok untuk konten viral.",
+        join: "Bergabung dengan",
+        creators: "2.5k+ Kreator",
+        upgraded: "yang sudah upgrade.",
+        pricing: "Lihat Paket Harga",
+        activate: "Aktifkan Aura Premium"
+      },
+      EN: {
+        title: "Voice Playground",
+        subtitle: "Explore our best AI voices across multiple languages. Hear the difference and choose your perfect character.",
+        upgrade: "Upgrade Now",
+        tech: "Select Technology",
+        variants: "Voice Variants",
+        quality_title: "Unbeatable Flagship Quality",
+        quality_desc: "Aura Voice uses advanced audio processing to generate emotional nuances, urban slang, and speech dynamics indistinguishable from real humans.",
+        quality_cta: "Perfect for viral content.",
+        join: "Join over",
+        creators: "2.5k+ Creators",
+        upgraded: "who have already upgraded.",
+        pricing: "View Pricing Plans",
+        activate: "Activate Aura Premium"
+      }
+    };
+    return translations[language][key] || translations['ID'][key];
+  };
 
   const currentVoices = PLAYGROUND_VOICES[language] || PLAYGROUND_VOICES["ID"];
   const activeTier = currentVoices[activeTierIdx] || currentVoices[0];
@@ -126,39 +161,18 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
             <div>
               <h2 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
-                Voice Playground <Sparkles className="text-terracotta w-6 h-6 animate-pulse" />
+                {t('title')} <Sparkles className="text-terracotta w-6 h-6 animate-pulse" />
               </h2>
               <p className="text-gray-400 mt-2 text-sm max-w-xl font-medium leading-relaxed">
-                Eksplorasi kualitas suara AI terbaik kami dalam berbagai bahasa. Dengar perbedaannya dan pilih karakter yang paling cocok.
+                {t('subtitle')}
               </p>
-            </div>
-            
-            <div className="flex bg-dark/50 p-1.5 rounded-2xl border border-surface2 backdrop-blur-md">
-              {[
-                { code: "ID", flag: "🇮🇩" },
-                { code: "EN", flag: "🇺🇸" },
-                { code: "CMN", flag: "🇨🇳" }
-              ].map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => setLanguage(lang.code)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all border-none cursor-pointer ${
-                    language === lang.code 
-                    ? "bg-terracotta text-white shadow-lg" 
-                    : "text-text-muted hover:text-text"
-                  }`}
-                >
-                  <span>{lang.flag}</span>
-                  <span>{lang.code}</span>
-                </button>
-              ))}
             </div>
           </div>
           <button 
              onClick={onUpgrade}
              className="bg-white text-black px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"
           >
-            Upgrade Now <ArrowRight className="w-4 h-4" />
+            {t('upgrade')} <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -166,7 +180,7 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
       <div className="flex flex-col lg:flex-row min-h-[600px]">
         {/* Tier Sidebar */}
         <div className="w-full lg:w-72 bg-surface/30 border-r border-surface2 p-6 space-y-3">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 px-2">Pilih Teknologi</p>
+          <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 px-2">{t('tech')}</p>
           {currentVoices.map((tier, idx) => (
             <button
               key={tier.tier}
@@ -190,7 +204,7 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
                 </div>
                 <div className="text-left">
                   <p className={`font-bold text-sm ${activeTierIdx === idx ? 'text-white' : 'text-gray-400'}`}>{tier.tier}</p>
-                  <p className="text-[10px] text-gray-500 font-medium">{tier.voices.length} Varian Suara</p>
+                  <p className="text-[10px] text-gray-500 font-medium">{tier.voices.length} {t('variants')}</p>
                 </div>
               </div>
               <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
@@ -356,9 +370,9 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
                   <Sparkles className="w-12 h-12 text-terracotta" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-white mb-2 tracking-tight">Kualitas Flagship yang Tak Terkalahkan</h3>
+                  <h3 className="text-xl font-black text-white mb-2 tracking-tight">{t('quality_title')}</h3>
                   <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
-                    Aura Voice menggunakan pemrosesan audio tingkat lanjut untuk menghasilkan nuansa emosi, slang perkotaan, dan dinamika bicara yang tidak bisa dibedakan dengan manusia asli. <strong>Sangat cocok untuk konten viral.</strong>
+                    {t('quality_desc')} <strong>{t('quality_cta')}</strong>
                   </p>
                 </div>
               </div>
@@ -378,7 +392,7 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
             ))}
           </div>
           <p className="text-sm font-bold text-gray-300">
-            Bergabung dengan <span className="text-white">2.5k+ Kreator</span> yang sudah upgrade.
+            {t('join')} <span className="text-white">{t('creators')}</span> {t('upgraded')}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -386,13 +400,13 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
             onClick={onUpgrade}
             className="text-white hover:text-terracotta text-sm font-bold transition-all"
           >
-            Lihat Paket Harga
+            {t('pricing')}
           </button>
           <button 
             onClick={onUpgrade}
             className="bg-terracotta hover:bg-terracotta/80 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-[0_10px_30px_rgba(231,76,60,0.3)] transition-all hover:scale-105 active:scale-95"
           >
-            Aktifkan Aura Premium &rarr;
+            {t('activate')} &rarr;
           </button>
         </div>
       </div>

@@ -493,6 +493,10 @@ async function createServer() {
         plan_id: planId,
         billing_cycle: billingCycle
       },
+      enabled_payments: [
+        "gopay", "shopeepay", "ovo", "dana", "linkaja", "qris", 
+        "bca_va", "bni_va", "bri_va", "mandiri_va", "other_va"
+      ],
       callbacks: {
         finish: `${req.protocol}://${req.get('host')}/settings`
       }
