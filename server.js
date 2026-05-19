@@ -658,7 +658,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       let { text, voice, speed, pitch, volume, isSample } = req.body;
       const apiKey = clean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
       let user = req.user;
-      const isGeminiVoice = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'].includes(voice);
+      const isGeminiVoice = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr', 'Aoife', 'Eos'].includes(voice);
 
       if (!user) {
         if (isSample) {
@@ -780,7 +780,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       let finalAudioContent = "";
       if (isGeminiVoice) {
         const response = await genAI.models.generateContent({
-          model: "gemini-3.1-flash-tts-preview",
+          model: "gemini-1.5-flash",
           contents: [{ parts: [{ text: processedText }] }],
           config: {
             responseModalities: [Modality.AUDIO],
@@ -838,8 +838,17 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
 
       res.json({ audioContent: finalAudioContent, voice: actualVoice });
     } catch (error) {
-      console.error('TTS error:', error);
-      res.status(500).json({ error: error.message });
+      console.error('TTS error details:', {
+        message: error.message,
+        stack: error.stack,
+        isSample: req.body?.isSample,
+        voice: req.body?.voice
+      });
+      res.status(500).json({ 
+        error: error.message, 
+        detail: isProd ? undefined : error.stack,
+        code: 'TTS_FAILED'
+      });
     }
   };
 

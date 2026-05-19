@@ -70,7 +70,7 @@ export const PLAYGROUND_VOICES = [
     color: "purple",
     voices: [
       { id: "id-ID-Neural2-A", gender: "Wanita", name: "Siti" },
-      { id: "id-ID-Neural2-D", gender: "Pria", name: "Agus" }
+      { id: "id-ID-Neural2-B", gender: "Pria", name: "Agus" }
     ],
     categories: [
       {
@@ -88,7 +88,7 @@ export const PLAYGROUND_VOICES = [
           {
             id: "neu_m_hype_1",
             title: "Motivational Hook",
-            voiceId: "id-ID-Neural2-D",
+            voiceId: "id-ID-Neural2-B",
             script: "Berhenti mengeluh dan mulai bertindak! Kesempatan itu tidak datang dua kali. Kalau lo nggak ambil sekarang, jangan menyesal kalau orang lain yang dapetin hasilnya!",
             url: "https://storage.googleapis.com/shinerva-assets/playground/neu_m_hype_1.mp3"
           }
@@ -101,8 +101,8 @@ export const PLAYGROUND_VOICES = [
     badge: "ULTRA",
     color: "terracotta",
     voices: [
-      { id: "id-ID-Studio-A", gender: "Pria", name: "Eko" },
-      { id: "id-ID-Studio-D", gender: "Wanita", name: "Maya" }
+      { id: "Charon", gender: "Pria", name: "Eko" },
+      { id: "Kore", gender: "Wanita", name: "Maya" }
     ],
     categories: [
       {
@@ -113,21 +113,21 @@ export const PLAYGROUND_VOICES = [
           {
             id: "stu_f_gossip_expressive",
             title: "Gossip Expressive",
-            voiceId: "id-ID-Studio-D",
+            voiceId: "Kore",
             script: "Gila parah banget sih! Eh, serius deh... gue tuh langsung bengong pas denger berita itu. Kayak... kok bisa gitu lho? Dan yang bikin gue kesel, dia tuh pura-pura gak tau apa-apa. Anjir... parah banget!",
             url: "https://storage.googleapis.com/shinerva-assets/playground/stu_f_gossip_expressive.mp3"
           },
           {
             id: "stu_m_breakdown",
             title: "Emotional Breakdown",
-            voiceId: "id-ID-Studio-A",
+            voiceId: "Charon",
             script: "Gue udah coba semuanya... beneran. Tapi dunia kayak nggak pernah kasih gue kesempatan. Capek banget rasanya... tapi ya mau gimana lagi kan? Harus tetap jalan.",
             url: "https://storage.googleapis.com/shinerva-assets/playground/stu_m_breakdown.mp3"
           },
           {
             id: "stu_f_sarcasm",
             title: "Sarcastic Commentary",
-            voiceId: "id-ID-Studio-D",
+            voiceId: "Kore",
             script: "Wah, hebat banget ya dia. Udah salah, malah nyalahin orang lain. Sumpah ya, level percaya dirinya itu... sesuatu banget sih. Luar biasa!",
             url: "https://storage.googleapis.com/shinerva-assets/playground/stu_f_sarcasm.mp3"
           }

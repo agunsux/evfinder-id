@@ -156,7 +156,7 @@ const VOICES = {
       useCase: "Narasi YouTube & Storytelling"
     },
     { 
-      id: "id-ID-Neural2-D", 
+      id: "id-ID-Neural2-B", 
       name: "Agus (Dynamic Narration)", 
       type: "Neural2", 
       premium: true, 
@@ -196,9 +196,9 @@ const VOICES = {
   ],
   "Aura Premium (Bisnis)": [
     { 
-      id: "id-ID-Studio-A", 
+      id: "Charon", 
       name: "Eko (Flagship Aura)", 
-      type: "Studio", 
+      type: "Gemini", 
       premium: true, 
       glow: true, 
       tier: "BISNIS",
@@ -206,9 +206,9 @@ const VOICES = {
       useCase: "Iklan High-End & Branding"
     },
     { 
-      id: "id-ID-Studio-D", 
+      id: "Kore", 
       name: "Maya (Human-Like Aura)", 
-      type: "Studio", 
+      type: "Gemini", 
       premium: true, 
       glow: true, 
       tier: "BISNIS",

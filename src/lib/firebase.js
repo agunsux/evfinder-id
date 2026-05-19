@@ -28,8 +28,9 @@ try {
       console.warn("[Firebase] Local persistence failed:", err.message);
     });
 
-    db = getFirestore(app);
-    console.log("[Firebase] Client initialized for project:", firebaseConfig.projectId);
+    const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
+    db = getFirestore(app, databaseId === "(default)" ? undefined : databaseId);
+    console.log("[Firebase] Client initialized for project:", firebaseConfig.projectId, "DB:", databaseId);
 
     // Connection check as suggested by skill
     const testConnection = async () => {

@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 dotenv.config();
 
@@ -13,7 +14,7 @@ const clean = (val) => {
   return res.replace(/[\u200B-\u200D\ufeff\u00a0\u0000-\u001F\u007F-\u009F]/g, "");
 };
 
-const projectId = clean(process.env.FIREBASE_PROJECT_ID);
+const projectId = clean(process.env.FIREBASE_PROJECT_ID) || firebaseConfig.projectId;
 const clientEmail = clean(process.env.FIREBASE_CLIENT_EMAIL);
 const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
 
@@ -62,6 +63,7 @@ const privateKey = formatPrivateKey(rawPrivateKey);
 
 console.log("[Firebase Admin] Startup Diagnostic:");
 console.log(` - Project ID: ${projectId || "(MISSING)"}`);
+console.log(` - Database ID: ${firebaseConfig.firestoreDatabaseId || "(default)"}`);
 console.log(` - Client Email: ${clientEmail || "(MISSING)"}`);
 if (privateKey) {
   const preview = privateKey.substring(0, 31).replace(/\n/g, "\\n");
@@ -131,5 +133,5 @@ try {
 }
 
 export const authAdmin = app ? admin.auth(app) : null;
-export const dbAdmin = app ? admin.firestore(app) : null;
+export const dbAdmin = app ? admin.firestore(app, firebaseConfig.firestoreDatabaseId === "(default)" ? undefined : firebaseConfig.firestoreDatabaseId) : null;
 export default admin;
