@@ -1,6 +1,6 @@
 {
   "name": "Shinerva",
-  "description": "Premium Indonesian AI Voice Studio with Terracotta branding. Advanced Text-to-Speech (TTS) featuring Chirp Ultra HD technology. Multi-tier pricing with local payments. Natural voices for professional content creation.",
+  "description": "Southeast Asia’s Emotional AI Voice Studio. Generate expressive, human-like AI voiceovers in Indonesian, Melayu, and English. Built for modern storytellers and Southeast Asian creators.",
   "requestFramePermissions": [],
   "majorCapabilities": ["text-to-speech", "ai-assistant", "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

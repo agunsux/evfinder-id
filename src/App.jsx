@@ -49,80 +49,80 @@ import VoicePlayground from "./components/VoicePlayground";
 const PACKS = [
   {
     id: 1,
-    tag: "Sejarah & Edukasi",
-    title: "Sejarah Revolusi",
-    desc: "Narasi sejarah perjuangan kemerdekaan dengan gaya epik, heroik, dan dramatis.",
+    tag: "Epic Storytelling",
+    title: "Cinematic Narrator",
+    desc: "Narasi berbobot tinggi untuk dokumenter, sejarah, atau video pendek dramatis.",
     content:
-      "Bangsa yang besar adalah bangsa yang menghargai jasa para pahlawannya. Di tengah gemuruh meriam dan bau mesiu, Soekarno berdiri tegak di hadapan ribuan rakyat, mengumumkan bahwa penindasan telah berakhir.",
+      "Di balik kabut pagi yang menyelimuti Jakarta, sebuah rahasia besar terkubur selama puluhan tahun. Kini, saatnya dunia mendengarkan kebenaran yang selama ini dibisikkan oleh angin.",
   },
   {
     id: 2,
-    tag: "Entertainment",
-    title: "Pop Culture Recap",
-    desc: "Breakdown film, series, selebriti, atau trending topic dengan gaya engaging dan santai.",
+    tag: "Viral Tech",
+    title: "The Explainer",
+    desc: "Gaya bicara jernih, persuasif, dan modern untuk breakdown konten teknologi atau tren global.",
     content:
-      "Kalian sadar nggak kalau di trailer film terbaru ini ada detail tersembunyi? Yup, Easter Egg ini beneran ngerubah teori fans di seluruh dunia! Mari kita bedah bareng-bareng kenapa adegan ini begitu penting untuk timeline-nya.",
+      "Kenapa desain Apple selalu terasa berbeda? Ini bukan soal minimalisme biasa. Ini soal bagaimana sebuah produk memahami cara kerja pikiran manusia sebelum kita menyadarinya sendiri.",
   },
   {
     id: 3,
-    tag: "Marketing",
-    title: "Hard Sell Ads",
-    desc: "Template iklan persuasif dengan teknik urgensi tinggi, call-to-action kuat.",
+    tag: "TikTok & Reels",
+    title: "Human Fast-Paced",
+    trending: true,
+    desc: "Energik, natural, dan penuh emosi. Didesain untuk menahan audiens agar tidak scroll ke video lain.",
     content:
-      "PROMO TERBATAS! Dapatkan diskon hingga 70 persen hanya untuk seratus pembeli pertama hari ini. Jangan sampai ketinggalan, klik link di bio sekarang juga!",
+      "Tunggu sebentar! Kalian sadar nggak kalau cara kita bikin konten selama ini salah total? Sini gue spill rahasianya cuma dalam lima belas detik biar video kalian langsung FYP!",
   },
   {
     id: 4,
-    tag: "Sosial Media",
-    title: "Reels & TikTok Narrator",
-    trending: true,
-    desc: "Gaya fast-paced, hook kuat di 3 detik pertama, energik, punchy, cocok untuk video pendek 15-60 detik.",
+    tag: "Audiobook",
+    title: "Emotional Storyteller",
+    desc: "Deep breaths, smooth transitions, and emotional layers for books and long-form content.",
     content:
-      "Stop scrolling! Kalian harus tau cara cepat upgrade skill editing cuma dalam 15 detik! Teknik ini udah dipakai sama banyak top content creator di seluruh dunia.",
+      "Dia berjalan menyusuri lorong yang sepi itu, merasakan detak jantungnya sendiri yang berdegup kencang. 'Apakah ini akhirnya?' tanyanya dalam hati, sambil menatap cahaya di ujung jalan.",
   },
   {
     id: 5,
-    tag: "Lifestyle",
-    title: "Motivasi & Mindset",
-    desc: "Narasi inspiratif, pengembangan diri, mindset sukses, morning motivation, quote story.",
+    tag: "Marketing",
+    title: "Premium Branding",
+    desc: "Mewah, elegan, dan meyakinkan. Sangat cocok untuk brand high-end yang menginginkan otoritas.",
     content:
-      "Kesuksesan bukan tentang seberapa cepat kamu berlari, tapi tentang seberapa kuat kamu bangkit setiap kali terjatuh. Hari ini adalah awal baru untuk masa depanmu.",
+      "Kemewahan sejati bukanlah tentang apa yang Anda lihat, melainkan tentang apa yang Anda rasakan. Rasakan kenyamanan tanpa kompromi dengan koleksi terbaru kami.",
   },
   {
     id: 6,
-    tag: "Storytelling",
-    title: "True Crime & Misteri",
-    desc: "Cerita kriminal, misteri, unsolved case dengan gaya tegang, dramatis, dan merinding.",
+    tag: "Podcast",
+    title: "The Intimate Host",
+    desc: "Santai, dekat, dan hangat. Memberikan kesan obrolan asli di pagi hari.",
     content:
-      "Malam itu begitu sunyi, sampai sebuah suara di balik pintu mengubah segalanya. Tidak ada yang menduga kalau rahasia ini baru akan terungkap setelah dua puluh tahun lamanya.",
+      "Halo semuanya, selamat datang kembali di podcast gue. Hari ini kita bakal ngobrol santai soal gimana caranya tetap tenang di tengah hiruk pikuk kehidupan kota besar.",
   },
 ];
 
 const FAQS = [
   {
-    question: "Apa itu Shinerva.id?",
+    question: "Apa itu Shinerva?",
     answer:
-      "Shinerva.id adalah platform AI Text-to-Speech (TTS) tercanggih untuk Bahasa Indonesia yang mampu menghasilkan suara manusiawi yang alami dan emosional.",
+      "Shinerva adalah platform AI Voice emosional pertama di Asia Tenggara. Kami melampaui Text-to-Speech (TTS) biasa dengan memberikan jiwa, emosi, dan karakter pada setiap narasi untuk kreator modern.",
   },
   {
     question: "Apakah kredit saya bisa hangus?",
     answer:
-      "Tergantung paket Anda. Kredit dari paket Top-Up tidak akan pernah hangus. Untuk paket bulanan (Kreator ke atas), sisa kredit akan rollover ke bulan berikutnya. Namun untuk paket FREE, kuota akan diperbarui setiap bulan dan sisa kuota yang tidak terpakai akan hangus.",
+      "Tergantung paket Anda. Kredit dari paket Top-Up tidak akan pernah hangus. Untuk paket bulanan (Kreator ke atas), sisa kredit akan rollover ke bulan berikutnya. Namun untuk paket FREE, kuota akan diperbarui setiap bulan.",
   },
   {
     question: "Apakah suara AI ini bisa dipakai di TikTok atau YouTube?",
     answer:
-      "Sangat bisa! Suara kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Untuk paket Kreator ke atas, Anda mendapatkan hak komersial penuh.",
+      "Sangat bisa! Suara emosional kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Kami membantu cerita Anda terasa lebih manusiawi dan mengonversi audiens lebih baik.",
   },
   {
-    question: "Apa perbedaan teknologi Basic dan Pulse?",
+    question: "Apa perbedaan teknologi Basic dan Aura?",
     answer:
-      "Basic adalah teknologi TTS standar untuk kebutuhan harian, sementara Pulse menggunakan pemrosesan saraf ekspresif yang menghasilkan intonasi, jeda, dan emosi yang sangat mendalam untuk narasi konten kreatif.",
+      "Basic adalah teknologi standar untuk narasi fungsional. Pulse menambahkan ekspresi emosional, sementara Aura adalah teknologi flagship multimodal kami yang menghasilkan tekstur suara, napas, dan intonasi yang hampir mustahil dibedakan dari rekaman manusia.",
   },
   {
     question: "Bagaimana cara menghubungi bantuan?",
     answer:
-      "Anda bisa menghubungi tim kami melalui WhatsApp atau Email yang tersedia di bagian bawah website jika mengalami kendala atau membutuhkan integrasi khusus.",
+      "Anda bisa menghubungi tim kami melalui WhatsApp atau Email untuk bantuan teknis, kerja sama agency, atau kebutuhan integrasi API khusus.",
   },
 ];
 
@@ -134,13 +134,13 @@ const LANGUAGES = [
 
 const VOICES = {
   "ID": {
-    "Basic (Free)": [
+    "Basic (Fungsional)": [
       { 
         id: "id-ID-Standard-A", 
         name: "Ratna (Wanita)", 
         type: "Standard", 
         tier: "FREE", 
-        desc: "Fast, lightweight voice generation for everyday content.",
+        desc: "Suara jernih untuk penjelasan teknis dan tutorial sederhana.",
         useCase: "Podcast & Edukasi"
       },
       { 
@@ -148,79 +148,79 @@ const VOICES = {
         name: "Bambang (Pria)", 
         type: "Standard", 
         tier: "FREE",
-        desc: "Practical voice generation for simple announcements.",
+        desc: "Gaya bicara formal untuk pengumuman atau berita singkat.",
         useCase: "Berita & Pengumuman"
       },
     ],
-    "Pulse (Starter/Kreator)": [
+    "Pulse (Ekspresif)": [
       { 
         id: "id-ID-Neural2-A", 
-        name: "Siti (Emotionally Expressive)", 
+        name: "Siti (Emotional Storytelling)", 
         type: "Neural2", 
         premium: true, 
         tier: "STARTER",
-        desc: "Emotionally expressive voices built for creators.",
+        desc: "Suara emosional dengan penekanan pada kata-kata penting. Sangat cocok untuk narasi.",
         useCase: "Narasi YouTube & Storytelling"
       },
       { 
         id: "id-ID-Neural2-B", 
-        name: "Agus (Dynamic Narration)", 
+        name: "Agus (Dynamic Creator)", 
         type: "Neural2", 
         premium: true, 
         tier: "STARTER",
-        desc: "Dynamic and engaging storytelling with creator-focused pacing.",
+        desc: "Energik dan punchy. Dibangun khusus untuk video pendek yang butuh perhatian instan.",
         useCase: "Video Pendek & Komedi"
       },
     ],
-    "Flow (Produktif)": [
+    "Flow (Cinematic)": [
       { 
         id: "id-ID-Wavenet-A", 
-        name: "Lestari (Smooth Flow)", 
+        name: "Lestari (Smooth & Elegant)", 
         type: "Wavenet", 
         premium: true, 
         tier: "PRODUKTIF",
-        desc: "Smooth cinematic narration with natural pacing.",
+        desc: "Suara mengalir yang memberikan rasa nyaman dan profesional.",
         useCase: "Audiobook & Meditasi"
       },
       { 
         id: "id-ID-Wavenet-B", 
-        name: "Joko (Immersive Flow)", 
+        name: "Joko (Dramatic Deep)", 
         type: "Wavenet", 
         premium: true, 
         tier: "PRODUKTIF",
-        desc: "Deep and dramatic voices for immersive storytelling.",
+        desc: "Deep dan berwibawa, ideal untuk narasi dokumenter intens.",
         useCase: "Misteri & Dokumenter"
       },
       { 
         id: "id-ID-Wavenet-C", 
-        name: "Putri (Elegant Flow)", 
+        name: "Putri (Sleek Corporate)", 
         type: "Wavenet", 
         premium: true, 
         tier: "PRODUKTIF",
-        desc: "Sleek and professional voices for cinematic delivery.",
+        desc: "Modern dan meyakinkan untuk branding brand premium.",
         useCase: "Iklan & Presentasi"
       },
     ],
-    "Aura Premium (Bisnis)": [
+    "Aura Flagship (Aspirational)": [
       { 
         id: "Charon", 
-        name: "Eko (Flagship Aura)", 
+        name: "Eko (Human Soul)", 
         type: "Gemini", 
         premium: true, 
         glow: true, 
         tier: "BISNIS",
-        desc: "Our flagship ultra-human AI voice experience.",
-        useCase: "Iklan High-End & Branding"
+        desc: "Teknologi Aura kami yang paling canggih. Tekstur suara yang tidak dapat dibedakan dari manusia.",
+        useCase: "Iklan High-End & Cinematic"
       },
       { 
         id: "Kore", 
-        name: "Maya (Human-Like Aura)", 
+        name: "Maya (Emotional Breath)", 
         type: "Gemini", 
         premium: true, 
         glow: true, 
         tier: "BISNIS",
-        desc: "Ultra-natural, emotionally layered cinematic creator voice.",
-        useCase: "Berita & Konten Formal"
+        desc: "Penuh nuansa emosi halus, napas alami, dan kejernihan sinematik.",
+        useCase: "Berita & Konten Storytelling"
       },
     ],
     "Aura Cinema (Enterprise)": [
@@ -721,11 +721,11 @@ const App = () => {
           }
           setIsAuthInitializing(false);
         }, (error) => {
-          console.error("Auth state change error:", error);
+          console.error("Auth state change error:", error?.message || error);
           setIsAuthInitializing(false);
         });
       } catch (e) {
-        console.error("onAuthStateChanged setup failed:", e);
+        console.error("onAuthStateChanged setup failed:", e?.message || e);
         setIsAuthInitializing(false);
       }
     } else {
@@ -957,7 +957,7 @@ const App = () => {
         toast.success(`Berhasil memutar contoh suara ${voice}`);
       }
     } catch (err) {
-      console.error("Preview error:", err);
+      console.error("Preview error:", err?.message || err);
       if (err.data && err.data.error) {
         toast.error(`Gagal: ${err.data.error}`);
       } else {
@@ -994,7 +994,7 @@ const App = () => {
       }
       return null;
     } catch (err) {
-      console.error("[Playground] Sample failed:", err);
+      console.error("[Playground] Sample failed:", err?.message || err);
       return null;
     }
   };
@@ -1115,7 +1115,7 @@ const App = () => {
         throw new Error("Gagal menerima data suara dari server.");
       }
     } catch (err) {
-      console.error("[TTS] Critical error in proceedWithGenerate:", err);
+      console.error("[TTS] Critical error in proceedWithGenerate:", err?.message || err);
       setStatus("idle");
       setLoadingMessage("");
       setShowFallback(true);
@@ -1223,7 +1223,7 @@ const App = () => {
         }
       } catch (err) {
         if (err.name !== "AbortError") {
-          console.error("Error sharing:", err);
+          console.error("Error sharing:", err?.message || err);
         }
       }
     } else {
@@ -1275,14 +1275,14 @@ const App = () => {
           setUser(syncData.user);
         }
       } catch (syncErr) {
-        console.error("[Auth] Background sync error:", syncErr);
+        console.error("[Auth] Background sync error:", syncErr?.message || syncErr);
       }
 
       await refreshUser();
       setIsAuthOpen(false);
       toast.success("Login Google berhasil!");
     } catch (err) {
-      console.error("[Auth] Google sign-in error:", err);
+      console.error("[Auth] Google sign-in error:", err?.message || err);
       toast.error(err.message || "Gagal masuk dengan Google.");
     } finally {
       setGoogleLoading(false);
@@ -1708,25 +1708,28 @@ const App = () => {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-24 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-terracotta/10 rounded-full blur-[120px] -z-10"></div>
           <div className="flex justify-center mb-6">
-            <span className="bg-terracotta/10 text-terracotta px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] border border-terracotta/20 animate-pulse">
-              Powered by RUNGU Engine
+            <span className="bg-terracotta/10 text-terracotta px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] border border-terracotta/20">
+              Southeast Asia’s Emotional AI Voice Platform
             </span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-tight text-text">
-            Ubah Teks Menjadi <br />
-            <span className="gradient-text">Suara Manusiawi</span>
+          <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-6 leading-tight text-text">
+            AI Voices That <br />
+            <span className="gradient-text">Actually Feel Human</span>
           </h1>
-          <p className="text-xl text-text-muted mb-10 max-w-2xl mx-auto font-medium">
-            Generator suara AI paling realistis di Indonesia. Sempurna untuk
-            konten TikTok, YouTube, Podcast, dan Iklan Anda tanpa harus rekaman.
+          <p className="text-xl text-text-muted mb-10 max-w-3xl mx-auto font-medium">
+            Generate emotionally expressive AI voiceovers for TikTok, YouTube, stories, and cinematic social content. 
+            Built for modern storytellers and the Southeast Asian creator economy.
           </p>
           <div className="flex justify-center gap-4">
-            <div className="flex items-center gap-2 bg-surface2 px-4 py-2 rounded-full border border-surface2">
-              <Check className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-bold text-text-muted">
-                Bonus 10.000 Karakter Signup
-              </span>
-            </div>
+             <button
+                onClick={() => {
+                  setAuthMode("signup");
+                  setIsAuthOpen(true);
+                }}
+                className="bg-terracotta hover:bg-trdark text-white px-8 py-4 rounded-full font-black text-lg transition-all transform hover:scale-105 shadow-2xl shadow-terracotta/30 border-none cursor-pointer"
+              >
+                Mulai Kreasi — Gratis
+              </button>
           </div>
         </section>
 
@@ -2084,9 +2087,9 @@ const App = () => {
                     })()}
 
                     {(!user || user.tier === 'FREE') && (
-                      <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20 animate-pulse">
+                      <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20">
                         <Gift className="w-3 h-3" />
-                        <span className="font-bold">Buka fitur suara Flow, Pulse & Aura Flagship dengan paket starter! <a href="#pricing" className="underline">Upgrade Sekarang</a></span>
+                        <span className="font-bold">Unlock Aura Flagship — Tekstur emosi paling manusiawi untuk konten Anda. <a href="#pricing" className="underline">Lihat Paket</a></span>
                       </div>
                     )}
                   </div>
@@ -2643,11 +2646,12 @@ const App = () => {
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
         >
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-4">
-              Pilih Paket Anda
+            <h2 className="text-4xl md:text-5xl font-black mb-4">
+               The Core Subscription
             </h2>
-            <p className="text-text-muted max-w-2xl mx-auto mb-8">
-              Mulai gratis, upgrade saat Anda siap untuk produksi profesional.
+            <p className="text-text-muted max-w-2xl mx-auto mb-8 text-lg">
+               Choose the plan that suits your creative scale. 
+               Experience high-fidelity emotional narration today.
             </p>
 
             {/* Billing Toggle */}
@@ -2668,32 +2672,28 @@ const App = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {/* Free */}
             <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2">Free</h3>
+              <h3 className="text-lg font-bold mb-2">Basic</h3>
               <div className="text-2xl font-black text-text mb-6">
                 Rp 0{" "}
                 <span className="text-xs font-medium text-text-muted">
-                  /bulan
+                  /mo
                 </span>
               </div>
               <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 6 menit audio ≈ 6 video TikTok 1 menit
+                 Entry-level emotional voices for creators.
               </div>
               <ul className="space-y-4 mb-8 flex-grow text-text-muted text-xs">
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  10.000 Kredit / Bulan
-                </li>
-                <li className="flex items-center gap-2 text-red-400">
-                  <X className="w-3 h-3 text-red-500 flex-shrink-0" />{" "}
-                  Kredit Sisa Hangus
+                  10.000 Credits / mo
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Tier 1 (Basic / Flow)
+                  Tier 1 (Fungsional) Voices
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Maks 10 Video / Hari
+                  Limited Daily generations
                 </li>
               </ul>
               <button
@@ -2709,34 +2709,26 @@ const App = () => {
             {/* Starter */}
             <div className="bg-surface border border-terracotta p-6 rounded-3xl flex flex-col relative shadow-[0_0_30px_rgba(226,114,91,0.15)]">
               <div className="absolute top-0 right-6 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
-                Paling Populer
+                Entry Pack
               </div>
               <h3 className="text-lg font-bold mb-2 text-text">Starter</h3>
               <div className="text-2xl font-black text-text mb-6">
-                Rp 19rb{" "}
+                Rp 19k{" "}
                 <span className="text-xs font-medium text-text-muted">
-                  /skali
+                  /topup
                 </span>
               </div>
               <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 33 menit audio ≈ 33 video TikTok 1 menit
+                 Experience expressive emotional voices.
               </div>
               <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  50.000 Kredit (Top Up)
+                  50.000 Credits (Permanent)
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Pulse: Suara Ekspresif & Manusiawi
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Hak Penggunaan Komersial
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Kredit Tidak Akan Hangus
+                   Unlock Pulse & Flow Voices
                 </li>
               </ul>
               <button 
@@ -2970,13 +2962,12 @@ const App = () => {
                 <div className="flex items-center gap-4 mb-6">
                   <ShinervaLogo className="w-12 h-12 text-terracotta" />
                   <span className="font-black text-3xl tracking-tight text-text">
-                    Shinerva<span className="text-terracotta">.id</span>
+                    SHINERVA
                   </span>
                 </div>
                 <p className="text-text-muted max-w-sm">
-                  Solusi AI Text-to-Speech khusus Bahasa Indonesia dengan
-                  kualitas manusiawi tersertifikasi untuk berbagai kebutuhan
-                  konten.
+                   Southeast Asia’s Emotional AI Voice Platform. 
+                   Transforming text into human-like cinematic narrations for a digital-first world.
                 </p>
               </div>
               <div>
