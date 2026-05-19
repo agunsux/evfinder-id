@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore, doc, getDocFromCache, getDocFromServer } from "firebase/firestore";
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
 
 const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
 const missingVars = requiredKeys.filter(key => !firebaseConfig[key]);
@@ -29,19 +29,27 @@ try {
     });
 
     const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
-    db = getFirestore(app, databaseId === "(default)" ? undefined : databaseId);
+    const dbInstance = getFirestore(app, databaseId === "(default)" ? undefined : databaseId);
+    db = dbInstance;
     console.log("[Firebase] Client initialized for project:", firebaseConfig.projectId, "DB:", databaseId);
 
     // Connection check as suggested by skill
     const testConnection = async () => {
       try {
-        await getDocFromServer(doc(db, '_system_', 'health'));
+        await getDocFromServer(doc(dbInstance, '_system_', 'health'));
+        console.log("[Firebase] Connection test: Success");
       } catch (error) {
         if (error.code === 'permission-denied') {
-          // Expected since the doc doesn't exist and rules are tight
           console.log("[Firebase] Connection test: Secured (Permission Denied as expected)");
+        } else if (error.code === 'not-found' || error.message.includes('not-found') || error.message.includes('5')) {
+           if (databaseId !== "(default)") {
+             console.warn("[Firebase] Named database not found, trying default...");
+             db = getFirestore(app);
+           }
         } else if (error.message.includes('offline') || error.code === 'unavailable') {
           console.error("[Firebase] Client is offline or project unreachable.");
+        } else {
+          console.warn("[Firebase] Connection test warning:", error.message);
         }
       }
     };

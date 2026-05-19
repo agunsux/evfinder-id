@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
 
 dotenv.config();
 
@@ -133,5 +133,23 @@ try {
 }
 
 export const authAdmin = app ? admin.auth(app) : null;
-export const dbAdmin = app ? admin.firestore(app, firebaseConfig.firestoreDatabaseId === "(default)" ? undefined : firebaseConfig.firestoreDatabaseId) : null;
+
+// Return a Firestore instance, with optional databaseId
+export const getFirestoreDb = (databaseId) => {
+  if (!app) return null;
+  try {
+    const dbId = (!databaseId || databaseId === "(default)") ? undefined : databaseId;
+    return admin.firestore(app, dbId);
+  } catch (err) {
+    console.error("[Firebase Admin] Failed to get Firestore instance:", err.message);
+    return null;
+  }
+};
+
+export let dbAdmin = getFirestoreDb(firebaseConfig.firestoreDatabaseId);
+
+export const setDbAdmin = (newDb) => {
+  dbAdmin = newDb;
+};
+
 export default admin;

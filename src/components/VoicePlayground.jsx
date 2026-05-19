@@ -18,7 +18,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { PLAYGROUND_VOICES } from "../lib/voicePlaygroundData";
 
 const VoicePlayground = ({ onUpgrade, generateSample }) => {
-  const [activeTierIdx, setActiveTierIdx] = useState(3); // Start with Studio (Flagship)
+  const [language, setLanguage] = useState("ID");
+  const [activeTierIdx, setActiveTierIdx] = useState(0); 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null); // id of playing sample
   const [progress, setProgress] = useState({}); // { id: progress_percent }
@@ -27,8 +28,19 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
   
   const audioRefs = useRef({});
 
-  const activeTier = PLAYGROUND_VOICES[activeTierIdx];
+  const currentVoices = PLAYGROUND_VOICES[language] || PLAYGROUND_VOICES["ID"];
+  const activeTier = currentVoices[activeTierIdx] || currentVoices[0];
   const activeCategory = activeTier.categories[activeCategoryIdx] || activeTier.categories[0];
+
+  // Reset indices when language changes to avoid out of bounds
+  useEffect(() => {
+    setActiveTierIdx(0);
+    setActiveCategoryIdx(0);
+    if (currentlyPlaying) {
+      audioRefs.current[currentlyPlaying]?.pause();
+      setCurrentlyPlaying(null);
+    }
+  }, [language]);
 
   const togglePlay = async (sample) => {
     if (currentlyPlaying === sample.id) {
@@ -111,13 +123,36 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
       {/* Header */}
       <div className="p-8 border-b border-surface2 bg-gradient-to-br from-surface to-dark">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h2 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
-              Voice Playground <Sparkles className="text-terracotta w-6 h-6 animate-pulse" />
-            </h2>
-            <p className="text-gray-400 mt-2 text-sm max-w-xl font-medium leading-relaxed">
-              Eksplorasi kualitas suara AI terbaik kami. Dengar perbedaannya dan pilih karakter suara yang paling cocok untuk konten viral Anda.
-            </p>
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+            <div>
+              <h2 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
+                Voice Playground <Sparkles className="text-terracotta w-6 h-6 animate-pulse" />
+              </h2>
+              <p className="text-gray-400 mt-2 text-sm max-w-xl font-medium leading-relaxed">
+                Eksplorasi kualitas suara AI terbaik kami dalam berbagai bahasa. Dengar perbedaannya dan pilih karakter yang paling cocok.
+              </p>
+            </div>
+            
+            <div className="flex bg-dark/50 p-1.5 rounded-2xl border border-surface2 backdrop-blur-md">
+              {[
+                { code: "ID", flag: "🇮🇩" },
+                { code: "EN", flag: "🇺🇸" },
+                { code: "CMN", flag: "🇨🇳" }
+              ].map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => setLanguage(lang.code)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all border-none cursor-pointer ${
+                    language === lang.code 
+                    ? "bg-terracotta text-white shadow-lg" 
+                    : "text-text-muted hover:text-text"
+                  }`}
+                >
+                  <span>{lang.flag}</span>
+                  <span>{lang.code}</span>
+                </button>
+              ))}
+            </div>
           </div>
           <button 
              onClick={onUpgrade}
@@ -132,7 +167,7 @@ const VoicePlayground = ({ onUpgrade, generateSample }) => {
         {/* Tier Sidebar */}
         <div className="w-full lg:w-72 bg-surface/30 border-r border-surface2 p-6 space-y-3">
           <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 px-2">Pilih Teknologi</p>
-          {PLAYGROUND_VOICES.map((tier, idx) => (
+          {currentVoices.map((tier, idx) => (
             <button
               key={tier.tier}
               onClick={() => {

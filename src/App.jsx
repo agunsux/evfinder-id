@@ -126,155 +126,260 @@ const FAQS = [
   },
 ];
 
+const LANGUAGES = [
+  { code: "ID", name: "Indonesia", flag: "🇮🇩" },
+  { code: "EN", name: "English", flag: "🇺🇸" },
+  { code: "CMN", name: "Mandarin", flag: "🇨🇳" }
+];
+
 const VOICES = {
-  "Basic (Free)": [
-    { 
-      id: "id-ID-Standard-A", 
-      name: "Ratna (Wanita)", 
-      type: "Standard", 
-      tier: "FREE", 
-      desc: "Fast, lightweight voice generation for everyday content.",
-      useCase: "Podcast & Edukasi"
-    },
-    { 
-      id: "id-ID-Standard-B", 
-      name: "Bambang (Pria)", 
-      type: "Standard", 
-      tier: "FREE",
-      desc: "Practical voice generation for simple announcements.",
-      useCase: "Berita & Pengumuman"
-    },
-  ],
-  "Pulse (Starter/Kreator)": [
-    { 
-      id: "id-ID-Neural2-A", 
-      name: "Siti (Emotionally Expressive)", 
-      type: "Neural2", 
-      premium: true, 
-      tier: "STARTER",
-      desc: "Emotionally expressive voices built for creators.",
-      useCase: "Narasi YouTube & Storytelling"
-    },
-    { 
-      id: "id-ID-Neural2-B", 
-      name: "Agus (Dynamic Narration)", 
-      type: "Neural2", 
-      premium: true, 
-      tier: "STARTER",
-      desc: "Dynamic and engaging storytelling with creator-focused pacing.",
-      useCase: "Video Pendek & Komedi"
-    },
-  ],
-  "Flow (Produktif)": [
-    { 
-      id: "id-ID-Wavenet-A", 
-      name: "Lestari (Smooth Flow)", 
-      type: "Wavenet", 
-      premium: true, 
-      tier: "PRODUKTIF",
-      desc: "Smooth cinematic narration with natural pacing.",
-      useCase: "Audiobook & Meditasi"
-    },
-    { 
-      id: "id-ID-Wavenet-B", 
-      name: "Joko (Immersive Flow)", 
-      type: "Wavenet", 
-      premium: true, 
-      tier: "PRODUKTIF",
-      desc: "Deep and dramatic voices for immersive storytelling.",
-      useCase: "Misteri & Dokumenter"
-    },
-    { 
-      id: "id-ID-Wavenet-C", 
-      name: "Putri (Elegant Flow)", 
-      type: "Wavenet", 
-      premium: true, 
-      tier: "PRODUKTIF",
-      desc: "Sleek and professional voices for cinematic delivery.",
-      useCase: "Iklan & Presentasi"
-    },
-  ],
-  "Aura Premium (Bisnis)": [
-    { 
-      id: "Charon", 
-      name: "Eko (Flagship Aura)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "BISNIS",
-      desc: "Our flagship ultra-human AI voice experience.",
-      useCase: "Iklan High-End & Branding"
-    },
-    { 
-      id: "Kore", 
-      name: "Maya (Human-Like Aura)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "BISNIS",
-      desc: "Ultra-natural, emotionally layered cinematic creator voice.",
-      useCase: "Berita & Konten Formal"
-    },
-  ],
-  "Aura Cinema (Enterprise)": [
-    { 
-      id: "Puck", 
-      name: "Puck (Viral Quality)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Viral-quality narration with cinematic depth.",
-      useCase: "Film & Narasi Epik"
-    },
-    { 
-      id: "Charon", 
-      name: "Charon (Atmospheric Aura)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Emotionally layered and atmospheric human-like delivery.",
-      useCase: "Storytelling & Dokumenter"
-    },
-    { 
-      id: "Kore", 
-      name: "Kore (Radiant Aura)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Bright, engaging, and ultra-natural presence.",
-      useCase: "Konten Anak & Marketing"
-    },
-    { 
-      id: "Fenrir", 
-      name: "Fenrir (Rugged & Bold)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Kasar, berani, dan penuh karakter.",
-      useCase: "Gaming & Brand Maskulin"
-    },
-    { 
-      id: "Zephyr", 
-      name: "Zephyr (Soft & Airy)", 
-      type: "Gemini", 
-      premium: true, 
-      glow: true, 
-      tier: "ENTERPRISE",
-      desc: "Lembut, menenangkan, dan ringan.",
-      useCase: "Relaksasi & Lifestyle"
-    },
-  ],
+  "ID": {
+    "Basic (Free)": [
+      { 
+        id: "id-ID-Standard-A", 
+        name: "Ratna (Wanita)", 
+        type: "Standard", 
+        tier: "FREE", 
+        desc: "Fast, lightweight voice generation for everyday content.",
+        useCase: "Podcast & Edukasi"
+      },
+      { 
+        id: "id-ID-Standard-B", 
+        name: "Bambang (Pria)", 
+        type: "Standard", 
+        tier: "FREE",
+        desc: "Practical voice generation for simple announcements.",
+        useCase: "Berita & Pengumuman"
+      },
+    ],
+    "Pulse (Starter/Kreator)": [
+      { 
+        id: "id-ID-Neural2-A", 
+        name: "Siti (Emotionally Expressive)", 
+        type: "Neural2", 
+        premium: true, 
+        tier: "STARTER",
+        desc: "Emotionally expressive voices built for creators.",
+        useCase: "Narasi YouTube & Storytelling"
+      },
+      { 
+        id: "id-ID-Neural2-B", 
+        name: "Agus (Dynamic Narration)", 
+        type: "Neural2", 
+        premium: true, 
+        tier: "STARTER",
+        desc: "Dynamic and engaging storytelling with creator-focused pacing.",
+        useCase: "Video Pendek & Komedi"
+      },
+    ],
+    "Flow (Produktif)": [
+      { 
+        id: "id-ID-Wavenet-A", 
+        name: "Lestari (Smooth Flow)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Smooth cinematic narration with natural pacing.",
+        useCase: "Audiobook & Meditasi"
+      },
+      { 
+        id: "id-ID-Wavenet-B", 
+        name: "Joko (Immersive Flow)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Deep and dramatic voices for immersive storytelling.",
+        useCase: "Misteri & Dokumenter"
+      },
+      { 
+        id: "id-ID-Wavenet-C", 
+        name: "Putri (Elegant Flow)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Sleek and professional voices for cinematic delivery.",
+        useCase: "Iklan & Presentasi"
+      },
+    ],
+    "Aura Premium (Bisnis)": [
+      { 
+        id: "Charon", 
+        name: "Eko (Flagship Aura)", 
+        type: "Gemini", 
+        premium: true, 
+        glow: true, 
+        tier: "BISNIS",
+        desc: "Our flagship ultra-human AI voice experience.",
+        useCase: "Iklan High-End & Branding"
+      },
+      { 
+        id: "Kore", 
+        name: "Maya (Human-Like Aura)", 
+        type: "Gemini", 
+        premium: true, 
+        glow: true, 
+        tier: "BISNIS",
+        desc: "Ultra-natural, emotionally layered cinematic creator voice.",
+        useCase: "Berita & Konten Formal"
+      },
+    ],
+    "Aura Cinema (Enterprise)": [
+      { 
+        id: "Puck", 
+        name: "Puck (Viral Quality)", 
+        type: "Gemini", 
+        premium: true, 
+        glow: true, 
+        tier: "ENTERPRISE",
+        desc: "Viral-quality narration with cinematic depth.",
+        useCase: "Film & Narasi Epik"
+      },
+      { 
+        id: "Charon", 
+        name: "Charon (Atmospheric Aura)", 
+        type: "Gemini", 
+        premium: true, 
+        glow: true, 
+        tier: "ENTERPRISE",
+        desc: "Emotionally layered and atmospheric human-like delivery.",
+        useCase: "Storytelling & Dokumenter"
+      },
+      { 
+        id: "Kore", 
+        name: "Kore (Radiant Aura)", 
+        type: "Gemini", 
+        premium: true, 
+        glow: true, 
+        tier: "ENTERPRISE",
+        desc: "Bright, engaging, and ultra-natural presence.",
+        useCase: "Konten Anak & Marketing"
+      },
+      { 
+        id: "Fenrir", 
+        name: "Fenrir (Rugged & Bold)", 
+        type: "Gemini", 
+        premium: true, 
+        glow: true, 
+        tier: "ENTERPRISE",
+        desc: "Kasar, berani, dan penuh karakter.",
+        useCase: "Gaming & Brand Maskulin"
+      },
+      { 
+        id: "Zephyr", 
+        name: "Zephyr (Soft & Airy)", 
+        type: "Gemini", 
+        premium: true, 
+        glow: true, 
+        tier: "ENTERPRISE",
+        desc: "Lembut, menenangkan, dan ringan.",
+        useCase: "Relaksasi & Lifestyle"
+      },
+    ],
+  },
+  "EN": {
+    "Basic (Free)": [
+      { 
+        id: "en-US-Standard-C", 
+        name: "Cathy (Female)", 
+        type: "Standard", 
+        tier: "FREE", 
+        desc: "Natural English female voice.",
+        useCase: "Education & Blogs"
+      },
+      { 
+        id: "en-US-Standard-D", 
+        name: "David (Male)", 
+        type: "Standard", 
+        tier: "FREE",
+        desc: "Clear English male voice.",
+        useCase: "News & Announcements"
+      },
+    ],
+    "Pulse (Starter/Kreator)": [
+      { 
+        id: "en-US-Neural2-F", 
+        name: "Sarah (Expressive)", 
+        type: "Neural2", 
+        premium: true, 
+        tier: "STARTER",
+        desc: "Emotionally rich English female narration.",
+        useCase: "YouTube & Storytelling"
+      },
+      { 
+        id: "en-US-Neural2-J", 
+        name: "James (Dynamic)", 
+        type: "Neural2", 
+        premium: true, 
+        tier: "STARTER",
+        desc: "Engaging English male voice.",
+        useCase: "Marketing & Shorts"
+      },
+    ],
+    "Flow (Produktif)": [
+      { 
+        id: "en-US-Wavenet-F", 
+        name: "Fiona (Smooth)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Soft and professional English flow.",
+        useCase: "Audiobooks & Meditations"
+      },
+      { 
+        id: "en-US-Wavenet-G", 
+        name: "George (Formal)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "PRODUKTIF",
+        desc: "Deep and formal English narration.",
+        useCase: "Presentations & Business"
+      },
+    ],
+    "Aura International": [
+      { 
+        id: "Zephyr", 
+        name: "Zephyr (US Aura)", 
+        type: "Gemini", 
+        premium: true, 
+        glow: true, 
+        tier: "BISNIS",
+        desc: "Ultra-natural English presence.",
+        useCase: "Branding & International High-End"
+      },
+    ]
+  },
+  "CMN": {
+    "Basic (Free)": [
+      { 
+        id: "cmn-CN-Standard-A", 
+        name: "Meiling (Female)", 
+        type: "Standard", 
+        tier: "FREE", 
+        desc: "Standard Mandarin female voice.",
+        useCase: "Educational Content"
+      },
+    ],
+    "Pulse (Starter/Kreator)": [
+      { 
+        id: "cmn-CN-Wavenet-C", 
+        name: "Lao Wang (Male)", 
+        type: "Wavenet", 
+        premium: true, 
+        tier: "STARTER",
+        desc: "Warm and deep Mandarin male voice.",
+        useCase: "Storytelling & News"
+      },
+    ]
+  }
 };
 
 const getVoiceDisplayName = (id) => {
   if (!id) return "-";
-  for (const category in VOICES) {
-    const voice = VOICES[category].find(v => v.id === id);
-    if (voice) return voice.name.split(" (")[0]; // Just the name part
+  for (const lang in VOICES) {
+    for (const category in VOICES[lang]) {
+      const voice = VOICES[lang][category].find(v => v.id === id);
+      if (voice) return voice.name.split(" (")[0];
+    }
   }
   return id.split("-").slice(-2).join("-");
 };
@@ -291,6 +396,7 @@ const formatDuration = (seconds) => {
 
 
 const App = () => {
+  const [language, setLanguage] = useState("ID");
   const [text, setText] = useState("");
   const [voice, setVoice] = useState("id-ID-Wavenet-A");
   const [speed, setSpeed] = useState(1);
@@ -312,9 +418,11 @@ const App = () => {
   };
 
   const getVoiceType = (voiceId) => {
-    for (const group of Object.values(VOICES)) {
-      const v = group.find(i => i.id === voiceId);
-      if (v) return v.type;
+    for (const lang of Object.values(VOICES)) {
+      for (const group of Object.values(lang)) {
+        const v = group.find(i => i.id === voiceId);
+        if (v) return v.type;
+      }
     }
     return "Standard";
   };
@@ -1751,96 +1859,118 @@ const App = () => {
                     </div>
                   )}
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-bold text-text-muted mb-2">
-                      Suara Pilihan
+                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <label className="block text-sm font-bold text-text-muted">
+                      Bahasa & Suara Pilihan
                     </label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1" ref={voiceDropdownRef}>
+                    <div className="flex bg-dark p-1 rounded-xl border border-surface2">
+                      {LANGUAGES.map((lang) => (
                         <button
-                          type="button"
-                          onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
-                          className="w-full bg-dark text-text rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
+                          key={lang.code}
+                          onClick={() => {
+                            setLanguage(lang.code);
+                            // Set first voice in new language
+                            const firstVoice = Object.values(VOICES[lang.code]).flat()[0];
+                            if (firstVoice) setVoice(firstVoice.id);
+                          }}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black transition-all border-none cursor-pointer ${
+                            language === lang.code 
+                            ? "bg-terracotta text-white shadow-lg shadow-terracotta/20" 
+                            : "text-text-muted hover:text-text hover:bg-surface2/50"
+                          }`}
                         >
-                          <span className="truncate">{getVoiceDisplayName(voice)}</span>
-                          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                          <span>{lang.flag}</span>
+                          <span className="hidden xs:inline">{lang.name}</span>
                         </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1" ref={voiceDropdownRef}>
+                          <button
+                            type="button"
+                            onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
+                            className="w-full bg-dark text-text rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
+                          >
+                            <span className="truncate">{getVoiceDisplayName(voice)}</span>
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
 
-                        <AnimatePresence>
-                          {isVoiceDropdownOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute z-50 left-0 right-0 mt-2 bg-surface rounded-2xl border border-surface2 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar"
-                            >
-                              {Object.entries(VOICES).map(([category, voiceList]) => (
-                                <div key={category}>
-                                  <div className="px-4 py-2 bg-surface2/30 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md border-b border-surface2/30">
-                                    {category}
-                                  </div>
-                                  <div className="p-1">
-                                    {voiceList.map((v) => {
-                                      const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
-                                      const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
-                                      const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
-                                      const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
-                                      const isUserFree = userTierIndex < 1;
-                                      const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
-                                      const isSelected = voice === v.id;
-                                      const isStudio = v.type === 'Studio' || v.glow;
+                          <AnimatePresence>
+                            {isVoiceDropdownOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute z-50 left-0 right-0 mt-2 bg-surface rounded-2xl border border-surface2 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar"
+                              >
+                                {Object.entries(VOICES[language]).map(([category, voiceList]) => (
+                                  <div key={category}>
+                                    <div className="px-4 py-2 bg-surface2/30 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md border-b border-surface2/30">
+                                      {category}
+                                    </div>
+                                    <div className="p-1">
+                                      {voiceList.map((v) => {
+                                        const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
+                                        const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
+                                        const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
+                                        const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
+                                        const isUserFree = userTierIndex < 1;
+                                        const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree);
+                                        const isSelected = voice === v.id;
+                                        const isStudio = v.type === 'Studio' || v.glow;
 
-                                      return (
-                                        <button
-                                          key={v.id}
-                                          type="button"
-                                          disabled={isLocked}
-                                          onClick={() => {
-                                            setVoice(v.id);
-                                            setIsVoiceDropdownOpen(false);
-                                          }}
-                                          className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group relative overflow-hidden ${
-                                            isSelected ? 'bg-surface2' : 'hover:bg-surface2/50'
-                                          } ${isLocked ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
-                                        >
-                                          <div className="flex flex-col relative z-20">
-                                            <div className="flex items-center gap-2">
-                                              <span className={`text-sm font-bold ${isSelected ? 'text-terracotta' : 'text-text'}`}>
-                                                {isLocked && "🔒 "}{v.name}
-                                              </span>
-                                              {isStudio && (
-                                                <span className="text-[8px] font-black bg-terracotta text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(231,76,60,0.5)]">
-                                                  AURA
+                                        return (
+                                          <button
+                                            key={v.id}
+                                            type="button"
+                                            disabled={isLocked}
+                                            onClick={() => {
+                                              setVoice(v.id);
+                                              setIsVoiceDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group relative overflow-hidden ${
+                                              isSelected ? 'bg-surface2' : 'hover:bg-surface2/50'
+                                            } ${isLocked ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
+                                          >
+                                            <div className="flex flex-col relative z-20">
+                                              <div className="flex items-center gap-2">
+                                                <span className={`text-sm font-bold ${isSelected ? 'text-terracotta' : 'text-text'}`}>
+                                                  {isLocked && "🔒 "}{v.name}
                                                 </span>
-                                              )}
+                                                {isStudio && (
+                                                  <span className="text-[8px] font-black bg-terracotta text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(231,76,60,0.5)]">
+                                                    AURA
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <span className="text-[10px] text-gray-500 font-medium">Beban: {voiceConfig.tiers[v.type] || 1}x Kredit</span>
                                             </div>
-                                            <span className="text-[10px] text-gray-500 font-medium">Beban: {voiceConfig.tiers[v.type] || 1}x Kredit</span>
-                                          </div>
-                                          
-                                          {isStudio && (
-                                            <div className="absolute right-0 top-0 bottom-0 w-1 bg-terracotta/50 shadow-[0_0_15px_rgba(231,76,60,0.5)]"></div>
-                                          )}
-                                          
-                                          {isSelected && (
-                                            <Check className="w-4 h-4 text-terracotta relative z-20" />
-                                          )}
+                                            
+                                            {isStudio && (
+                                              <div className="absolute right-0 top-0 bottom-0 w-1 bg-terracotta/50 shadow-[0_0_15px_rgba(231,76,60,0.5)]"></div>
+                                            )}
+                                            
+                                            {isSelected && (
+                                              <Check className="w-4 h-4 text-terracotta relative z-20" />
+                                            )}
 
-                                          {isStudio && (
-                                            <div className="absolute inset-0 bg-gradient-to-r from-terracotta/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
+                                            {isStudio && (
+                                              <div className="absolute inset-0 bg-gradient-to-r from-terracotta/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       <button
                         onClick={handlePreviewVoice}
                         disabled={testLoading}
@@ -1858,7 +1988,7 @@ const App = () => {
 
                     {/* Selected Voice Info Box */}
                     {(() => {
-                      const selectedVoice = Object.values(VOICES).flat().find(v => v.id === voice);
+                      const selectedVoice = Object.values(VOICES[language]).flat().find(v => v.id === voice);
                       if (!selectedVoice) return null;
                       const isStudio = selectedVoice.type === 'Studio' || selectedVoice.glow;
 

@@ -7,7 +7,8 @@ import path from 'path';
 import cors from 'cors';
 import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
-import { authAdmin, dbAdmin, initErrorMsg } from './src/lib/firebaseAdmin.js';
+import { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
+import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 
 // --- Startup Check ---
 if (!authAdmin) {
@@ -65,6 +66,29 @@ let voiceConfig = {
 };
 
 async function loadInitialConfig() {
+  if (!dbAdmin) return;
+  
+  // Handshake to verify database existence
+  try {
+    const docRef = dbAdmin.collection('_system_').doc('health');
+    await docRef.get(); // This will throw 5 NOT_FOUND if the database itself is missing
+    console.log("[Firebase] Database connection verified.");
+  } catch (err) {
+    if (err.code === 5 || err.message.includes("NOT_FOUND") || err.message.includes("not-found")) {
+      const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
+      if (dbId !== "(default)") {
+        console.warn(`[Firebase] Named database '${dbId}' not found. Falling back to (default).`);
+        const fallbackDb = getFirestoreDb("(default)");
+        if (fallbackDb) {
+          setDbAdmin(fallbackDb);
+        }
+      }
+    } else {
+      console.warn("[Firebase] Initial handshake warning:", err.message);
+    }
+  }
+
+  // Load config after verified
   if (dbAdmin) {
     try {
       const doc = await dbAdmin.collection('config').doc('voices').get();
@@ -73,7 +97,7 @@ async function loadInitialConfig() {
         console.log("[Firebase] Global voice config loaded.");
       }
     } catch (err) {
-      console.warn("[Firebase] Could not load global config, using defaults.");
+      console.warn("[Firebase] Could not load global config (might be missing doc).");
     }
   }
 }
@@ -780,7 +804,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       let finalAudioContent = "";
       if (isGeminiVoice) {
         const response = await genAI.models.generateContent({
-          model: "gemini-1.5-flash",
+          model: "gemini-3.1-flash-tts-preview",
           contents: [{ parts: [{ text: processedText }] }],
           config: {
             responseModalities: [Modality.AUDIO],
@@ -791,17 +815,18 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
             },
           },
         });
-        const pcmBase64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        const pcmBase64 = response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!pcmBase64) throw new Error("Gemini TTS returned no audio data");
         finalAudioContent = pcmToWav(pcmBase64, 24000);
       } else {
         const ssmlText = `<speak>${processedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva dot ai di.</prosody>' : ''}</speak>`;
+        const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
         const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             input: { ssml: ssmlText },
-            voice: { languageCode: 'id-ID', name: actualVoice },
+            voice: { languageCode: languageCode, name: actualVoice },
             audioConfig: { 
               audioEncoding: 'MP3', 
               speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
