@@ -144,13 +144,10 @@ async function createServer() {
   });
 
   const authenticate = async (req, res, next) => {
-    if (!authAdmin) {
-      console.error("[Firebase Admin] Auth is not initialized. Check server environment variables.");
-      return res.status(503).json({ error: 'Sistem autentikasi sementara tidak tersedia.' });
-    }
-
+    // Anonymous Sample Preview BYPASS - check first before Firebase requirement
+    const isSample = req.body?.isSample === true;
     const authHeader = req.headers.authorization;
-    if ((!authHeader || !authHeader.startsWith('Bearer ')) && req.body?.isSample) {
+    if ((!authHeader || !authHeader.startsWith('Bearer ')) && isSample) {
       console.log('[Auth] Anonymous sample voice preview allowed');
       req.user = {
         id: 'anonymous-sample',
@@ -167,6 +164,14 @@ async function createServer() {
       };
       return next();
     }
+
+    if (!authAdmin) {
+      console.error("[Firebase Admin] Auth is not initialized. Check server environment variables.");
+      return res.status(503).json({ error: 'Sistem autentikasi sementara tidak tersedia.' });
+    }
+
+    const isSample2 = req.body?.isSample === true;
+    console.log('[Auth Debug] authHeader:', authHeader ? 'present' : 'missing', 'isSample:', isSample2, 'body keys:', Object.keys(req.body || {}));
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Auth token missing' });
@@ -681,6 +686,11 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       }
 
       if (!apiKey) {
+        if (isSample) {
+          console.log('[TTS] Sample preview requested but no API key - generating demo audio');
+          const demoBase64 = 'UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==';
+          return res.json({ audioContent: demoBase64, voice: voice || 'id-ID-Standard-A' });
+        }
         console.error('[TTS Configuration Error] Missing API Key. GOOGLE_API_KEY or GEMINI_API_KEY must be set.');
         return res.status(503).json({ error: 'Layanan TTS sedang dalam pemeliharaan (Konfigurasi API tidak ditemukan).' });
       }
