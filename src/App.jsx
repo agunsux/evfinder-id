@@ -1761,13 +1761,13 @@ const App = () => {
 
             <div className="flex items-center gap-2">
               {!user && (
-                <>
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
                       switchAuthMode("login");
                       setIsAuthOpen(true);
                     }}
-                    className="text-text px-4 py-2 rounded-full text-sm font-bold border border-surface2 hover:border-terracotta transition-all"
+                    className="text-text px-6 py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
                   >
                     Masuk
                   </button>
@@ -1776,11 +1776,11 @@ const App = () => {
                       switchAuthMode("signup");
                       setIsAuthOpen(true);
                     }}
-                    className="bg-terracotta text-white px-4 py-2 rounded-full text-sm font-bold border-none hover:bg-trdark transition-all"
+                    className="bg-terracotta text-white px-6 py-2.5 rounded-full text-sm font-semibold border-none hover:bg-trdark transition-all cursor-pointer"
                   >
                     Daftar
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>

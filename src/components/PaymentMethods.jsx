@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const PaymentMethods = () => {
@@ -7,15 +8,18 @@ const PaymentMethods = () => {
         Metode Pembayaran
       </div>
       <div className="flex flex-wrap justify-center items-center gap-6 mb-6">
-        <img src="/logo DANA.png" alt="DANA" className="h-8 object-contain" />
-        <img src="/logo gopay.png" alt="GoPay" className="h-8 object-contain" />
-        <img src="/Logo Shopee Pay.png" alt="ShopeePay" className="h-8 object-contain" />
-        <img src="/LOGO QRIS.png" alt="QRIS" className="h-10 object-contain" /> 
+        <img src="/payment/dana.png" alt="DANA" className="h-8" />
+        <img src="/payment/gopay.png" alt="GoPay" className="h-8" />
+        <img src="/payment/ovo.png" alt="OVO" className="h-8" />
+        <img src="/payment/shopeepay.png" alt="ShopeePay" className="h-8" />
+        <img src="/payment/qris.png" alt="QRIS" className="h-10" /> 
       </div>
       <div className="flex flex-wrap justify-center items-center gap-6">
-        <img src="/logo mastercard.png" alt="MasterCard" className="h-6 object-contain" />
-        <img src="/logo visa.png" alt="Visa" className="h-6 object-contain" />
-        <img src="/logo paypal.png" alt="PayPal" className="h-6 object-contain" />
+        <span className="text-sm font-bold text-text-muted">Virtual Account:</span>
+        <span className="text-sm font-bold text-text">BCA, Mandiri, BNI, BRI</span>
+        <img src="/payment/mastercard.png" alt="MasterCard" className="h-6" />
+        <img src="/payment/visa.png" alt="Visa" className="h-6" />
+        <img src="/payment/paypal.png" alt="PayPal" className="h-6" />
       </div>
     </div>
   );

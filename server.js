@@ -472,11 +472,20 @@ async function createServer() {
   });
 
   // --- MIDTRANS CONFIG ---
-  const snap = new midtransClient.Snap({
-    isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
-    serverKey: process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-YOUR_KEY',
-    clientKey: process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-YOUR_KEY'
-  });
+  let cachedSnap = null;
+  function getSnap() {
+    if (!cachedSnap) {
+      if (!process.env.MIDTRANS_SERVER_KEY || !process.env.MIDTRANS_CLIENT_KEY) {
+        throw new Error('Midtrans API keys are not configured. Please set MIDTRANS_SERVER_KEY and MIDTRANS_CLIENT_KEY in app settings.');
+      }
+      cachedSnap = new midtransClient.Snap({
+        isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
+        serverKey: process.env.MIDTRANS_SERVER_KEY,
+        clientKey: process.env.MIDTRANS_CLIENT_KEY
+      });
+    }
+    return cachedSnap;
+  }
 
   // --- PAYMENT ROUTES ---
   app.post('/api/payment/create', authenticate, async (req, res) => {
@@ -522,12 +531,13 @@ async function createServer() {
     };
 
     try {
+      const snap = getSnap();
       const transaction = await snap.createTransaction(parameter);
       // Save pending transaction if needed, but for simplicity we rely on webhook
       res.json({ token: transaction.token, redirect_url: transaction.redirect_url });
     } catch (error) {
       console.error('Midtrans Error:', error);
-      res.status(500).json({ error: 'Gagal membuat transaksi pembayaran' });
+      res.status(500).json({ error: error.message || 'Gagal membuat transaksi pembayaran' });
     }
   });
 
@@ -535,7 +545,11 @@ async function createServer() {
     const notification = req.body;
     
     // Rungu's Security Measure: Verify Signature Key
-    const serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-YOUR_KEY';
+    const serverKey = process.env.MIDTRANS_SERVER_KEY;
+    if (!serverKey) {
+        console.error('[Midtrans Webhook] Missing MIDTRANS_SERVER_KEY');
+        return res.status(500).json({ error: 'Server configuration error' });
+    }
     const signatureKey = crypto.createHash('sha512')
       .update(notification.order_id + notification.status_code + notification.gross_amount + serverKey)
       .digest('hex');
@@ -546,6 +560,7 @@ async function createServer() {
     }
 
     try {
+      const snap = getSnap();
       const statusResponse = await snap.transaction.notification(notification);
       const orderId = statusResponse.order_id;
       const transactionStatus = statusResponse.transaction_status;
