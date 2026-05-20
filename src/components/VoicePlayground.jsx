@@ -402,18 +402,23 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                     </div>
                   </div>
 
-                  {/* Waveform Visualization (Simplified) */}
+                  {/* Waveform Visualization */}
                   <div className="h-6 flex items-center justify-between gap-1 px-1">
-                    {[...Array(24)].map((_, i) => (
-                      <motion.div
-                        key={i}
-                        animate={currentlyPlaying === sample.id ? { 
-                          height: [8, Math.random() * 20 + 4, 8] 
-                        } : { height: 4 }}
-                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.05 }}
-                        className={`w-full rounded-full ${currentlyPlaying === sample.id ? 'bg-terracotta' : 'bg-surface2'}`}
-                      />
-                    ))}
+                    {[...Array(24)].map((_, i) => {
+                      const barTime = (i / 24) * 100;
+                      const progressVal = progress[sample.id] || 0;
+                      const diff = Math.abs(barTime - progressVal);
+                      const height = currentlyPlaying === sample.id ? Math.max(4, 24 - diff * 0.8) : 4;
+                      
+                      return (
+                        <motion.div
+                          key={i}
+                          animate={{ height }}
+                          transition={{ duration: 0.1, ease: "linear" }}
+                          className={`w-full rounded-full ${currentlyPlaying === sample.id ? 'bg-terracotta' : 'bg-surface2'}`}
+                        />
+                      );
+                    })}
                   </div>
 
                   {/* Progress Line */}

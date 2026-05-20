@@ -43,6 +43,11 @@ import {
   AlertTriangle,
   AlertCircle,
   ShieldCheck,
+  CreditCard,
+  Smartphone,
+  Landmark,
+  QrCode,
+  Coins,
 } from "lucide-react";
 
 import { PLANS } from "./lib/plans";
@@ -232,13 +237,11 @@ const FAQS = {
 };
 
 const LANGUAGES = [
-  { code: "ID", name: "Indonesia", flag: "🇮🇩" },
-  { code: "EN", name: "English", flag: "🇺🇸" }
+  { code: "ID", name: "Indonesia", flag: "🇮🇩" }
 ];
 
 const DEFAULT_VOICES = {
   "ID": "id-ID-Standard-A",
-  "EN": "en-US-Standard-C",
   "CMN": "cmn-CN-Standard-A"
 };
 
@@ -501,96 +504,9 @@ const VOICES = {
         name: "Kloning Suara Kustom",
         type: "Studio",
         premium: true,
-        comingSoon: true,
+        comingSoon: false,
         tier: "BISNIS",
-        desc: "Gunakan identitas suara Anda sendiri untuk branding konsisten.",
-        useCase: "Personal Branding & Corporate"
-      }
-    ]
-  },
-  "EN": {
-    "Basic (Free)": [
-      { 
-        id: "en-US-Standard-C", 
-        name: "Cathy (Female)", 
-        type: "Standard", 
-        tier: "FREE", 
-        desc: "Natural English female voice.",
-        useCase: "Education & Blogs"
-      },
-      { 
-        id: "en-US-Standard-D", 
-        name: "David (Male)", 
-        type: "Standard", 
-        tier: "FREE",
-        desc: "Clear English male voice.",
-        useCase: "News & Announcements"
-      },
-    ],
-    "Pulse (Coming Soon)": [
-      { 
-        id: "en-US-Wavenet-C", 
-        name: "Sarah (Expressive)", 
-        type: "Wavenet", 
-        premium: true, 
-        comingSoon: true,
-        tier: "STARTER",
-        desc: "Emotionally rich English female narration.",
-        useCase: "YouTube & Storytelling"
-      },
-      { 
-        id: "en-US-Wavenet-B", 
-        name: "James (Dynamic)", 
-        type: "Wavenet", 
-        premium: true, 
-        comingSoon: true,
-        tier: "STARTER",
-        desc: "Engaging English male voice.",
-        useCase: "Marketing & Shorts"
-      },
-    ],
-    "Flow (Produktif)": [
-      { 
-        id: "en-US-Wavenet-F", 
-        name: "Fiona (Smooth)", 
-        type: "Wavenet", 
-        premium: true, 
-        tier: "PRODUKTIF",
-        desc: "Soft and professional English flow.",
-        useCase: "Audiobooks & Meditations"
-      },
-      { 
-        id: "en-US-Wavenet-D", 
-        name: "George (Formal)", 
-        type: "Wavenet", 
-        premium: true, 
-        tier: "PRODUKTIF",
-        desc: "Deep and formal English narration.",
-        useCase: "Presentations & Business"
-      },
-    ],
-    "Aura International (Coming Soon)": [
-      { 
-        id: "en-GB-Wavenet-B", 
-        name: "Arthur (London Aura)", 
-        type: "Wavenet", 
-        premium: true, 
-        glow: true, 
-        comingSoon: true,
-        tier: "BISNIS",
-        desc: "Ultra-natural English presence with a sophisticated London accent.",
-        useCase: "Branding & International High-End"
-      },
-    ],
-    "Voice Cloning (Enterprise)": [
-      {
-        id: "cloning-custom-en",
-        name: "Custom Voice Cloning",
-        type: "Studio",
-        premium: true,
-        comingSoon: true,
-        tier: "BISNIS",
-        desc: "Use your own vocal identity for consistent global branding.",
+        desc: "Kloning suara Anda sendiri hanya dengan sampel 30 detik. Akurasi 99%.",
         useCase: "Personal Branding & Corporate"
       }
     ]
@@ -801,6 +717,20 @@ const App = () => {
       return () => clearTimeout(timer);
     }
   }, [isNearLimit, isCappedByRequest, isCappedByQuota]);
+
+  // Low credit warning notification
+  const hasWarnedLowCredits = useRef(false);
+  useEffect(() => {
+    if (user && remainingCredits < 1000 && !hasWarnedLowCredits.current) {
+        toast("Kredit Anda hampir habis (< 1000). Harap lakukan top-up agar tetap bisa menggunakan layanan.", {
+            icon: '⚠️',
+            duration: 6000,
+        });
+        hasWarnedLowCredits.current = true;
+    } else if (remainingCredits >= 1000) {
+        hasWarnedLowCredits.current = false;
+    }
+  }, [remainingCredits, user]);
 
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
   const [billingCycle, setBillingCycle] = useState("monthly"); // monthly, yearly
@@ -1798,7 +1728,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-24 items-center">
             <div className="flex items-center gap-4">
-              <ShinervaLogo className="w-12 h-12 text-terracotta" />
+              <img src="/logo_navbar.png" alt="Shinerva AI Logo" className="w-12 h-12 object-contain" />
               <span className="font-black text-2xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer flex flex-col leading-tight">
                 SHINERVA AI
                 <span className="text-[10px] text-terracotta uppercase tracking-[0.3em] font-black">Text To Speech</span>
@@ -2857,36 +2787,35 @@ const App = () => {
             </div>
 
             {/* Supported Payment Methods */}
-            <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 mb-8 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2 shadow-2xl">
-               <div className="text-xs font-black text-terracotta uppercase tracking-[0.3em] w-full text-center mb-6">Metode Pembayaran Instan & Otomatis:</div>
-               <div className="flex flex-wrap justify-center items-center gap-x-10 gap-y-6">
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-black text-blue-400 tracking-tighter">DANA</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-black text-orange-500 tracking-tighter">ShopeePay</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-black text-purple-600 tracking-tighter">OVO</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-black text-blue-600 tracking-tighter">GoPay</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-black text-red-600 tracking-tighter">LinkAja</span>
-                  </div>
-                  <div className="h-8 w-[1px] bg-surface2 hidden md:block"></div>
-                  <div className="flex flex-col items-center px-4 py-2 bg-white rounded-lg">
-                    <span className="text-2xl font-black text-black font-serif italic">QRIS</span>
-                  </div>
-                  <div className="h-8 w-[1px] bg-surface2 hidden md:block"></div>
-                  <div className="flex flex-wrap justify-center gap-8">
-                    <span className="text-sm font-black text-blue-800">VA BCA</span>
-                    <span className="text-sm font-black text-orange-600">VA BNI</span>
-                    <span className="text-sm font-black text-blue-500">VA BRI</span>
-                    <span className="text-sm font-black text-blue-900 font-mono">Mandiri</span>
-                  </div>
-               </div>
+            <div className="flex flex-col items-center mb-16 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2 shadow-2xl">
+              <div className="text-xs font-black text-terracotta uppercase tracking-[0.3em] w-full text-center mb-8">Metode Pembayaran:</div>
+
+              {/* E-Wallets */}
+              <div className="flex flex-wrap justify-center items-center gap-6 mb-6">
+                <img src="/payment/dana.png" alt="DANA" className="h-6" />
+                <img src="/payment/gopay.png" alt="GoPay" className="h-6" />
+                <img src="/payment/ovo.png" alt="OVO" className="h-6" />
+                <img src="/payment/shopeepay.png" alt="ShopeePay" className="h-6" />
+              </div>
+
+              {/* QRIS & VAs */}
+              <div className="flex flex-wrap justify-center items-center gap-6 mb-6">
+                <img src="/payment/qris.png" alt="QRIS" className="h-8" />
+                <div className="flex items-center gap-2">
+                    <Landmark className="w-5 h-5 text-text-muted" />
+                    <span className="text-sm font-bold text-text">Virtual Account</span>
+                </div>
+              </div>
+
+              {/* Cards/PayPal */}
+              <div className="flex flex-wrap justify-center items-center gap-6">
+                 <div className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-text-muted" />
+                    <img src="/payment/mastercard.png" alt="MasterCard" className="h-6" />
+                    <img src="/payment/visa.png" alt="Visa" className="h-6" />
+                 </div>
+                 <span className="text-sm font-black text-blue-700 tracking-tighter">PayPal</span>
+              </div>
             </div>
             
             {/* Comparison Text */}
