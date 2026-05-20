@@ -52,7 +52,7 @@ export const PLAYGROUND_VOICES = {
               title: "Misteri Tengah Malam",
               voiceId: "id-ID-Wavenet-C",
               script: "Pintu itu... berderit pelan. Di balik kegelapan yang pekat, sepasang mata merah menatap tajam. Keheningan ini... hanyalah awal dari sesuatu yang jauh lebih mengerikan.",
-              url: "https://storage.googleapis.com/shinerva-assets/playground/wav_m_horror_1.mp3"
+              url: "/flow-demo-flashTTS.mp3"
             }
           ]
         }
@@ -102,7 +102,7 @@ export const PLAYGROUND_VOICES = {
               title: "Gossip Expressive",
               voiceId: "id-ID-Wavenet-D",
               script: "Gila parah banget sih! Eh, serius deh... gue tuh langsung bengong pas denger berita itu. Kayak... kok bisa gitu lho? Dan yang bikin gue kesel, dia tuh pura-pura gak tau apa-apa. Anjir... parah banget!",
-              url: "https://storage.googleapis.com/shinerva-assets/playground/stu_f_gossip_expressive.mp3"
+              url: "/aura-demo.mp3"
             }
           ]
         }
