@@ -884,7 +884,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       });
 
       const finalProcessedText = (processedText || "").trim() || "Halo.";
-      const ssmlText = `<speak>${finalProcessedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva titik ey ay.</prosody>' : ''}</speak>`;
+      const ssmlText = `<speak>${finalProcessedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva dot ay di.</prosody>' : ''}</speak>`;
       const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
       
       console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode}). SSML Length: ${ssmlText.length}`);
