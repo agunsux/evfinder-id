@@ -21,10 +21,6 @@ const PaymentMethods = () => {
         <img src="/payment/visa.png" alt="Visa" className="h-6" />
         <img src="/payment/paypal.png" alt="PayPal" className="h-6" />
       </div>
-      <div className="mt-8 pt-6 border-t border-surface2 w-full text-center">
-         <div className="text-xs font-black text-text-muted uppercase tracking-[0.2em] mb-2">Didukung oleh</div>
-         <img src="/payment/midtrans.png" alt="Midtrans" className="h-8 opacity-70 mx-auto" />
-      </div>
     </div>
   );
 };

@@ -95,6 +95,7 @@ const LiveAudioDemo = () => {
           <div key={voice.id} className={`p-6 rounded-3xl border transition-all ${playingId === voice.id ? 'bg-zinc-800 border-amber-500' : 'bg-zinc-900 border-zinc-700'}`}>
             <h3 className="text-xl font-black text-white mb-1">{voice.name}</h3>
             <p className="text-zinc-400 text-sm mb-4">{voice.description}</p>
+            <div className="inline-block px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold mb-4">DEMO GRATIS</div>
             
             <audio
               ref={audioRefs[voice.id]}
@@ -109,11 +110,7 @@ const LiveAudioDemo = () => {
             <div className="flex items-center gap-4 mb-4">
               <button
                 onClick={() => {
-                  if (audioRefs.current[voice.id]) {
-                    togglePlay(voice.id);
-                  } else {
-                    console.warn(`Audio ${voice.id} not loaded`);
-                  }
+                  togglePlay(voice.id);
                 }}
                 className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center text-black hover:bg-amber-400 transition"
               >

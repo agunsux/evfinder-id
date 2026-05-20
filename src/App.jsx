@@ -5,7 +5,6 @@ import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
 import { auth, isConfigValid, initError as clientInitError } from './lib/firebase';
-import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
 import { 
   logout, 
   loginWithGoogle 
@@ -1685,20 +1684,21 @@ const App = () => {
     }
   };
 
-  if (!isConfigValid) {
+  if (!isConfigValid || (initError && !user)) {
     return (
       <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-4 text-center">
         <div className="w-16 h-16 bg-terracotta/20 rounded-full flex items-center justify-center mb-6">
           <AlertTriangle className="w-8 h-8 text-terracotta" />
         </div>
-        <h1 className="text-2xl font-black text-text mb-2">Konfigurasi Firebase Client Bermasalah</h1>
+        <h1 className="text-2xl font-black text-text mb-2">Konfigurasi Firebase Bermasalah</h1>
         <p className="text-text-muted max-w-md mb-8">
-          File konfigurasi Firebase tidak valid. Pastikan firebase-applet-config.json memiliki semua kunci yang diperlukan.
+          Aplikasi tidak dapat terhubung ke Firebase karena beberapa variabel lingkungan belum diatur atau salah. 
+          Silakan periksa pengaturan .env atau pastikan API Key sudah benar.
         </p>
         <div className="bg-surface2 p-4 rounded-xl border border-surface2 text-left w-full max-w-md">
-          <h3 className="text-xs font-black text-terracotta uppercase mb-2">Error:</h3>
+          <h3 className="text-xs font-black text-terracotta uppercase mb-2">Pesan Kesalahan:</h3>
           <p className="text-xs font-mono text-text-muted break-all mb-4">
-            {clientInitError || "Firebase client configuration invalid"}
+            {initError || clientInitError || "Konfigurasi Firebase ditemukan namun terjadi kegagalan saat inisialisasi layanan (Check Console for details)."}
           </p>
           
           <div className="mt-4 p-3 bg-black/20 rounded border border-white/5 font-mono text-[10px] space-y-1">
@@ -1880,23 +1880,6 @@ const App = () => {
               >
                 <span className="text-xl">✨</span>
                 {t('hero.cta_primary')}
-              </button>
-              <button
-                onClick={playHeroSample}
-                disabled={isPlayingHero}
-                className="bg-surface2 hover:bg-surface3 text-text px-8 py-4 rounded-full font-bold text-lg transition-all transform hover:scale-105 border border-surface3 cursor-pointer flex items-center justify-center gap-2"
-              >
-                {isPlayingHero ? (
-                    <>
-                        <span className="animate-pulse">🎧</span>
-                        Mendengarkan...
-                    </>
-                ) : (
-                    <>
-                        <span>🎧</span>
-                        Dengarkan Sampel
-                    </>
-                )}
               </button>
           </div>
         </section>
@@ -2873,366 +2856,6 @@ const App = () => {
                 </button>
               </div>
             ))}
-          </div>
-        </section>
-
-        {/* Pricing Section */}
-        <section
-          id="pricing"
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
-        >
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black mb-4">
-               {t('pricing.title')}
-            </h2>
-            <p className="text-text-muted max-w-2xl mx-auto mb-8 text-lg">
-               {t('pricing.subtitle')}
-            </p>
-
-            {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-4 mb-8">
-              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-text-muted'}`}>{t('pricing.monthly')}</span>
-              <button 
-                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-                className="w-14 h-7 bg-surface2 rounded-full relative p-1 transition-colors cursor-pointer border-none"
-              >
-                <div className={`w-5 h-5 bg-terracotta rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'}`}></div>
-              </button>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-text-muted'}`}>{t('pricing.yearly')}</span>
-                <span className="bg-green-500/20 text-green-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">{t('pricing.save')} 27%</span>
-              </div>
-            </div>
-
-            {/* Supported Payment Methods - Redesigned (Bayarind Style) */}
-            <div className="w-full max-w-4xl mx-auto mb-16 bg-[#F7F9FC] dark:bg-[#18191B] border border-[#E2E8F0] dark:border-[#2D3139] rounded-2xl p-8 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-800">
-                
-                {/* Virtual Account Column */}
-                <div className="flex flex-col items-center pb-6 md:pb-0 md:pr-4">
-                  <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6">
-                    Virtual Account
-                  </span>
-                  <div className="flex flex-wrap justify-center items-center gap-6">
-                    {[
-                      { name: 'PermataBank', file: 'logo-permata.webp' },
-                      { name: 'BRI', file: 'logo-bri.webp' },
-                      { name: 'Mandiri', file: 'logo-mandiri.webp' },
-                      { name: 'BNI', file: 'logo-bni.webp' },
-                      { name: 'Danamon', file: 'logo-danamon.webp' },
-                      { name: 'Maybank', file: 'logo-maybank.webp' }
-                    ].map((item) => (
-                      <div 
-                        key={item.name} 
-                        className="bg-white dark:bg-white/95 p-2 rounded-xl border border-gray-100 shadow-sm flex items-center justify-center w-[120px] h-[54px] hover:scale-105 transition-transform duration-200"
-                        title={item.name}
-                      >
-                        <img 
-                          src={`/images/payments/${item.file}`} 
-                          alt={item.name} 
-                          className="max-w-full max-h-full object-contain"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const parent = e.target.parentNode;
-                            if (parent && !parent.querySelector('.fallback-text')) {
-                              const text = document.createElement('span');
-                              text.className = 'fallback-text text-[10px] font-bold text-gray-500 uppercase';
-                              text.innerText = item.name;
-                              parent.appendChild(text);
-                            }
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* E-Wallet & QRIS Column */}
-                <div className="flex flex-col items-center pt-6 md:pt-0 md:pl-4">
-                  <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6">
-                    E-Wallet & QRIS
-                  </span>
-                  <div className="flex flex-wrap justify-center items-center gap-6">
-                    {[
-                      { name: 'LinkAja', file: 'logo-linkaja.webp' },
-                      { name: 'DANA', file: 'logo-dana.webp' },
-                      { name: 'ShopeePay', file: 'logo-spay.webp' },
-                      { name: 'QRIS', file: 'logo-qris.webp' },
-                      { name: 'OCTO Clicks', file: 'logo-octoclick.webp' }
-                    ].map((item) => (
-                      <div 
-                        key={item.name} 
-                        className="bg-white dark:bg-white/95 p-2 rounded-xl border border-gray-100 shadow-sm flex items-center justify-center w-[120px] h-[54px] hover:scale-105 transition-transform duration-200"
-                        title={item.name}
-                      >
-                        <img 
-                          src={`/images/payments/${item.file}`} 
-                          alt={item.name} 
-                          className="max-w-full max-h-full object-contain"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const parent = e.target.parentNode;
-                            if (parent && !parent.querySelector('.fallback-text')) {
-                              const text = document.createElement('span');
-                              text.className = 'fallback-text text-[10px] font-bold text-gray-500 uppercase';
-                              text.innerText = item.name;
-                              parent.appendChild(text);
-                            }
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {/* Free */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2">Basic</h3>
-              <div className="text-2xl font-black text-text mb-6">
-                Rp 0{" "}
-                <span className="text-xs font-medium text-text-muted">
-                  /mo
-                </span>
-              </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                 Entry-level emotional voices for creators.
-              </div>
-              <ul className="space-y-4 mb-8 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  10.000 Credits / mo
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Tier 1 (Fungsional) Voices
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Limited Daily generations
-                </li>
-              </ul>
-              <button
-                onClick={() => {
-                  setAuthMode("signup");
-                  setIsAuthOpen(true);
-                }}
-                className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer"
-              >
-                {t('hero.cta_primary')}
-              </button>
-            </div>
-            {/* Starter */}
-            <div className="bg-surface border border-terracotta p-6 rounded-3xl flex flex-col relative shadow-[0_0_30px_rgba(226,114,91,0.15)]">
-              <div className="absolute top-0 right-6 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
-                Entry Pack
-              </div>
-              <h3 className="text-lg font-bold mb-2 text-text">Starter</h3>
-              <div className="text-2xl font-black text-text mb-6">
-                Rp 19k{" "}
-                <span className="text-xs font-medium text-text-muted">
-                  /topup
-                </span>
-              </div>
-              <div className="text-xs text-text-muted bg-surface2 px-3 py-2 rounded-lg mb-6 font-medium">
-                 Expressive voices (Pulse) are coming soon.
-              </div>
-              <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  50.000 Credits (Permanent)
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                   Unlock Flow Voices <span className="text-[10px] opacity-60">(Pulse soon)</span>
-                </li>
-              </ul>
-              <button 
-                onClick={() => handlePurchase(PLANS.STARTER.id)}
-                disabled={purchaseLoading === PLANS.STARTER.id}
-                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
-                    purchaseLoading === PLANS.STARTER.id 
-                    ? "bg-surface2 text-text-muted" 
-                    : "bg-terracotta hover:bg-trdark text-white"
-                }`}
-              >
-                {purchaseLoading === PLANS.STARTER.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
-              </button>
-            </div>
-            {/* Kreator */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2 text-text">Kreator</h3>
-              <div className="mb-6">
-                {billingCycle === 'monthly' ? (
-                  <div className="text-2xl font-black text-text">
-                    Rp 49rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-xs text-text-muted line-through">Rp 49rb</div>
-                    <div className="text-2xl font-black text-text">
-                      Rp 35rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                    </div>
-                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 429rb ditagih tahunan</div>
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 100 menit audio ≈ 100 video TikTok 1 menit
-              </div>
-              <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> 150.000
-                  Kredit
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Basic, Flow, <span className="opacity-60">Pulse (Soon)</span> & <span className="opacity-60">Aura (Soon)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Support
-                  WA Lengkap
-                </li>
-              </ul>
-              <button 
-                onClick={() => handlePurchase(PLANS.KREATOR.id)}
-                disabled={purchaseLoading === PLANS.KREATOR.id}
-                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
-                    purchaseLoading === PLANS.KREATOR.id 
-                    ? "bg-surface2 text-text-muted" 
-                    : "bg-terracotta hover:bg-trdark text-white"
-                }`}
-              >
-                {purchaseLoading === PLANS.KREATOR.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
-              </button>
-            </div>
-            {/* Produktif */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2 text-text">Produktif</h3>
-              <div className="mb-6">
-                {billingCycle === 'monthly' ? (
-                  <div className="text-2xl font-black text-text">
-                    Rp 99rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-xs text-text-muted line-through">Rp 99rb</div>
-                    <div className="text-2xl font-black text-text">
-                      Rp 72rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                    </div>
-                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 869rb ditagih tahunan</div>
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 266 menit audio ≈ 266 video TikTok 1 menit
-              </div>
-              <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  400.000 Kredit
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Antrean Instan
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Full Commercial
-                </li>
-              </ul>
-              <button 
-                onClick={() => handlePurchase(PLANS.PRODUKTIF.id)}
-                disabled={purchaseLoading === PLANS.PRODUKTIF.id}
-                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
-                    purchaseLoading === PLANS.PRODUKTIF.id 
-                    ? "bg-surface2 text-text-muted" 
-                    : "bg-terracotta hover:bg-trdark text-white"
-                }`}
-              >
-                {purchaseLoading === PLANS.PRODUKTIF.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
-              </button>
-            </div>
-            {/* Bisnis */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2 text-text">Bisnis</h3>
-              <div className="mb-6">
-                {billingCycle === 'monthly' ? (
-                  <div className="text-2xl font-black text-text">
-                    Rp 249rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-xs text-text-muted line-through">Rp 249rb</div>
-                    <div className="text-2xl font-black text-text">
-                      Rp 182rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                    </div>
-                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 2.184rb ditagih tahunan</div>
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 1000 menit audio ≈ 1000 video TikTok 1 menit
-              </div>
-              <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  1.500.000 Kredit
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  <span className="opacity-60">Akses Eksklusif Aura Flagship (Soon)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" /> WA
-                  Khusus Tim
-                </li>
-              </ul>
-              <button 
-                onClick={() => handlePurchase(PLANS.BISNIS.id)}
-                disabled={purchaseLoading === PLANS.BISNIS.id}
-                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
-                    purchaseLoading === PLANS.BISNIS.id 
-                    ? "bg-surface2 text-text-muted" 
-                    : "bg-terracotta hover:bg-trdark text-white"
-                }`}
-              >
-                {purchaseLoading === PLANS.BISNIS.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
-              </button>
-            </div>
-          </div>
-          
-          {/* Top-Up Section */}
-          <div className="mt-20">
-            <div className="text-center mb-10">
-              <h3 className="text-2xl font-black text-white">Butuh Kredit Tambahan?</h3>
-              <p className="text-text-muted mt-2 text-sm">Beli top-up satu kali untuk kredit ekstra tanpa perlu upgrade paket bulanan.</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {[PLANS.TOPUP_RECEH, PLANS.TOPUP_AMAN, PLANS.TOPUP_DARURAT].map((pack) => (
-                <div key={pack.id} className="bg-surface2/30 border border-surface2 p-6 rounded-2xl hover:border-terracotta/30 transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 className="font-bold text-white group-hover:text-terracotta transition-colors">{pack.name}</h4>
-                      <p className="text-xs text-text-muted mt-1">{pack.credits.toLocaleString("id-ID")} Kredit</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-black text-white">Rp {(pack.price/1000)}rb</div>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handlePurchase(pack.id)}
-                    disabled={true}
-                    className="w-full py-2.5 rounded-xl bg-surface2 text-gray-500 font-bold text-sm transition-all border border-transparent cursor-not-allowed flex justify-center items-center"
-                  >
-                    Menunggu Verifikasi
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
 
