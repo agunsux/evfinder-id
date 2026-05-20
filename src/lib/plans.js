@@ -1,58 +1,39 @@
 export const PLANS = {
+  FREE: {
+    id: "free",
+    name: "Gratis",
+    price: 0,
+    credits: 10000,
+    validityDays: 30,
+    type: "once",
+    tier: "FREE"
+  },
   STARTER: {
     id: "starter",
-    name: "Starter",
-    price: 19000,
+    name: "Starter Pack",
+    price: 29000,
     credits: 50000,
-    type: "topup",
+    validityDays: 60,
+    type: "once",
     tier: "STARTER"
   },
-  KREATOR: {
-    id: "kreator",
-    name: "Kreator",
-    price: 49000,
-    yearlyPrice: 429000,
+  CREATOR: {
+    id: "creator",
+    name: "Creator Pack",
+    price: 79000,
     credits: 150000,
-    type: "subscription",
-    tier: "KREATOR"
+    validityDays: 90,
+    type: "once",
+    tier: "CREATOR",
+    isPopular: true
   },
-  PRODUKTIF: {
-    id: "produktif",
-    name: "Produktif",
-    price: 99000,
-    yearlyPrice: 869000,
-    credits: 400000,
-    type: "subscription",
-    tier: "PRODUKTIF"
-  },
-  BISNIS: {
-    id: "bisnis",
-    name: "Bisnis",
-    price: 249000,
-    yearlyPrice: 2184000,
-    credits: 1500000,
-    type: "subscription",
-    tier: "BISNIS"
-  },
-  TOPUP_RECEH: {
-    id: "topup_receh",
-    name: "Paket Receh",
-    price: 25000,
-    credits: 60000,
-    type: "topup"
-  },
-  TOPUP_AMAN: {
-    id: "topup_aman",
-    name: "Paket Aman",
-    price: 75000,
-    credits: 200000,
-    type: "topup"
-  },
-  TOPUP_DARURAT: {
-    id: "topup_darurat",
-    name: "Paket Darurat Bisnis",
-    price: 150000,
+  PRO: {
+    id: "pro",
+    name: "Pro Pack",
+    price: 199000,
     credits: 500000,
-    type: "topup"
+    validityDays: 180,
+    type: "once",
+    tier: "PRO"
   }
 };

@@ -52,7 +52,7 @@ import {
 
 import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
-import VoicePlayground from "./components/VoicePlayground";
+import LiveAudioDemo from "./components/landing/LiveAudioDemo";
 
 const PACKS = {
   ID: [
@@ -648,6 +648,26 @@ const App = () => {
   const [purchaseLoading, setPurchaseLoading] = useState(null);
   const [isReferralOpen, setIsReferralOpen] = useState(false);
   const [lastViewedReferrals, setLastViewedReferrals] = useState(0);
+  const [isPlayingHero, setIsPlayingHero] = useState(false);
+  const playHeroSample = async () => {
+    if (isPlayingHero) return;
+    setIsPlayingHero(true);
+    const sampleText = "Platform AI Voice pertama yang mengutamakan tekstur emosi, napas, dan intonasi manusiawi untuk kreator.";
+    const voiceId = "id-ID-Standard-A";
+    
+    const url = await generateSample(sampleText, voiceId);
+    if (url) {
+      const audio = new Audio(url);
+      audio.onended = () => setIsPlayingHero(false);
+      audio.play().catch(e => {
+        console.error("Audio play failed", e);
+        setIsPlayingHero(false);
+      });
+    } else {
+       setIsPlayingHero(false);
+    }
+  };
+
 
   const [isPronunciationOpen, setIsPronunciationOpen] = useState(false);
   const [isVoiceDropdownOpen, setIsVoiceDropdownOpen] = useState(false);
@@ -911,12 +931,17 @@ const App = () => {
           setInitError(null);
         } else if (!user) {
           // Server failed and user is not logged in
-          const serverError = data.initError && data.initError !== "null"
+          const serverError = data.initError && data.initError !== "null" && data.initError !== ""
             ? data.initError 
             : "Backend initialization incomplete or credentials missing.";
           
           console.warn("[System] Firebase Admin is not initialized on server.", serverError);
-          setInitError(serverError);
+          // Only set the init error if it's actually an error message
+          if (data.initError && data.initError !== "null" && data.initError !== "") {
+            setInitError(serverError);
+          } else {
+            setInitError(null);
+          }
         }
       } catch (e) {
         console.warn("[System] Could not fetch diagnostics:", e);
@@ -1723,163 +1748,27 @@ const App = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Toaster position="top-right" />
-      {/* Navbar */}
-      <nav className="fixed top-0 w-full z-50 glass-panel border-b border-surface">
+      <nav className="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-24 items-center">
-            <div className="flex items-center gap-4">
-              <img src="/logo_navbar.png" alt="Shinerva AI Logo" className="w-12 h-12 object-contain" />
-              <span className="font-black text-2xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer flex flex-col leading-tight">
-                SHINERVA AI
-                <span className="text-[10px] text-terracotta uppercase tracking-[0.3em] font-black">Text To Speech</span>
+          <div className="flex justify-between h-16 items-center">
+            <div className="flex items-center gap-2">
+              <img src="/logo_navbar.png" alt="Shinerva AI Logo" className="w-8 h-8 object-contain" />
+              <span className="font-black text-xl tracking-tight text-text cursor-pointer">
+                SHINERVA
               </span>
             </div>
-            <div className="hidden md:flex items-center space-x-8">
-              {/* Simplified nav: just keeping the essence */}
-            </div>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button
-                onClick={toggleTheme}
-                className="p-2 sm:p-2.5 rounded-full hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text-muted hover:text-text shrink-0"
-                aria-label="Toggle Theme"
-              >
-                {theme === "dark" ? (
-                  <Sun className="w-5 h-5" />
-                ) : (
-                  <Moon className="w-5 h-5" />
-                )}
-              </button>
 
-              <LanguageSelector />
-
-              {user ? (
-                <div className="relative">
-                  <button
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center gap-2 bg-surface2 hover:bg-surface3 border border-surface2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-all cursor-pointer group select-none"
-                  >
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-terracotta/20 flex items-center justify-center text-terracotta shrink-0">
-                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <div className="hidden sm:flex flex-col items-start overflow-hidden">
-                      <span className="text-[11px] font-black text-text group-hover:text-terracotta transition-colors truncate max-w-[100px]">
-                        {user.name || user.email?.split("@")[0] || "User"}
-                      </span>
-                      <span className="text-[9px] font-bold text-text-muted uppercase tracking-widest">
-                        {user.tier || "FREE"}
-                      </span>
-                    </div>
-                    <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-text-muted transition-transform shrink-0 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {isUserMenuOpen && (
-                    <div 
-                      className="absolute right-0 mt-3 w-64 bg-surface border border-surface2 rounded-2xl shadow-2xl overflow-hidden z-[70] animate-in fade-in slide-in-from-top-2 duration-200"
-                    >
-                      <div className="p-4 border-b border-surface2 bg-surface2/30">
-                        <div className="flex items-center justify-between mb-1">
-                           <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">{t('nav.account')}</p>
-                           <button onClick={() => setIsUserMenuOpen(false)} className="text-text-muted hover:text-text bg-transparent border-none cursor-pointer p-1">
-                             <X className="w-3 h-3" />
-                           </button>
-                        </div>
-                        <p className="text-xs font-bold text-text truncate">{user.email}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                           <span className="text-[9px] font-black bg-terracotta text-white px-2 py-0.5 rounded-md uppercase tracking-tight">
-                             {user.tier}
-                           </span>
-                           <span className="text-[10px] font-bold text-text-muted">
-                             {remainingCredits.toLocaleString(language === 'ID' ? "id-ID" : "en-US")} {t('nav.remaining')}
-                           </span>
-                        </div>
-                      </div>
-                      
-                      <div className="p-2">
-                        <button 
-                          onClick={() => {
-                            setIsProfileModalOpen(true);
-                            setIsUserMenuOpen(false);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
-                        >
-                          <UserCircle className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">{t('nav.profile')}</span>
-                        </button>
-                        
-                        <button 
-                          onClick={() => {
-                            setIsHistoryOpen(true);
-                            setIsUserMenuOpen(false);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
-                        >
-                          <History className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">{t('nav.history_voices')}</span>
-                        </button>
-
-                        <button 
-                          onClick={() => {
-                            setIsReferralOpen(true);
-                            setIsUserMenuOpen(false);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
-                        >
-                          <UserPlus className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">{t('nav.referral_bonus')}</span>
-                        </button>
-                        
-                        <button 
-                          onClick={() => {
-                             window.location.hash = "pricing";
-                             setIsUserMenuOpen(false);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
-                        >
-                          <Settings className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                          <span className="text-sm font-bold">{t('nav.subscription')}</span>
-                        </button>
-
-                        {user.tier === 'ENTERPRISE' && (
-                          <button 
-                            onClick={() => {
-                              setIsVoiceMgmtOpen(true);
-                              setIsUserMenuOpen(false);
-                            }}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface2 transition-colors border-none bg-transparent cursor-pointer text-text group text-left"
-                          >
-                            <Settings2 className="w-5 h-5 text-text-muted group-hover:text-terracotta" />
-                            <span className="text-sm font-bold">Voice Dev Console</span>
-                          </button>
-                        )}
-                        
-                        <div className="h-px bg-surface2 my-2 mx-2"></div>
-                        
-                        <button 
-                          onClick={() => {
-                            handleLogout();
-                            setIsUserMenuOpen(false);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 text-red-500 transition-colors border-none bg-transparent cursor-pointer group text-left"
-                        >
-                          <LogOut className="w-5 h-5" />
-                          <span className="text-sm font-bold">Keluar Sekarang</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      switchAuthMode("login");
-                      setIsAuthOpen(true);
-                    }}
-                    className="text-text-muted hover:text-text font-bold text-sm tracking-tight transition-colors border-none bg-transparent cursor-pointer px-3 py-2 rounded-lg hover:bg-surface2"
-                  >
-                    {t('nav.login')} / Daftar
-                  </button>
-                </div>
+            <div className="flex items-center gap-2">
+              {!user && (
+                <button
+                  onClick={() => {
+                    switchAuthMode("login");
+                    setIsAuthOpen(true);
+                  }}
+                  className="bg-terracotta text-white px-4 py-2 rounded-full text-sm font-bold border-none cursor-pointer hover:bg-trdark"
+                >
+                  Masuk
+                </button>
               )}
             </div>
           </div>
@@ -1953,9 +1842,9 @@ const App = () => {
         </div>
       )}
 
-      <main className="flex-grow pt-32 pb-24">
+      <main className="flex-grow pt-12 pb-12">
         {/* Hero Section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-24 relative">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-terracotta/10 rounded-full blur-[120px] -z-10"></div>
           <div className="flex justify-center mb-6">
             <span className="bg-terracotta/10 text-terracotta px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] border border-terracotta/20">
@@ -1969,17 +1858,40 @@ const App = () => {
           <p className="text-xl text-text-muted mb-10 max-w-3xl mx-auto font-medium">
             {t('hero.subtitle')}
           </p>
-          <div className="flex justify-center gap-4">
-             <button
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <button
                 onClick={() => {
                   setAuthMode("signup");
                   setIsAuthOpen(true);
                 }}
-                className="bg-terracotta hover:bg-trdark text-white px-8 py-4 rounded-full font-black text-lg transition-all transform hover:scale-105 shadow-2xl shadow-terracotta/30 border-none cursor-pointer"
+                className="bg-terracotta hover:bg-trdark text-white px-8 py-4 rounded-full font-black text-lg transition-all transform hover:scale-105 shadow-2xl shadow-terracotta/30 border-none cursor-pointer flex items-center justify-center gap-2"
               >
+                <span className="text-xl">✨</span>
                 {t('hero.cta_primary')}
               </button>
+              <button
+                onClick={playHeroSample}
+                disabled={isPlayingHero}
+                className="bg-surface2 hover:bg-surface3 text-text px-8 py-4 rounded-full font-bold text-lg transition-all transform hover:scale-105 border border-surface3 cursor-pointer flex items-center justify-center gap-2"
+              >
+                {isPlayingHero ? (
+                    <>
+                        <span className="animate-pulse">🎧</span>
+                        Mendengarkan...
+                    </>
+                ) : (
+                    <>
+                        <span>🎧</span>
+                        Dengarkan Sampel
+                    </>
+                )}
+              </button>
           </div>
+        </section>
+
+        {/* Live Audio Demo */}
+        <section id="demo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <LiveAudioDemo />
         </section>
 
         {/* Aura Section */}
@@ -2710,321 +2622,56 @@ const App = () => {
         >
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black mb-4">
-               {t('pricing.title')}
+              Pilih Paket Kredit Suara
             </h2>
             <p className="text-text-muted max-w-2xl mx-auto mb-8 text-lg">
-               {t('pricing.subtitle')}
+              Beli paket sesuai kebutuhan. Tanpa langganan, kredit rollover otomatis selama masa aktif. Lebih fleksibel, lebih adil.
             </p>
 
-            {/* Billing Toggle */}
-            <div className="flex items-center justify-center gap-4 mb-8">
-              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-text-muted'}`}>{t('pricing.monthly')}</span>
-              <button 
-                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-                className="w-14 h-7 bg-surface2 rounded-full relative p-1 transition-colors cursor-pointer border-none"
-              >
-                <div className={`w-5 h-5 bg-terracotta rounded-full transition-transform ${billingCycle === 'yearly' ? 'translate-x-7' : 'translate-x-0'}`}></div>
-              </button>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-text-muted'}`}>{t('pricing.yearly')}</span>
-                <span className="bg-green-500/20 text-green-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">{t('pricing.save')} 27%</span>
-              </div>
-            </div>
-
-            {/* Supported Payment Methods */}
-            <div className="flex flex-col items-center mb-16 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2 shadow-2xl">
-              <div className="text-xs font-black text-terracotta uppercase tracking-[0.3em] w-full text-center mb-8">Metode Pembayaran:</div>
-
-              {/* E-Wallets */}
-              <div className="flex flex-wrap justify-center items-center gap-6 mb-6">
-                <img src="/payment/dana.png" alt="DANA" className="h-6" />
-                <img src="/payment/gopay.png" alt="GoPay" className="h-6" />
-                <img src="/payment/ovo.png" alt="OVO" className="h-6" />
-                <img src="/payment/shopeepay.png" alt="ShopeePay" className="h-6" />
-              </div>
-
-              {/* QRIS & VAs */}
-              <div className="flex flex-wrap justify-center items-center gap-6 mb-6">
-                <img src="/payment/qris.png" alt="QRIS" className="h-8" />
-                <div className="flex items-center gap-2">
-                    <Landmark className="w-5 h-5 text-text-muted" />
-                    <span className="text-sm font-bold text-text">Virtual Account</span>
-                </div>
-              </div>
-
-              {/* Cards/PayPal */}
-              <div className="flex flex-wrap justify-center items-center gap-6">
-                 <div className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-text-muted" />
-                    <img src="/payment/mastercard.png" alt="MasterCard" className="h-6" />
-                    <img src="/payment/visa.png" alt="Visa" className="h-6" />
-                 </div>
-                 <span className="text-sm font-black text-blue-700 tracking-tighter">PayPal</span>
-              </div>
-            </div>
             
-            {/* Comparison Text */}
-            <div className="flex justify-center mb-16">
-              <div className="bg-surface2/50 backdrop-blur-sm px-6 py-3 rounded-2xl border border-surface2 flex items-center gap-3 shadow-lg">
-                <span className="text-[10px] sm:text-xs font-black text-text-muted uppercase tracking-widest">Premium quality</span>
-                <div className="h-4 w-[1px] bg-surface2"></div>
-                <span className="text-xs sm:text-sm font-bold text-white">Vs ElevenLabs (Rp 300rb+/bln) — Shinerva 5x Lebih Hemat</span>
-              </div>
+            {/* Payment methods - simplified */}
+            <div className="flex flex-col items-center mt-16 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2">
+               <div className="text-xs font-black text-text-muted uppercase tracking-[0.2em] mb-6">Didukung oleh</div>
+               <img src="/payment/midtrans.png" alt="Midtrans" className="h-8 opacity-70"/>
             </div>
+
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-            {/* Free */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2">Basic</h3>
-              <div className="text-2xl font-black text-text mb-6">
-                Rp 0{" "}
-                <span className="text-xs font-medium text-text-muted">
-                  /mo
-                </span>
-              </div>
-              <div className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                 Eksperimen awal. Kualitas suara terbatas & watermark audio.
-              </div>
-              <ul className="space-y-4 mb-8 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  10.000 Kredit / mo (Reset tiap tgl 1)
-                </li>
-                <li className="flex items-center gap-2 line-through opacity-50">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Premium Neural Voices
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Max 20x Generate / hari
-                </li>
-              </ul>
-              <button
-                onClick={() => {
-                  setAuthMode("signup");
-                  setIsAuthOpen(true);
-                }}
-                className="w-full border border-surface2 hover:border-terracotta text-white font-bold py-3 text-sm rounded-xl transition-all bg-transparent cursor-pointer"
-              >
-                {t('hero.cta_primary')}
-              </button>
-            </div>
-            {/* Starter */}
-            <div className="bg-surface border border-terracotta p-6 rounded-3xl flex flex-col relative shadow-[0_0_30px_rgba(226,114,91,0.15)]">
-              <div className="absolute top-0 right-6 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest">
-                Entry Pack
-              </div>
-              <h3 className="text-lg font-bold mb-2 text-text">Starter</h3>
-              <div className="text-2xl font-black text-text mb-6">
-                Rp 19k{" "}
-                <span className="text-xs font-medium text-text-muted">
-                  /topup
-                </span>
-              </div>
-              <div className="text-xs text-text-muted bg-surface2 px-3 py-2 rounded-lg mb-6 font-medium">
-                 Expressive voices (Pulse) are coming soon.
-              </div>
-              <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  50.000 Credits (Permanent)
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                   Unlock Flow Voices <span className="text-[10px] opacity-60">(Pulse soon)</span>
-                </li>
-              </ul>
-              <button 
-                onClick={() => handlePurchase(PLANS.STARTER.id)}
-                disabled={purchaseLoading === PLANS.STARTER.id}
-                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
-                    purchaseLoading === PLANS.STARTER.id 
-                    ? "bg-surface2 text-text-muted" 
-                    : "bg-terracotta hover:bg-trdark text-white"
-                }`}
-              >
-                {purchaseLoading === PLANS.STARTER.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
-              </button>
-            </div>
-            {/* Kreator */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col relative">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white text-black text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-xl whitespace-nowrap z-10 border border-black">
-                Most Popular
-              </div>
-              <h3 className="text-lg font-bold mb-2 text-text">Kreator</h3>
-              <div className="mb-6">
-                {billingCycle === 'monthly' ? (
-                  <div className="text-2xl font-black text-text">
-                    Rp 49rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-xs text-text-muted line-through">Rp 49rb</div>
-                    <div className="text-2xl font-black text-text">
-                      Rp 35rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                    </div>
-                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 429rb ditagih tahunan</div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Pakets */}
+            {[PLANS.FREE, PLANS.STARTER, PLANS.CREATOR, PLANS.PRO].map((plan) => (
+              <div key={plan.id} className={`bg-surface border p-6 rounded-3xl flex flex-col relative ${plan.isPopular ? 'border-terracotta shadow-[0_0_30px_rgba(226,114,91,0.15)]' : 'border-surface2'}`}>
+                {plan.isPopular && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest z-10">
+                    Paling Populer
                   </div>
                 )}
+                <h3 className="text-lg font-bold mb-2 text-text">{plan.name}</h3>
+                <div className="text-2xl font-black text-text mb-6">
+                  {plan.price === 0 ? "Gratis" : `Rp ${(plan.price/1000).toLocaleString("id-ID")}rb`}
+                </div>
+                <div className="text-xs text-text-muted bg-surface2 px-3 py-2 rounded-lg mb-6 font-medium">
+                  {plan.credits.toLocaleString("id-ID")} Kredit Suara<br/>
+                  Masa aktif: {plan.validityDays} hari
+                </div>
+                <button 
+                  onClick={() => handlePurchase(plan.id)}
+                  disabled={purchaseLoading === plan.id || plan.price === 0}
+                  className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
+                    purchaseLoading === plan.id
+                      ? "bg-surface2 text-text-muted" 
+                      : plan.price === 0 
+                      ? "bg-transparent border border-surface2 text-text"
+                      : "bg-terracotta hover:bg-trdark text-white"
+                  }`}
+                >
+                  {plan.price === 0 ? "Mulai Gratis" : purchaseLoading === plan.id ? <Loader2 className="animate-spin w-4 h-4" /> : "Beli Sekarang"}
+                </button>
               </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 100 menit audio ≈ 100 video TikTok 1 menit
-              </div>
-              <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> 150.000
-                  Kredit
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Basic, Flow, <span className="opacity-60">Pulse (Soon)</span> & <span className="opacity-60">Aura (Soon)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-white flex-shrink-0" /> Support
-                  WA Lengkap
-                </li>
-              </ul>
-              <button 
-                onClick={() => handlePurchase(PLANS.KREATOR.id)}
-                disabled={purchaseLoading === PLANS.KREATOR.id}
-                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
-                    purchaseLoading === PLANS.KREATOR.id 
-                    ? "bg-surface2 text-text-muted" 
-                    : "bg-terracotta hover:bg-trdark text-white"
-                }`}
-              >
-                {purchaseLoading === PLANS.KREATOR.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
-              </button>
-            </div>
-            {/* Produktif */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2 text-text">Produktif</h3>
-              <div className="mb-6">
-                {billingCycle === 'monthly' ? (
-                  <div className="text-2xl font-black text-text">
-                    Rp 99rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-xs text-text-muted line-through">Rp 99rb</div>
-                    <div className="text-2xl font-black text-text">
-                      Rp 72rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                    </div>
-                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 869rb ditagih tahunan</div>
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 266 menit audio ≈ 266 video TikTok 1 menit
-              </div>
-              <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  400.000 Kredit
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Antrean Instan
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  Full Commercial
-                </li>
-              </ul>
-              <button 
-                onClick={() => handlePurchase(PLANS.PRODUKTIF.id)}
-                disabled={purchaseLoading === PLANS.PRODUKTIF.id}
-                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
-                    purchaseLoading === PLANS.PRODUKTIF.id 
-                    ? "bg-surface2 text-text-muted" 
-                    : "bg-terracotta hover:bg-trdark text-white"
-                }`}
-              >
-                {purchaseLoading === PLANS.PRODUKTIF.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
-              </button>
-            </div>
-            {/* Bisnis */}
-            <div className="bg-surface border border-surface2 p-6 rounded-3xl flex flex-col">
-              <h3 className="text-lg font-bold mb-2 text-text">Bisnis</h3>
-              <div className="mb-6">
-                {billingCycle === 'monthly' ? (
-                  <div className="text-2xl font-black text-text">
-                    Rp 249rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="text-xs text-text-muted line-through">Rp 249rb</div>
-                    <div className="text-2xl font-black text-text">
-                      Rp 182rb <span className="text-xs font-medium text-text-muted">/bulan</span>
-                    </div>
-                    <div className="text-[10px] text-green-500 font-bold mt-1">Rp 2.184rb ditagih tahunan</div>
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-terracotta bg-terracotta/10 px-3 py-2 rounded-lg mb-6 font-medium">
-                ≈ 1000 menit audio ≈ 1000 video TikTok 1 menit
-              </div>
-              <ul className="space-y-4 mb-10 flex-grow text-text-muted text-xs">
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  1.500.000 Kredit
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  <span className="opacity-60">Akses Eksklusif Aura Flagship (Soon)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" />{" "}
-                  <span className="opacity-60">Professional Voice Cloning (Soon)</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-3 h-3 text-terracotta flex-shrink-0" /> WA
-                  Khusus Tim
-                </li>
-              </ul>
-              <button 
-                onClick={() => handlePurchase(PLANS.BISNIS.id)}
-                disabled={purchaseLoading === PLANS.BISNIS.id}
-                className={`w-full font-bold py-3 text-sm rounded-xl transition-all flex justify-center items-center cursor-pointer border-none ${
-                    purchaseLoading === PLANS.BISNIS.id 
-                    ? "bg-surface2 text-text-muted" 
-                    : "bg-terracotta hover:bg-trdark text-white"
-                }`}
-              >
-                {purchaseLoading === PLANS.BISNIS.id ? <Loader2 className="animate-spin w-4 h-4" /> : t('pricing.cta')}
-              </button>
-            </div>
+            ))}
           </div>
           
-          {/* Top-Up Section */}
-          <div className="mt-20">
-            <div className="text-center mb-10">
-              <h3 className="text-2xl font-black text-white">Butuh Kredit Tambahan?</h3>
-              <p className="text-text-muted mt-2 text-sm">Beli top-up satu kali untuk kredit ekstra tanpa perlu upgrade paket bulanan.</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {[PLANS.TOPUP_RECEH, PLANS.TOPUP_AMAN, PLANS.TOPUP_DARURAT].map((pack) => (
-                <div key={pack.id} className="bg-surface2/30 border border-surface2 p-6 rounded-2xl hover:border-terracotta/30 transition-all group">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h4 className="font-bold text-white group-hover:text-terracotta transition-colors">{pack.name}</h4>
-                      <p className="text-xs text-text-muted mt-1">{pack.credits.toLocaleString("id-ID")} Kredit</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-black text-white">Rp {(pack.price/1000)}rb</div>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => handlePurchase(pack.id)}
-                    disabled={true}
-                    className="w-full py-2.5 rounded-xl bg-surface2 text-gray-500 font-bold text-sm transition-all border border-transparent cursor-not-allowed flex justify-center items-center"
-                  >
-                    Menunggu Verifikasi
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Top-Up Section - Removed as per requirements */}
+          <div className="mt-20"></div>
         </section>
 
         {/* Pronunciation Management Section */}
@@ -3171,19 +2818,6 @@ const App = () => {
             </div>
           </section>
         )}
-
-        {/* Voice Playground Showcase */}
-        <section id="playground" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
-          <VoicePlayground 
-            language={language}
-            setLanguage={handleLanguageChange}
-            generateSample={generateSample}
-            onUpgrade={() => {
-              const element = document.getElementById('pricing');
-              if (element) element.scrollIntoView({ behavior: 'smooth' });
-            }} 
-          />
-        </section>
 
         {/* Content Packs */}
         <section

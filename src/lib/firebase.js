@@ -11,7 +11,7 @@ if (missingVars.length > 0) {
   initError = `Missing Firebase configuration keys: ${missingVars.join(", ")}. Please check your setup.`;
 }
 
-export let isConfigValid = !initError;
+export let isConfigValid = (initError === null);
 let app = null;
 let auth = null;
 let db = null;
