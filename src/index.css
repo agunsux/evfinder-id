@@ -1,25 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #0a0a0a;
-  --color-bg-secondary: #111111;
-  --color-bg-card: #171717;
-  --color-text-primary: #f3efe8;
-  --color-text-secondary: #9a948c;
-  --color-text-muted: #666666;
-  --color-accent: #c8a96e;
-  --color-accent-light: #e6c98f;
-  --color-border: rgba(255, 255, 255, 0.08);
+  --color-terracotta: #E2725B;
+  --color-trdark: #b3513d;
+  --color-dark: #0F0F0F;
+  --color-surface: #1A1A1A;
+  --color-surface2: #242424;
+  --color-text: #FFFFFF;
+  --color-text-muted: #999999;
+  --breakpoint-xs: 400px;
+  --font-heading: "Fraunces", serif;
+  --font-body: system-ui, sans-serif;
 }
 
-@layer base {
-  body {
-    @apply bg-bg-primary text-text-primary font-sans antialiased;
-  }
+body {
+  background-color: var(--color-dark);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  @apply transition-colors duration-300;
 }
 
-/* Typography pairings */
-.font-display {
-  font-family: 'Fraunces', serif;
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
 }
 
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-terracotta);
+}
+
+.glass-panel {
+  background: rgba(26, 26, 26, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #FF9A85, #E2725B);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

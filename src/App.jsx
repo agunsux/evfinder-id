@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Toaster, toast } from 'react-hot-toast';
+import { useLocation, Routes, Route, useNavigate } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import DashboardPage from './pages/DashboardPage';
 import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
@@ -556,11 +559,13 @@ const formatDuration = (seconds) => {
   const secs = seconds % 60;
   if (mins === 0) return `${secs}s`;
   return `${mins}m ${secs}s`;
-};
+    </div>
 
+  );
 
 const App = () => {
   const [language, setLanguage] = useState("ID");
+  const [text, setText] = useState("");
 
   const t = (path) => {
     const keys = path.split('.');
@@ -583,7 +588,7 @@ const App = () => {
     }
   };
 
-  const LanguageSelector = () => (
+  /* const LanguageSelector = () => (
     <div className="relative group">
       <button 
         className="flex items-center gap-1.5 bg-surface2 hover:bg-surface3 border border-surface2 px-2.5 py-1.5 rounded-full transition-all cursor-pointer text-xs font-bold text-text-muted hover:text-text"
@@ -605,8 +610,8 @@ const App = () => {
         ))}
       </div>
     </div>
-  );
-  const [text, setText] = useState("");
+  ); */
+
   const [voice, setVoice] = useState("id-ID-Wavenet-A");
   const [speed, setSpeed] = useState(1);
   const [pitch, setPitch] = useState(0);
@@ -664,6 +669,7 @@ const App = () => {
 
   const [isVoiceMgmtOpen, setIsVoiceMgmtOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [voiceConfig, setVoiceConfig] = useState({ tiers: {}, limits: {} });
   const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
@@ -1721,26 +1727,34 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Toaster position="top-right" />
-      {/* Navbar */}
-      <nav className="fixed top-0 w-full z-50 glass-panel border-b border-surface">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-24 items-center">
-            <div className="flex items-center gap-4">
-              <img src="/logo_navbar.png" alt="Shinerva AI Logo" className="w-12 h-12 object-contain" />
-              <span className="font-black text-2xl tracking-tight text-text hover:text-terracotta transition-colors cursor-pointer flex flex-col leading-tight">
-                SHINERVA AI
-                <span className="text-[10px] text-terracotta uppercase tracking-[0.3em] font-black">Text To Speech</span>
-              </span>
-            </div>
-            <div className="hidden md:flex items-center space-x-8">
-              <a
-                href="#"
-                className="text-text-muted hover:text-text font-medium transition-colors"
-              >
-                {t('nav.home')}
-              </a>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/app" element={
+        <div className="min-h-screen flex flex-col">
+          <Toaster position="top-right" />
+          {/* Navbar */}
+          <nav className="fixed top-0 w-full z-50 glass-panel border-b border-surface">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between h-16 sm:h-24 items-center px-4 sm:px-6">
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <img src="/logo_navbar.png" alt="Shinerva AI Logo" className="w-8 h-8 sm:w-12 sm:h-12 object-contain" />
+                  <span className="font-black text-lg sm:text-2xl tracking-tight text-text cursor-pointer flex flex-col leading-tight">
+                    SHINERVA AI
+                    <span className="text-[8px] sm:text-[10px] text-terracotta uppercase tracking-[0.2em] sm:tracking-[0.3em] font-black">TTS</span>
+                  </span>
+                </div>
+                <div className="md:hidden">
+                  <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-text-muted hover:text-text cursor-pointer">
+                    {isMobileMenuOpen ? <X className="w-6 h-6" /> : <div className="space-y-1.5"><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current"></div><div className="w-6 h-0.5 bg-current"></div></div>}
+                  </button>
+                </div>
+                <div className="hidden md:flex items-center space-x-8">
+                  <a
+                    href="#"
+                    className="text-text-muted hover:text-text font-medium transition-colors"
+                  >
+                    {t('nav.home')}
+                  </a>
               <a
                 href="#pricing"
                 className="text-text-muted hover:text-text font-medium transition-colors"
@@ -1940,6 +1954,26 @@ const App = () => {
           </div>
         </div>
       </nav>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 top-24 z-40 bg-surface md:hidden p-4">
+          <div className="flex flex-col space-y-2">
+            <a href="#" className="p-4 rounded-xl hover:bg-surface2 text-text-muted hover:text-text font-bold" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.home')}</a>
+            <a href="#pricing" className="p-4 rounded-xl hover:bg-surface2 text-text-muted hover:text-text font-bold" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.packs')}</a>
+            <a href="#faq" className="p-4 rounded-xl hover:bg-surface2 text-text-muted hover:text-text font-bold" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.faq')}</a>
+            <a href="#contact" className="p-4 rounded-xl hover:bg-surface2 text-text-muted hover:text-text font-bold" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.contact')}</a>
+            {user && (
+              <>
+                <a href="#pronunciation" className="p-4 rounded-xl hover:bg-surface2 text-text-muted hover:text-text font-bold" onClick={() => setIsMobileMenuOpen(false)}>{t('nav.pronunciation')}</a>
+                <button onClick={() => { setIsReferralOpen(true); setIsMobileMenuOpen(false); }} className="w-full text-left p-4 rounded-xl hover:bg-surface2 text-terracotta font-bold border-none bg-transparent cursor-pointer">
+                  {t('nav.referral')}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Notification Toast */}
       {notification && (
@@ -4120,7 +4154,9 @@ const App = () => {
         </div>
       )}
     </div>
+        } 
+      />
+    </Routes>
   );
 }
-
 export default App;
