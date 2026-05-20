@@ -986,7 +986,6 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       env: process.env.NODE_ENV,
       timestamp: new Date().toISOString()
     };
-    console.log("[Diag] Auth diagnostics requested:", diag);
     res.json(diag);
   });
 
