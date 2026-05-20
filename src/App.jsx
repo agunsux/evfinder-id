@@ -53,6 +53,7 @@ import {
 import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
 import LiveAudioDemo from "./components/landing/LiveAudioDemo";
+import PaymentMethods from "./components/PaymentMethods";
 
 const PACKS = {
   ID: [
@@ -1752,7 +1753,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center gap-2">
-              <img src="/logo_navbar.png" alt="Shinerva AI Logo" className="w-8 h-8 object-contain" />
+              <ShinervaLogo className="w-8 h-8" />
               <span className="font-black text-xl tracking-tight text-text cursor-pointer">
                 SHINERVA
               </span>
@@ -1760,15 +1761,26 @@ const App = () => {
 
             <div className="flex items-center gap-2">
               {!user && (
-                <button
-                  onClick={() => {
-                    switchAuthMode("login");
-                    setIsAuthOpen(true);
-                  }}
-                  className="bg-terracotta text-white px-4 py-2 rounded-full text-sm font-bold border-none cursor-pointer hover:bg-trdark"
-                >
-                  Masuk
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      switchAuthMode("login");
+                      setIsAuthOpen(true);
+                    }}
+                    className="text-text px-4 py-2 rounded-full text-sm font-bold border border-surface2 hover:border-terracotta transition-all"
+                  >
+                    Masuk
+                  </button>
+                  <button
+                    onClick={() => {
+                      switchAuthMode("signup");
+                      setIsAuthOpen(true);
+                    }}
+                    className="bg-terracotta text-white px-4 py-2 rounded-full text-sm font-bold border-none hover:bg-trdark transition-all"
+                  >
+                    Daftar
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -2628,12 +2640,8 @@ const App = () => {
               Beli paket sesuai kebutuhan. Tanpa langganan, kredit rollover otomatis selama masa aktif. Lebih fleksibel, lebih adil.
             </p>
 
-            
-            {/* Payment methods - simplified */}
-            <div className="flex flex-col items-center mt-16 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2">
-               <div className="text-xs font-black text-text-muted uppercase tracking-[0.2em] mb-6">Didukung oleh</div>
-               <img src="/payment/midtrans.png" alt="Midtrans" className="h-8 opacity-70"/>
-            </div>
+            {/* Payment methods */}
+            <PaymentMethods />
 
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
