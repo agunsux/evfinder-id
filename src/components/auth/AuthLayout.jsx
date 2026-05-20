@@ -6,7 +6,7 @@ const AuthLayout = ({ children, title, subtitle }) => {
     <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-surface border border-surface2 rounded-3xl p-8 shadow-2xl">
         <div className="flex justify-center mb-8">
-            <ShinervaLogo className="w-12 h-12" />
+            <ShinervaLogo className="w-12 h-12 text-terracotta" />
         </div>
         <div className="text-center mb-8">
             <h1 className="text-2xl font-black text-text">{title}</h1>

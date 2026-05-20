@@ -3,15 +3,20 @@ import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth"
 import { getFirestore, doc, getDocFromCache, getDocFromServer } from "firebase/firestore";
 import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
 
+console.log("[Firebase] Config imported:", Object.keys(firebaseConfig), firebaseConfig);
+
 const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'appId'];
 const missingVars = requiredKeys.filter(key => !firebaseConfig[key]);
+
+console.log("[Firebase] Required keys check:", requiredKeys, "Missing:", missingVars);
 
 let initError = null;
 if (missingVars.length > 0) {
   initError = `Missing Firebase configuration keys: ${missingVars.join(", ")}. Please check your setup.`;
 }
 
-export let isConfigValid = (initError === null);
+export let isConfigValid = !initError;
+console.log("[Firebase] isConfigValid:", isConfigValid, "initError:", initError);
 let app = null;
 let auth = null;
 let db = null;
