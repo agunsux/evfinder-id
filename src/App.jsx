@@ -270,7 +270,7 @@ const TRANSLATIONS = {
       title_part1: "Suara AI yang",
       title_accent: "Sangat Manusiawi",
       subtitle: "Beri jiwa pada konten Anda. Platform AI Voice pertama yang mengutamakan tekstur emosi, napas, dan intonasi manusiawi untuk kreator.",
-      cta_primary: "Mulai Kreasi — Gratis",
+      cta_primary: "Mulai & Dapat Bonus",
       cta_secondary: "Dengarkan Sampel"
     },
     welcome: {
@@ -352,7 +352,7 @@ const TRANSLATIONS = {
       title_part1: "AI Voices That",
       title_accent: "Actually Feel Human",
       subtitle: "Give soul to your content. The first AI voice platform prioritizing emotional texture, breath, and human-like intonation for creators.",
-      cta_primary: "Start Creation — Free",
+      cta_primary: "Start & Get Bonus",
       cta_secondary: "Listen to Samples"
     },
     welcome: {
@@ -1735,53 +1735,7 @@ const App = () => {
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <a
-                href="#"
-                className="text-text-muted hover:text-text font-medium transition-colors"
-              >
-                {t('nav.home')}
-              </a>
-              <a
-                href="#pricing"
-                className="text-text-muted hover:text-text font-medium transition-colors"
-              >
-                {t('nav.packs')}
-              </a>
-              <a
-                href="#faq"
-                className="text-text-muted hover:text-text font-medium transition-colors"
-              >
-                {t('nav.faq')}
-              </a>
-              <a
-                href="#contact"
-                className="text-text-muted hover:text-text font-medium transition-colors"
-              >
-                {t('nav.contact')}
-              </a>
-              {user && (
-                <>
-                  <a
-                    href="#pronunciation"
-                    className="text-text-muted hover:text-text font-medium transition-colors"
-                  >
-                    {t('nav.pronunciation')}
-                  </a>
-                  <button
-                    onClick={handleReferralClick}
-                    className="flex items-center gap-2 text-terracotta hover:text-trdark font-bold transition-all border-none bg-transparent cursor-pointer relative"
-                  >
-                    <Gift className="w-4 h-4" /> 
-                    {t('nav.referral')}
-                    {user && (user.valid_referrals > 0) && (
-                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-terracotta opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-terracotta"></span>
-                      </span>
-                    )}
-                  </button>
-                </>
-              )}
+              {/* Simplified nav: just keeping the essence */}
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
               <button
@@ -1921,18 +1875,9 @@ const App = () => {
                       switchAuthMode("login");
                       setIsAuthOpen(true);
                     }}
-                    className="text-text-muted hover:text-text font-bold text-sm tracking-tight transition-colors border-none bg-transparent cursor-pointer px-3 py-2 rounded-lg hover:bg-surface2 hidden xs:block"
+                    className="text-text-muted hover:text-text font-bold text-sm tracking-tight transition-colors border-none bg-transparent cursor-pointer px-3 py-2 rounded-lg hover:bg-surface2"
                   >
-                    {t('nav.login')}
-                  </button>
-                  <button
-                    onClick={() => {
-                      switchAuthMode("signup");
-                      setIsAuthOpen(true);
-                    }}
-                    className="bg-terracotta hover:bg-trdark text-white px-4 py-2 sm:px-6 sm:py-2.5 rounded-full font-bold text-[11px] sm:text-sm transition-all transform hover:scale-105 shadow-lg shadow-terracotta/20 border-none cursor-pointer whitespace-nowrap"
-                  >
-                    {t('nav.signup')}
+                    {t('nav.login')} / Daftar
                   </button>
                 </div>
               )}
