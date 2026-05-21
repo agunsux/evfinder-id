@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
@@ -474,6 +475,7 @@ const formatDuration = (seconds) => {
 
 
 const App = () => {
+  const navigate = useNavigate();
   const [language, setLanguage] = useState("ID");
 
   const t = (path) => {
@@ -1675,8 +1677,15 @@ const App = () => {
             </div>
 
             <div className="flex items-center justify-end flex-1 gap-2">
-              {!user && (
-                <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
+                {user ? (
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="text-text px-6 py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
+                  >
+                    Akun Saya
+                  </button>
+                ) : (
                   <button
                     onClick={() => {
                       switchAuthMode("login");
@@ -1686,17 +1695,8 @@ const App = () => {
                   >
                     Masuk
                   </button>
-                  <button
-                    onClick={() => {
-                      switchAuthMode("signup");
-                      setIsAuthOpen(true);
-                    }}
-                    className="bg-terracotta text-white px-6 py-2.5 rounded-full text-sm font-semibold border-none hover:bg-trdark transition-all cursor-pointer"
-                  >
-                    Daftar
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -2412,7 +2412,7 @@ const App = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-3 mt-4 pt-4 border-t border-surface2">
-                        {audioUrl && !isTeaser ? (
+                        {audioUrl && !isTeaser && user ? (
                             <>
                               <a
                                 href={audioUrl}
@@ -2433,7 +2433,7 @@ const App = () => {
                             disabled
                             className="w-full bg-surface2 text-text-muted font-bold py-3 rounded-lg flex items-center justify-center gap-2 text-sm cursor-not-allowed"
                           >
-                             <Download className="w-4 h-4" /> Preview (Download Terkunci)
+                             <Download className="w-4 h-4" /> {user ? "Preview" : "Masuk untuk Unduh"}
                           </button>
                         )}
                       </div>
@@ -2527,11 +2527,11 @@ const App = () => {
 
         {/* Pronunciation Management Section */}
         {user && (
-          <section id="pronunciation" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 my-16">
-            <div className="bg-surface rounded-3xl p-8 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
+          <section id="pronunciation" className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-10 mt-24 mb-16">
+            <div className="bg-surface rounded-3xl p-10 md:p-12 border border-surface2 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
               
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
                   <h2 className="text-3xl font-black text-text flex items-center gap-3">
                     <BookOpen className="w-8 h-8 text-terracotta" /> 
@@ -2541,17 +2541,17 @@ const App = () => {
                     Kelola bagaimana AI menyebutkan kata atau istilah khusus Anda.
                   </p>
                 </div>
-                <div className="bg-surface2 px-4 py-2 rounded-full border border-surface2">
+                <div className="bg-surface2 px-5 py-2.5 rounded-full border border-surface2">
                   <span className="text-sm font-bold text-terracotta">
                     {Object.keys(user.pronunciations || {}).length} Aturan Aktif
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* Form to add new rule */}
                 <div className="lg:col-span-4 space-y-4">
-                  <div className="bg-dark/50 rounded-2xl p-6 border border-surface2 h-full">
+                  <div className="bg-dark/50 rounded-2xl p-8 border border-surface2 h-full">
                     <h3 className="font-bold text-text mb-4 text-sm uppercase tracking-wider">Tambah Aturan Baru</h3>
                     <div className="space-y-4">
                       <div>
@@ -2607,7 +2607,7 @@ const App = () => {
         {/* Pricing Section */}
         <section
           id="pricing-temporarily-renamed"
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-16"
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-24 mb-16"
         >
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black mb-4">

@@ -9,7 +9,7 @@ const voices = [
     description: "Warm · Storytelling · Podcast",
     voice: "Female",
     script: "Selamat datang di Shinerva. Kami hadir untuk membuat suara Indonesia terdengar lebih manusiawi.",
-    audioUrl: "/aura.mp3?v=2"
+    audioUrl: "/samples/aura.mp3" // Placeholder - user needs to provide
   },
   {
     id: "pulse",
@@ -17,7 +17,7 @@ const voices = [
     description: "Energetic · Confident · Ads",
     voice: "Male",
     script: "Selamat datang di Shinerva. Kami hadir untuk membuat suara Indonesia terdengar lebih manusiawi.",
-    audioUrl: "/pulse.mp3?v=2"
+    audioUrl: "/samples/pulse.mp3" // Placeholder
   },
   {
     id: "flow",
@@ -25,7 +25,7 @@ const voices = [
     description: "Calm · Professional · Learning",
     voice: "Female",
     script: "Selamat datang di Shinerva. Kami hadir untuk membuat suara Indonesia terdengar lebih manusiawi.",
-    audioUrl: "/flow.mp3?v=2"
+    audioUrl: "/samples/flow.mp3" // Placeholder
   }
 ];
 
