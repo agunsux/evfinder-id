@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, Routes, Route } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import Dashboard from './components/Dashboard';
+import CreatorDashboard from './components/dashboard/CreatorDashboard';
 import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
@@ -2976,7 +2976,7 @@ const App = () => {
             </main>
           </>
         } />
-        <Route path="/dashboard" element={<Dashboard user={user} refreshUser={refreshUser} />} />
+        <Route path="/dashboard/*" element={<CreatorDashboard user={user} refreshUser={refreshUser} />} />
       </Routes>
 
       {/* Profile Modal */}
