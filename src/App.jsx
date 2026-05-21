@@ -415,125 +415,38 @@ const TRANSLATIONS = {
 
 const VOICES = {
   "ID": {
-    "Basic (Fungsional)": [
+    "Flow (Cinematic Narrator)": [
       { 
-        id: "id-ID-Standard-A", 
-        name: "Ratna (Wanita)", 
-        type: "Standard", 
-        tier: "FREE", 
-        desc: "Suara jernih untuk penjelasan teknis dan tutorial sederhana.",
-        useCase: "Podcast & Edukasi"
-      },
-      { 
-        id: "id-ID-Standard-B", 
-        name: "Bambang (Pria)", 
-        type: "Standard", 
-        tier: "FREE",
-        desc: "Gaya bicara formal untuk pengumuman atau berita singkat.",
-        useCase: "Berita & Pengumuman"
-      },
-    ],
-    "Pulse (Segera Hadir)": [
-      { 
-        id: "id-ID-Wavenet-A", 
-        name: "Siti (Emotional Storytelling)", 
+        id: "id-ID-Wavenet-D", 
+        name: "Flow", 
         type: "Wavenet", 
         premium: true, 
-        comingSoon: true,
-        tier: "STARTER",
-        desc: "Suara emosional dengan penekanan pada kata-kata penting. Sangat cocok untuk narasi.",
-        useCase: "Narasi YouTube & Storytelling"
-      },
+        tier: "FREE",
+        desc: "Calm, stable, neutral. Perfect for narration and long-form.",
+        useCase: "Audiobook, Narration"
+      }
+    ],
+    "Pulse (Energetic Presenter)": [
       { 
         id: "id-ID-Wavenet-B", 
-        name: "Agus (Dynamic Creator)", 
+        name: "Pulse", 
         type: "Wavenet", 
         premium: true, 
-        comingSoon: true,
         tier: "STARTER",
-        desc: "Energik dan punchy. Dibangun khusus untuk video pendek yang butuh perhatian instan.",
-        useCase: "Video Pendek & Komedi"
-      },
+        desc: "Energetic, persuasive, modern. Punchy for social media.",
+        useCase: "Short-form video, Ads"
+      }
     ],
-    "Flow (Cinematic)": [
-      { 
-        id: "id-ID-Wavenet-D", 
-        name: "Lestari (Smooth & Elegant)", 
-        type: "Wavenet", 
-        premium: true, 
-        tier: "PRODUKTIF",
-        desc: "Suara mengalir yang memberikan rasa nyaman dan profesional.",
-        useCase: "Audiobook & Meditasi"
-      },
-      { 
-        id: "id-ID-Standard-C", 
-        name: "Joko (Dramatic Deep)", 
-        type: "Standard", 
-        premium: true, 
-        tier: "PRODUKTIF",
-        desc: "Gaya bicara formal dan berwibawa, ideal untuk narasi dokumenter intens.",
-        useCase: "Misteri & Dokumenter"
-      },
-    ],
-    "Aura Flagship (Segera Hadir)": [
+    "Aura (Emotional Storyteller)": [
       { 
         id: "id-ID-Wavenet-C", 
-        name: "Eko (Curated Soul)", 
+        name: "Aura", 
         type: "Wavenet", 
         premium: true, 
-        glow: true, 
-        comingSoon: true,
-        tier: "BISNIS",
-        desc: "Tekstur emosi yang dioptimalkan untuk narasi sinematik.",
-        useCase: "Iklan High-End & Cinematic"
-      },
-      { 
-        id: "id-ID-Wavenet-D", 
-        name: "Maya (Curated Breath)", 
-        type: "Wavenet", 
-        premium: true, 
-        glow: true, 
-        comingSoon: true,
-        tier: "BISNIS",
-        desc: "Penuh nuansa emosi halus, napas alami, dan kejernihan sinematik.",
-        useCase: "Berita & Konten Storytelling"
-      },
-    ],
-    "Voice Cloning (Enterprise)": [
-      {
-        id: "cloning-custom",
-        name: "Kloning Suara Kustom",
-        type: "Studio",
-        premium: true,
-        comingSoon: false,
-        tier: "BISNIS",
-        desc: "Kloning suara Anda sendiri hanya dengan sampel 30 detik. Akurasi 99%.",
-        useCase: "Personal Branding & Corporate"
+        tier: "CREATOR",
+        desc: "Warm, cinematic, deep. Emotionally directed storytelling.",
+        useCase: "Cinematic Narration"
       }
-    ]
-  },
-  "CMN": {
-    "Basic (Free)": [
-      { 
-        id: "cmn-CN-Standard-A", 
-        name: "Meiling (Female)", 
-        type: "Standard", 
-        tier: "FREE", 
-        desc: "Standard Mandarin female voice.",
-        useCase: "Educational Content"
-      },
-    ],
-    "Pulse (Coming Soon)": [
-      { 
-        id: "cmn-CN-Wavenet-C", 
-        name: "Lao Wang (Male)", 
-        type: "Wavenet", 
-        premium: true, 
-        comingSoon: true,
-        tier: "STARTER",
-        desc: "Warm and deep Mandarin male voice.",
-        useCase: "Storytelling & News"
-      },
     ]
   }
 };
@@ -1752,14 +1665,16 @@ const App = () => {
       <nav className="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-2">
-              <ShinervaLogo className="w-8 h-8" />
-              <span className="font-black text-xl tracking-tight text-text cursor-pointer">
+            <div className="flex-1"></div>
+            
+            <div className="flex items-center justify-center gap-3">
+              <ShinervaLogo className="w-10 h-10 text-terracotta" />
+              <span className="font-black text-2xl tracking-tight text-terracotta cursor-pointer">
                 SHINERVA
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-end flex-1 gap-2">
               {!user && (
                 <div className="flex items-center gap-3">
                   <button
@@ -2610,9 +2525,88 @@ const App = () => {
           </div>
         </section>
 
+        {/* Pronunciation Management Section */}
+        {user && (
+          <section id="pronunciation" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
+            <div className="bg-surface rounded-3xl p-8 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
+              
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                  <h2 className="text-3xl font-black text-text flex items-center gap-3">
+                    <BookOpen className="w-8 h-8 text-terracotta" /> 
+                    Daftar Aturan Pengucapan
+                  </h2>
+                  <p className="text-text-muted mt-2">
+                    Kelola bagaimana AI menyebutkan kata atau istilah khusus Anda.
+                  </p>
+                </div>
+                <div className="bg-surface2 px-4 py-2 rounded-full border border-surface2">
+                  <span className="text-sm font-bold text-terracotta">
+                    {Object.keys(user.pronunciations || {}).length} Aturan Aktif
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Form to add new rule */}
+                <div className="lg:col-span-4 space-y-4">
+                  <div className="bg-dark/50 rounded-2xl p-6 border border-surface2 h-full">
+                    <h3 className="font-bold text-text mb-4 text-sm uppercase tracking-wider">Tambah Aturan Baru</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Kata Asli</label>
+                        <input
+                          type="text"
+                          value={newWord}
+                          onChange={(e) => setNewWord(e.target.value)}
+                          className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none text-sm"
+                          placeholder="Contoh: Shinerva"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Cara Baca</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={newPronunciation}
+                            onChange={(e) => setNewPronunciation(e.target.value)}
+                            className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none pr-10 text-sm"
+                            placeholder="Contoh: shi ner va"
+                          />
+                          <button 
+                            onClick={() => handleTestPronunciation(newWord, newPronunciation)}
+                            disabled={testLoading}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-surface2 rounded-lg transition-colors text-terracotta disabled:opacity-50 border-none bg-transparent cursor-pointer"
+                            title="Tes suara"
+                          >
+                            {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (newWord.trim() && newPronunciation.trim()) {
+                            handleUpdatePronunciation(newWord.trim(), newPronunciation.trim());
+                            setNewWord("");
+                            setNewPronunciation("");
+                          }
+                        }}
+                        className="w-full bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-none cursor-pointer mt-2"
+                      >
+                        Simpan Aturan
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Pricing Section */}
         <section
-          id="pricing"
+          id="pricing-temporarily-renamed"
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
         >
           <div className="text-center mb-16">
