@@ -415,37 +415,37 @@ const TRANSLATIONS = {
 
 const VOICES = {
   "ID": {
-    "Flow (Cinematic Narrator)": [
+    "Flow": [
       { 
         id: "id-ID-Wavenet-D", 
         name: "Flow", 
-        type: "Wavenet", 
-        premium: true, 
+        type: "GeminiFlash", 
+        premium: false, 
         tier: "FREE",
-        desc: "Calm, stable, neutral. Perfect for narration and long-form.",
-        useCase: "Audiobook, Narration"
+        desc: "Calm, articulated narrator.",
+        useCase: "Audiobook, Presentations"
       }
     ],
-    "Pulse (Energetic Presenter)": [
+    "Pulse": [
       { 
         id: "id-ID-Wavenet-B", 
         name: "Pulse", 
-        type: "Wavenet", 
+        type: "GeminiFlash", 
         premium: true, 
         tier: "STARTER",
-        desc: "Energetic, persuasive, modern. Punchy for social media.",
-        useCase: "Short-form video, Ads"
+        desc: "Modern, energetic creator voice.",
+        useCase: "TikTok, Ads, Shorts"
       }
     ],
-    "Aura (Emotional Storyteller)": [
+    "Aura": [
       { 
         id: "id-ID-Wavenet-C", 
         name: "Aura", 
-        type: "Wavenet", 
+        type: "GeminiFlash", 
         premium: true, 
         tier: "CREATOR",
-        desc: "Warm, cinematic, deep. Emotionally directed storytelling.",
-        useCase: "Cinematic Narration"
+        desc: "Cinematic, emotional storyteller.",
+        useCase: "Documentary, Storytelling"
       }
     ]
   }

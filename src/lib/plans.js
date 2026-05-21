@@ -12,7 +12,7 @@ export const PLANS = {
     id: "starter",
     name: "Starter Pack",
     price: 29000,
-    credits: 50000,
+    credits: 40000,
     validityDays: 90,
     type: "once",
     tier: "STARTER"
@@ -21,7 +21,7 @@ export const PLANS = {
     id: "creator",
     name: "Creator Pack",
     price: 79000,
-    credits: 150000,
+    credits: 120000,
     validityDays: 180,
     type: "once",
     tier: "CREATOR",
@@ -30,8 +30,8 @@ export const PLANS = {
   PRO: {
     id: "pro",
     name: "Pro Pack",
-    price: 199000,
-    credits: 500000,
+    price: 249000,
+    credits: 350000,
     validityDays: 365,
     type: "once",
     tier: "PRO"
