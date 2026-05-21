@@ -855,8 +855,11 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       console.log(`[Gemini TTS] Requesting voice: ${voiceName} for input length: ${optimizedText.length}`);
 
       const ai = new GoogleGenAI({ apiKey: apiKey });
+      const isAura = actualVoice.toLowerCase() === 'aura';
+      const targetModel = isAura ? 'gemini-3.1-flash' : 'gemini-2.5-flash';
+
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: targetModel,
         contents: `Instruction:\n${finalInstruction}\n\nNarration:\n${optimizedText}`,
         config: {
           responseModalities: ["AUDIO"],
