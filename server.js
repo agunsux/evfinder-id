@@ -19,8 +19,7 @@ const getFilename = () => {
 };
 const __filename = getFilename();
 const __dirname = path.dirname(__filename);
-import fs from 'fs';
-import path from 'path';
+
 
 let firebaseConfig = {};
 try {
