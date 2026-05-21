@@ -785,41 +785,25 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
   return Buffer.from(buffer).toString('base64');
 }
 
-  // --- TTS GENERATION ---
+  // --- TTS GENERATION (SHINERVA V2) ---
   const handleTtsRequest = async (req, res) => {
-    console.log(`[TTS Handler] Method: ${req.method} Path: ${req.url} Body:`, { ...req.body, text: req.body?.text?.slice(0, 20) + '...' });
+    console.log(`[TTS Handler V2] Method: ${req.method} Path: ${req.url} Body:`, { voice: req.body?.voice, text: req.body?.text?.slice(0, 20) + '...' });
     try {
-      let { text, voice, speed, pitch, volume, isSample } = req.body;
-      const apiKey = clean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
+      let { text, voice, isSample } = req.body;
+      const apiKey = clean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
       let user = req.user;
-      const isGeminiVoice = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr', 'Aoife', 'Eos'].includes(voice);
 
       if (!user) {
         if (isSample) {
-          // Allow limited guest access for samples
-          user = { 
-            id: 'guest', 
-            tier: 'FREE', 
-            monthly_chars: 0, 
-            signup_bonus_chars: 0, 
-            earned_chars: 0, 
-            used_chars: 0, 
-            generation_count: 0,
-            pronunciations: {} 
-          };
+          user = { id: 'guest', tier: 'FREE', monthly_chars: 0, signup_bonus_chars: 0, earned_chars: 0, used_chars: 0, generation_count: 0 };
         } else {
           return res.status(401).json({ error: 'Harap masuk (login) untuk menggunakan layanan TTS.' });
         }
       }
 
       if (isSample) {
-        // Allow custom text for samples but limit length to avoid abuse
-        if (text && text.length > 500) {
-          return res.status(400).json({ error: "Sample text is too long (max 500 chars)." });
-        }
-        if (!text) {
-          text = "Halo, ini adalah contoh suara saya yang jernih dan natural di Shinerva. Suara ini menggunakan teknologi kecerdasan buatan terbaru untuk menghasilkan pengucapan yang sangat mirip dengan manusia asli.";
-        }
+        if (text && text.length > 500) return res.status(400).json({ error: "Sample text is too long (max 500 chars)." });
+        if (!text) text = "Halo, ini adalah contoh suara saya yang jernih dan natural di Shinerva.";
       }
 
       if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -827,112 +811,119 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       }
 
       if (!apiKey) {
-        console.error('[TTS Configuration Error] Missing API Key. GOOGLE_API_KEY or GEMINI_API_KEY must be set.');
         return res.status(503).json({ error: 'Layanan TTS sedang dalam pemeliharaan (Konfigurasi API tidak ditemukan).' });
       }
 
-      const tier = user.tier || 'FREE';
-      
-      // Voice Authorization - STABLE VOICE ROUTING
-      let actualVoice = voice || 'id-ID-Standard-A';
-      
-      const isWavenetVoice = actualVoice.includes('Wavenet');
-      const isStudioVoice = actualVoice.includes('Studio');
-
-      const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
-      const userTierIndex = tierOrder.indexOf(tier);
-
-      if (!isSample) {
-        if (isStudioVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
-          return res.status(403).json({ error: 'Suara Premium ini hanya tersedia untuk paket BISNIS ke atas. Silakan upgrade paket Anda.' });
+      const PRESETS = {
+        'shinerva-flow': {
+          model: 'gemini-2.5-flash',
+          voice: 'Aoife',
+          speed: 1.0,
+          style: 'You are a professional voiceover artist for formal news, corporate presentations, and educational videos. Read the provided text with flawless Indonesian articulation and clear enunciation. Maintain a strictly steady, medium-paced tempo. The tone must be neutral, calm, objective, and highly credible. Avoid any dramatic emotional expressions, sighs, or casual inflections. Focus 100% on information clarity and professional delivery.',
+          minTier: 'FREE'
+        },
+        'shinerva-pulse': {
+          model: 'gemini-2.5-pro',
+          voice: 'Achernar',
+          speed: 0.95,
+          style: 'Vibe: Fomo, cepat, pake bahasa slang kekinian yang biasa berseliweran',
+          minTier: 'STARTER'
+        },
+        'shinerva-aura': {
+          model: 'gemini-2.5-flash', // Using 2.5-flash as stable fallback for 3.1-flash preview
+          voice: 'Enceladus',
+          speed: 1.0,
+          style: 'Vibe: Estetik, misterius, dalam, ala cuplikan film bioskop atau narasi',
+          minTier: 'CREATOR'
+        },
+        'shinerva-aura-doc': {
+          model: 'gemini-2.5-flash',
+          voice: 'Enceladus',
+          speed: 1.0,
+          style: 'Vibe: Dokumenter alam, serius, mendidik, tenang, berwibawa layaknya narator film sejarah atau National Geographic.',
+          minTier: 'PRO'
+        },
+        'shinerva-aura-midnight': {
+          model: 'gemini-2.5-flash',
+          voice: 'Enceladus',
+          speed: 0.9,
+          style: 'Vibe: Siaran radio tengah malam, intim, misterius, berbisik, tempo lambat, seperti berbagi rahasia.',
+          minTier: 'PRO'
+        },
+        'shinerva-aura-philosophy': {
+          model: 'gemini-2.5-flash',
+          voice: 'Enceladus',
+          speed: 0.9,
+          style: 'Vibe: Filosofis, kontemplatif, reflektif, bijaksana, banyak jeda merenung.',
+          minTier: 'PRO'
+        },
+        'shinerva-aura-cinematic': {
+          model: 'gemini-2.5-flash',
+          voice: 'Enceladus',
+          speed: 1.0,
+          style: 'Vibe: Estetik, misterius, dalam, ala cuplikan film bioskop atau narasi. Epik dan dramatis.',
+          minTier: 'PRO'
         }
-        if (isWavenetVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
-          return res.status(403).json({ error: 'Suara ini hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
-        }
+      };
+
+      const presetId = voice || 'shinerva-flow';
+      const preset = PRESETS[presetId];
+
+      if (!preset) {
+        return res.status(400).json({ error: 'Voice preset tidak valid atau tidak ditemukan.' });
       }
 
-      // Multiplier logic
-      let voiceTierName = 'Standard';
-      if (isWavenetVoice) voiceTierName = 'Wavenet';
-      else if (isStudioVoice) voiceTierName = 'Studio';
+      const tier = user.tier || 'FREE';
+      const tierOrder = ["FREE", "STARTER", "CREATOR", "PRO"];
+      const userTierIndex = tierOrder.indexOf(tier);
+      const requiredTierIndex = tierOrder.indexOf(preset.minTier);
 
-      const multiplier = voiceConfig.tiers[voiceTierName] || 1;
-      const totalCharCost = isSample ? 0 : text.length * multiplier;
+      if (!isSample && userTierIndex < requiredTierIndex) {
+        return res.status(403).json({ error: `Suara ini eksklusif untuk paket ${preset.minTier} ke atas. Silakan upgrade paket Anda.` });
+      }
 
+      const totalCharCost = isSample ? 0 : text.length;
       const totalAvailable = (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0);
-      let remaining = totalAvailable - (user.used_chars || 0);
+      const remaining = totalAvailable - (user.used_chars || 0);
 
       if (!isSample && totalCharCost > remaining) {
-        return res.status(402).json({ error: 'Kredit karakter tidak mencukupi (Membutuhkan ' + totalCharCost + ' kredit).' });
+        return res.status(402).json({ error: `Kredit karakter tidak mencukupi (Membutuhkan ${totalCharCost} kredit).` });
       }
 
-      // Rungu Engine logic
-      const modifiedText = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&apos;");
-
-      // Interpret Expressive Prosody Cues for SSML
-      const expressiveText = modifiedText
-        .replace(/\[semangat\]/gi, '<prosody rate="1.1" pitch="+2st">')
-        .replace(/\[\/semangat\]/gi, '</prosody>')
-        .replace(/\[sedih\]/gi, '<prosody rate="0.85" pitch="-2st" volume="soft">')
-        .replace(/\[\/sedih\]/gi, '</prosody>')
-        .replace(/\[serius\]/gi, '<prosody rate="0.95" pitch="-1st" volume="medium">')
-        .replace(/\[\/serius\]/gi, '</prosody>')
-        .replace(/\[bisik\]/gi, '<prosody volume="x-soft" rate="0.9">')
-        .replace(/\[\/bisik\]/gi, '</prosody>')
-        .replace(/\[teriak\]/gi, '<emphasis level="strong"><prosody volume="loud" pitch="+3st">')
-        .replace(/\[\/teriak\]/gi, '</prosody></emphasis>');
-
-      // Pronunciation Global Dictionary
-      const globalPhonetics = { "AI": "ey ay", "IT": "ay ti", "Shinerva": "shi ner va", "RUNGU": "ru ngu" };
-      const allPronunciations = { ...globalPhonetics, ...(user.pronunciations || {}) };
+      console.log(`[Gemini Audio] Generating ${presetId} using ${preset.model} (${preset.voice})`);
       
-      let processedText = expressiveText;
-      Object.entries(allPronunciations).forEach(([word, pron]) => {
-        const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
-        processedText = processedText.replace(regex, pron);
-      });
-
-      const finalProcessedText = (processedText || "").trim() || "Halo.";
-      const ssmlText = `<speak>${finalProcessedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva dot ay di.</prosody>' : ''}</speak>`;
-      const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
+      const ai = new GoogleGenAI({ apiKey });
       
-      console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode}). SSML Length: ${ssmlText.length}`);
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[Google TTS] Payload: ${ssmlText.slice(0, 200)}...`);
-      }
-      
-      const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input: { ssml: ssmlText },
-          voice: { languageCode: languageCode, name: actualVoice },
-          audioConfig: { 
-            audioEncoding: 'MP3', 
-            speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
+      const response = await ai.models.generateContent({
+        model: preset.model,
+        contents: text,
+        config: {
+          systemInstruction: preset.style,
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: preset.voice
+              }
+            }
           }
-        })
-      });
-      
-      const data = await response.json();
-      if (!response.ok) {
-        console.error(`[Google TTS] Error Status ${response.status}:`, data.error);
-        if (data.error?.message?.includes("API key not valid")) {
-            throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
         }
-        throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
+      });
+
+      if (!response.candidates || response.candidates.length === 0 || !response.candidates[0].content || !response.candidates[0].content.parts) {
+         throw new Error("Gagal mendapatkan respons audio dari Gemini.");
       }
-      const finalAudioContent = data.audioContent;
-      if (finalAudioContent) {
-        console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}. Length: ${finalAudioContent.length}. Start: ${finalAudioContent.substring(0, 20)}...`);
-      } else {
-        console.warn(`[Google TTS] Warning: Empty audioContent returned for ${actualVoice}`);
+
+      let base64Audio = null;
+      for (const part of response.candidates[0].content.parts) {
+         if (part.inlineData && part.inlineData.mimeType && part.inlineData.mimeType.includes("audio/")) {
+             base64Audio = part.inlineData.data;
+             break;
+         }
+      }
+
+      if (!base64Audio) {
+         throw new Error("Gemini tidak mengembalikan format audio yang valid.");
       }
 
       if (!isSample) {
@@ -944,7 +935,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
           id: generateId(),
           date: Date.now(),
           text_length: text.length,
-          voice: actualVoice,
+          voice: presetId,
           tier: tier,
           duration: Math.round(text.length / 15),
           credits_used: totalCharCost
@@ -958,7 +949,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         });
       }
 
-      res.json({ audioContent: finalAudioContent, voice: actualVoice });
+      res.json({ audioContent: base64Audio, voice: presetId });
     } catch (error) {
       console.error('TTS error details:', {
         message: error.message,
