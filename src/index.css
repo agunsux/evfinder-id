@@ -12,20 +12,12 @@
 }
 
 :root {
-  --bg-dark: #FDFBF7;
-  --bg-surface: #F5EFEB;
-  --bg-surface2: #EAE0D8;
-  --text-main: #2C1810;
-  --text-muted: #6B5B53;
-  --color-gold: #C5A059;
-}
-
-.dark {
   --bg-dark: #000000;
   --bg-surface: #0A0A0A;
   --bg-surface2: #171717;
   --text-main: #FAFAFA;
   --text-muted: #A3A3A3;
+  --color-gold: #C5A059;
 }
 
 body {

@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate, Routes, Route } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import CreatorDashboard from './components/dashboard/CreatorDashboard';
 import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
@@ -240,8 +239,7 @@ const FAQS = {
 };
 
 const LANGUAGES = [
-  { code: "ID", name: "Indonesia", flag: "🇮🇩" },
-  { code: "EN", name: "English", flag: "🇬🇧" }
+  { code: "ID", name: "Indonesia", flag: "🇮🇩" }
 ];
 
 const DEFAULT_VOICES = {
@@ -1111,15 +1109,51 @@ const App = () => {
   }, [audioUrl]);
 
   const handlePreviewVoice = async () => {
+    if (!user) {
+      toast.error("Silakan login untuk mencoba suara.");
+      return;
+    }
+    
+    setTestLoading(true);
     try {
-      const voiceName = voice.replace('shinerva-', '').split('-')[0]; // aura, pulse, flow
-      const url = `/samples/${voiceName}.mp3`;
-      const audio = new Audio(url);
-      audio.play().catch(e => console.error("[Preview] Play error:", e));
-      toast.success(`Berhasil memutar contoh suara ${getVoiceDisplayName(voice)}`);
+      const idToken = await auth.currentUser.getIdToken();
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          voice,
+          speed,
+          pitch,
+          volume,
+          isSample: true
+        })
+      };
+      const res = await fetch("/api/tts", options);
+      const data = await checkResponse(res, 0, options);
+      if (data.audioContent) {
+        const mimeType = 'audio/mpeg';
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audio.play().catch(e => console.error("[Preview] Play error:", e));
+          toast.success(`Berhasil memutar contoh suara ${getVoiceDisplayName(voice)}`);
+        } else {
+          toast.error("Gagal memproses data suara.");
+        }
+      }
     } catch (err) {
-      console.error(`[TTS Preview] Playback failed for voice: ${voice}`, err);
-      toast.error("Gagal memutar sampel suara.");
+      console.error(`[TTS Preview] Generation failed for voice: ${voice}`, err?.message || err);
+      if (err.data && err.data.error) {
+        toast.error(`Gagal: ${err.data.error}`);
+      } else {
+        toast.error(err.message || "Gagal tes suara");
+      }
+    } finally {
+      setTestLoading(false);
     }
   };
 
@@ -1230,7 +1264,7 @@ const App = () => {
         const generationTime = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`[TTS] Synthesis successful in ${generationTime}s. Audio Size: ${Math.round(data.audioContent.length / 1024)} KB`);
         
-        const mimeType = 'audio/wav';
+        const mimeType = 'audio/mpeg';
         
         let url;
         const blob = base64ToBlob(data.audioContent, mimeType);
@@ -1632,32 +1666,22 @@ const App = () => {
       <Toaster position="top-right" />
       <nav className="sticky top-4 w-full z-50 bg-surface/80 backdrop-blur-md border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-3 flex-1">
-              <ShinervaLogo className="w-10 h-10 text-terracotta" />
-              <span className="font-black text-2xl tracking-tight text-terracotta cursor-pointer">
+          <div className="flex justify-between h-20 items-center">
+            <div className="flex-1"></div>
+            
+            <div className="flex items-center justify-center gap-4 flex-1">
+              <ShinervaLogo className="w-12 h-12 text-terracotta" />
+              <span className="font-black text-3xl tracking-tight text-terracotta cursor-pointer">
                 SHINERVA
               </span>
             </div>
-            
-            <div className="flex-1"></div>
 
-            <div className="flex items-center justify-end flex-1 gap-3">
-              <LanguageSelector />
-              
-              <button
-                onClick={toggleTheme}
-                className="p-2.5 rounded-full bg-surface2 border border-surface2 hover:border-terracotta text-text-muted hover:text-terracotta transition-all cursor-pointer"
-                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-
+            <div className="flex items-center justify-end flex-1 gap-2">
               <div className="flex items-center gap-3">
                 {user ? (
                   <button
                     onClick={() => navigate('/dashboard')}
-                    className="text-text px-6 py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
+                    className="text-text px-4 py-2 md:px-6 md:py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
                   >
                     Akun Saya
                   </button>
@@ -1667,7 +1691,7 @@ const App = () => {
                       setAuthMode("login");
                       setIsAuthOpen(true);
                     }}
-                    className="text-text px-6 py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
+                    className="text-text px-4 py-2 md:px-6 md:py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
                   >
                     Masuk
                   </button>
@@ -1745,11 +1769,8 @@ const App = () => {
         </div>
       )}
 
-      <Routes>
-        <Route path="/" element={
-          <>
-            <main className="flex-grow pt-12 pb-12">
-              {/* Hero Section */}
+      <main className="flex-grow pt-12 pb-12 px-4 sm:px-6 lg:px-8">
+        {/* Hero Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-terracotta/10 rounded-full blur-[120px] -z-10"></div>
           <div className="flex justify-center mb-6">
@@ -1918,7 +1939,7 @@ const App = () => {
                     ref={textAreaRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className={`w-full h-64 bg-dark text-text rounded-2xl p-5 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${(isNearLimit || isCappedByRequest || isCappedByQuota) ? "border-terracotta ring-1 ring-terracotta" : ""}`}
+                    className={`w-full h-48 bg-dark text-text rounded-lg p-4 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${(isNearLimit || isCappedByRequest || isCappedByQuota) ? "border-terracotta ring-1 ring-terracotta" : ""}`}
                     placeholder={t('studio.placeholder')}
                   />
                   {user && (
@@ -2077,69 +2098,6 @@ const App = () => {
                       </button>
                     </div>
 
-                    {/* Selected Voice Info Box */}
-                    {(() => {
-                      const selectedVoice = Object.values(VOICES[language]).flat().find(v => v.id === voice);
-                      if (!selectedVoice) return null;
-                      const isStudio = selectedVoice.type === 'Studio' || selectedVoice.glow;
-
-                      return (
-                        <div className={`mt-3 rounded-xl p-4 border relative overflow-hidden group transition-all ${
-                          isStudio 
-                          ? 'bg-terracotta/10 border-terracotta/30 shadow-[0_0_20px_rgba(231,76,60,0.1)]' 
-                          : 'bg-surface2/30 border-surface2/50'
-                        }`}>
-                          <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg border ${
-                              isStudio ? 'bg-terracotta text-white border-terracotta/50' : 'bg-dark border-surface2 text-terracotta'
-                            }`}>
-                              <Mic className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-black text-white uppercase tracking-wider">
-                                    Tier: {selectedVoice.type} ({selectedVoice.tier})
-                                  </span>
-                                  {isStudio && (
-                                    <span className="text-[8px] font-black bg-white text-terracotta px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(255,255,255,0.5)]">
-                                      FLAGSHIP
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-bold text-text-muted">Beban:</span>
-                                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border ${
-                                    isStudio 
-                                    ? 'text-white bg-terracotta border-terracotta/20' 
-                                    : 'text-terracotta bg-terracotta/10 border-terracotta/20'
-                                  }`}>
-                                    {voiceConfig.tiers[selectedVoice.type] || 1}x Kredit
-                                  </span>
-                                </div>
-                              </div>
-                              <p className="text-[11px] text-gray-400 font-medium mb-2 leading-relaxed">
-                                {selectedVoice.desc}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
-                                  isStudio ? 'bg-terracotta/20 text-white border-terracotta/30' : 'bg-dark text-text-muted border-surface2'
-                                }`}>
-                                  Cocok Untuk:
-                                </span>
-                                <span className={`text-[10px] font-bold ${isStudio ? 'text-white' : 'text-gray-300'}`}>
-                                  {selectedVoice.useCase}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          {/* Decorative glow */}
-                          <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl transition-all ${
-                            isStudio ? 'bg-terracotta/20 group-hover:bg-terracotta/30' : 'bg-terracotta/5 group-hover:bg-terracotta/10'
-                          }`}></div>
-                        </div>
-                      );
-                    })()}
 
                     {(!user || user.tier === 'FREE') && (
                       <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20">
@@ -2147,174 +2105,15 @@ const App = () => {
                         <span className="font-bold">{t('studio.unlock_aura')} <a href="#pricing" className="underline">{t('studio.view_packs')}</a></span>
                       </div>
                     )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-2">
-                    <div>
-                      <label className="block text-sm font-bold text-text-muted mb-2">
-                        Kecepatan ({speed}x)
-                      </label>
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="2"
-                        step="0.1"
-                        value={speed}
-                        onChange={(e) => setSpeed(e.target.value)}
-                        className="w-full h-2 bg-dark rounded-lg appearance-none cursor-pointer mt-3 accent-terracotta"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        <span>Lambat</span>
-                        <span>Normal</span>
-                        <span>Cepat</span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-text-muted mb-2">
-                        Pitch ({pitch})
-                      </label>
-                      <input
-                        type="range"
-                        min="-20"
-                        max="20"
-                        step="1"
-                        value={pitch}
-                        onChange={(e) => setPitch(e.target.value)}
-                        className="w-full h-2 bg-dark rounded-lg appearance-none cursor-pointer mt-3 accent-terracotta"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        <span>Rendah</span>
-                        <span>Normal</span>
-                        <span>Tinggi</span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-text-muted mb-2">
-                        Volume ({volume > 0 ? `+${volume}` : volume} dB)
-                      </label>
-                      <input
-                        type="range"
-                        min="-10"
-                        max="10"
-                        step="1"
-                        value={volume}
-                        onChange={(e) => setVolume(e.target.value)}
-                        className="w-full h-2 bg-dark rounded-lg appearance-none cursor-pointer mt-3 accent-terracotta"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        <span>Kecil</span>
-                        <span>Normal</span>
-                        <span>Besar</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
               {/* Right Column */}
               <div className="w-full md:w-80 flex flex-col gap-6">
-                <div className="bg-dark rounded-2xl p-5 border border-surface2">
-                  <h3 className="font-bold mb-4 flex items-center gap-2">
-                    <Settings2 className="w-4 h-4 text-terracotta" /> Pengaturan
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-400">
-                        Sisipkan Jeda
-                      </span>
-                      <button
-                        onClick={() => insertAtCursor(" ... ")}
-                        className="text-xs bg-surface2 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 cursor-pointer"
-                      >
-                        + 1 Detik
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-400">
-                        Penekanan Kata
-                      </span>
-                      <button
-                        onClick={applyEmphasis}
-                        className="text-xs bg-surface2 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 cursor-pointer"
-                      >
-                        Terapkan
-                      </button>
-                    </div>
 
-                    <div className="pt-2 border-t border-surface2">
-                      <span className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-3">
-                        Gaya Bicara (Expressive)
-                      </span>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => {
-                            const sel = window.getSelection().toString();
-                            insertAtCursor(`[semangat]${sel || "teks"}[/semangat]`);
-                          }}
-                          className="text-[10px] bg-terracotta/10 hover:bg-terracotta/20 text-terracotta font-bold py-2 rounded-lg border border-terracotta/20 transition-all cursor-pointer"
-                        >
-                          🔥 Semangat
-                        </button>
-                        <button
-                          onClick={() => {
-                            const sel = window.getSelection().toString();
-                            insertAtCursor(`[serius]${sel || "teks"}[/serius]`);
-                          }}
-                          className="text-[10px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-bold py-2 rounded-lg border border-blue-500/20 transition-all cursor-pointer"
-                        >
-                          💼 Serius
-                        </button>
-                        <button
-                          onClick={() => {
-                            const sel = window.getSelection().toString();
-                            insertAtCursor(`[bisik]${sel || "teks"}[/bisik]`);
-                          }}
-                          className="text-[10px] bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 font-bold py-2 rounded-lg border border-purple-500/20 transition-all cursor-pointer"
-                        >
-                          🤫 Bisik
-                        </button>
-                        <button
-                          onClick={() => {
-                            const sel = window.getSelection().toString();
-                            insertAtCursor(`[teriak]${sel || "teks"}[/teriak]`);
-                          }}
-                          className="text-[10px] bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-2 rounded-lg border border-red-500/20 transition-all cursor-pointer"
-                        >
-                          📢 Teriak
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-surface2">
-                      <span className="text-sm text-gray-400">
-                        Panduan Pengucapan
-                      </span>
-                      <button
-                        onClick={() => {
-                          const element = document.getElementById('pronunciation');
-                          if (element) {
-                            element.scrollIntoView({ behavior: 'smooth' });
-                          } else {
-                            setIsPronunciationOpen(true);
-                          }
-                        }}
-                        className="text-xs bg-surface2 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 cursor-pointer"
-                      >
-                        Kelola
-                      </button>
-                    </div>
-                  </div>
-                </div>
 
                 <div className="flex-grow flex flex-col justify-end">
-                  <div className="bg-surface2/30 rounded-2xl p-4 border border-surface2 mb-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-[10px] font-black text-text-muted uppercase tracking-widest">RUNGU ENGINE PRO</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 leading-tight">
-                      Phonetic hardening, natural breathing, and deep prosody active. Optimasi Bahasa Indonesia v3.0.
-                    </p>
-                  </div>
+
                   {audioUrl && (
                     <audio
                       key={audioUrl}
@@ -2502,86 +2301,9 @@ const App = () => {
               </div>
             </div>
           </div>
+        </div>
         </section>
 
-        {/* Pronunciation Management Section */}
-        {user && (
-          <section id="pronunciation" className="max-w-5xl mx-auto px-6 sm:px-8 lg:px-10 mt-24 mb-16">
-            <div className="bg-surface rounded-3xl p-10 md:p-12 border border-surface2 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
-              
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                <div>
-                  <h2 className="text-3xl font-black text-text flex items-center gap-3">
-                    <BookOpen className="w-8 h-8 text-terracotta" /> 
-                    Daftar Aturan Pengucapan
-                  </h2>
-                  <p className="text-text-muted mt-2">
-                    Kelola bagaimana AI menyebutkan kata atau istilah khusus Anda.
-                  </p>
-                </div>
-                <div className="bg-surface2 px-5 py-2.5 rounded-full border border-surface2">
-                  <span className="text-sm font-bold text-terracotta">
-                    {Object.keys(user.pronunciations || {}).length} Aturan Aktif
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                {/* Form to add new rule */}
-                <div className="lg:col-span-4 space-y-4">
-                  <div className="bg-dark/50 rounded-2xl p-8 border border-surface2 h-full">
-                    <h3 className="font-bold text-text mb-4 text-sm uppercase tracking-wider">Tambah Aturan Baru</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Kata Asli</label>
-                        <input
-                          type="text"
-                          value={newWord}
-                          onChange={(e) => setNewWord(e.target.value)}
-                          className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none text-sm"
-                          placeholder="Contoh: Shinerva"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Cara Baca</label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={newPronunciation}
-                            onChange={(e) => setNewPronunciation(e.target.value)}
-                            className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none pr-10 text-sm"
-                            placeholder="Contoh: shi ner va"
-                          />
-                          <button 
-                            onClick={() => handleTestPronunciation(newWord, newPronunciation)}
-                            disabled={testLoading}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-surface2 rounded-lg transition-colors text-terracotta disabled:opacity-50 border-none bg-transparent cursor-pointer"
-                            title="Tes suara"
-                          >
-                            {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                          </button>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (newWord.trim() && newPronunciation.trim()) {
-                            handleUpdatePronunciation(newWord.trim(), newPronunciation.trim());
-                            setNewWord("");
-                            setNewPronunciation("");
-                          }
-                        }}
-                        className="w-full bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-none cursor-pointer mt-2"
-                      >
-                        Simpan Aturan
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* Pricing Section */}
         <section
@@ -2638,150 +2360,6 @@ const App = () => {
           <div className="mt-20"></div>
         </section>
 
-        {/* Pronunciation Management Section */}
-        {user && (
-          <section id="pronunciation" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
-            <div className="bg-surface rounded-3xl p-8 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
-              
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                  <h2 className="text-3xl font-black text-text flex items-center gap-3">
-                    <BookOpen className="w-8 h-8 text-terracotta" /> 
-                    Daftar Aturan Pengucapan
-                  </h2>
-                  <p className="text-text-muted mt-2">
-                    Kelola bagaimana AI menyebutkan kata atau istilah khusus Anda.
-                  </p>
-                </div>
-                <div className="bg-surface2 px-4 py-2 rounded-full border border-surface2">
-                  <span className="text-sm font-bold text-terracotta">
-                    {Object.keys(user.pronunciations || {}).length} Aturan Aktif
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Form to add new rule */}
-                <div className="lg:col-span-4 space-y-4">
-                  <div className="bg-dark/50 rounded-2xl p-6 border border-surface2 h-full">
-                    <h3 className="font-bold text-text mb-4 text-sm uppercase tracking-wider">Tambah Aturan Baru</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Kata Asli</label>
-                        <input
-                          type="text"
-                          value={newWord}
-                          onChange={(e) => setNewWord(e.target.value)}
-                          className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none text-sm"
-                          placeholder="Contoh: Shinerva"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-text-muted mb-2 uppercase">Cara Baca</label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={newPronunciation}
-                            onChange={(e) => setNewPronunciation(e.target.value)}
-                            className="w-full bg-dark text-text rounded-xl px-4 py-3 border border-surface2 focus:border-terracotta focus:outline-none pr-10 text-sm"
-                            placeholder="Contoh: shi ner va"
-                          />
-                          <button 
-                            onClick={() => handleTestPronunciation(newWord, newPronunciation)}
-                            disabled={testLoading}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-surface2 rounded-lg transition-colors text-terracotta disabled:opacity-50 border-none bg-transparent cursor-pointer"
-                            title="Tes suara"
-                          >
-                            {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                          </button>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (newWord.trim() && newPronunciation.trim()) {
-                            handleUpdatePronunciation(newWord.trim(), newPronunciation.trim());
-                            setNewWord("");
-                            setNewPronunciation("");
-                          }
-                        }}
-                        className="w-full bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border-none cursor-pointer mt-2"
-                      >
-                        <Plus className="w-4 h-4" /> Simpan Aturan
-                      </button>
-                    </div>
-                    
-                    <div className="mt-8 pt-6 border-t border-surface2">
-                      <h4 className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Tips Cepat</h4>
-                      <div className="space-y-2">
-                        {[
-                          { w: "AI", p: "ey ai" },
-                          { w: "TTS", p: "te te es" }
-                        ].map(tip => (
-                          <div 
-                            key={tip.w}
-                            onClick={() => {setNewWord(tip.w); setNewPronunciation(tip.p);}}
-                            className="flex justify-between items-center text-xs p-2 rounded-lg hover:bg-surface2 cursor-pointer transition-colors border border-transparent hover:border-surface2"
-                          >
-                            <span className="text-text font-bold">{tip.w}</span>
-                            <span className="text-text-muted">→ {tip.p}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* List of existing rules */}
-                <div className="lg:col-span-8">
-                  <div className="bg-dark/30 rounded-2xl p-2 border border-surface2 min-h-[300px] flex flex-col">
-                    <div className="max-h-[500px] overflow-y-auto custom-scrollbar p-2">
-                      {user.pronunciations && Object.keys(user.pronunciations).length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {Object.entries(user.pronunciations).map(([word, pron]) => (
-                            <div key={word} className="flex items-center justify-between bg-dark p-4 rounded-xl border border-surface2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-text font-bold truncate">{word}</span>
-                                <span className="text-terracotta text-xs font-medium truncate">Dibaca: {pron}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleTestPronunciation(word, pron)}
-                                  disabled={testLoading}
-                                  className="text-text-muted hover:text-terracotta transition-colors p-2 hover:bg-surface2 rounded-lg cursor-pointer border-none bg-transparent"
-                                  title="Tes suara"
-                                >
-                                  <Play className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleUpdatePronunciation(word, null)}
-                                  className="text-text-muted hover:text-red-500 transition-colors p-2 hover:bg-surface2 rounded-lg cursor-pointer border-none bg-transparent"
-                                  title="Hapus"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center py-20 text-center px-4">
-                          <div className="w-16 h-16 bg-surface2 rounded-full flex items-center justify-center mb-4">
-                            <BookOpen className="w-8 h-8 text-text-muted" />
-                          </div>
-                          <h4 className="font-bold text-text mb-1">Belum ada aturan</h4>
-                          <p className="text-sm text-text-muted max-w-xs">
-                            Coba tambahkan kata yang sering salah diucapkan oleh AI agar hasilnya lebih sempurna.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* Content Packs */}
         <section
@@ -2984,11 +2562,7 @@ const App = () => {
             </div>
           </div>
         </footer>
-            </main>
-          </>
-        } />
-        <Route path="/dashboard/*" element={<CreatorDashboard user={user} refreshUser={refreshUser} />} />
-      </Routes>
+      </main>
 
       {/* Profile Modal */}
       {isProfileModalOpen && user && (
