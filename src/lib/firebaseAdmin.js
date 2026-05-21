@@ -1,6 +1,14 @@
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
-import firebaseConfig from '../../firebase-applet-config.json' with { type: 'json' };
+import fs from 'fs';
+
+let firebaseConfig = {};
+try {
+  const configPath = new URL('../../firebase-applet-config.json', import.meta.url);
+  firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+} catch (e) {
+  console.warn("[Firebase Admin] Failed to load firebase-applet-config.json:", e.message);
+}
 
 dotenv.config();
 
