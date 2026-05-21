@@ -240,7 +240,8 @@ const FAQS = {
 };
 
 const LANGUAGES = [
-  { code: "ID", name: "Indonesia", flag: "🇮🇩" }
+  { code: "ID", name: "Indonesia", flag: "🇮🇩" },
+  { code: "EN", name: "English", flag: "🇬🇧" }
 ];
 
 const DEFAULT_VOICES = {
@@ -1632,16 +1633,26 @@ const App = () => {
       <nav className="sticky top-4 w-full z-50 bg-surface/80 backdrop-blur-md border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <div className="flex-1"></div>
-            
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
               <ShinervaLogo className="w-10 h-10 text-terracotta" />
               <span className="font-black text-2xl tracking-tight text-terracotta cursor-pointer">
                 SHINERVA
               </span>
             </div>
+            
+            <div className="flex-1"></div>
 
-            <div className="flex items-center justify-end flex-1 gap-2">
+            <div className="flex items-center justify-end flex-1 gap-3">
+              <LanguageSelector />
+              
+              <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-full bg-surface2 border border-surface2 hover:border-terracotta text-text-muted hover:text-terracotta transition-all cursor-pointer"
+                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+
               <div className="flex items-center gap-3">
                 {user ? (
                   <button
