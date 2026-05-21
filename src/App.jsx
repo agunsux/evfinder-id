@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Routes, Route } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
+import Dashboard from './components/Dashboard';
 import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
 import { handleApiError, checkResponse } from './lib/errorUtils.jsx';
@@ -1652,7 +1653,7 @@ const App = () => {
                 ) : (
                   <button
                     onClick={() => {
-                      switchAuthMode("login");
+                      setAuthMode("login");
                       setIsAuthOpen(true);
                     }}
                     className="text-text px-6 py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
@@ -1733,8 +1734,11 @@ const App = () => {
         </div>
       )}
 
-      <main className="flex-grow pt-12 pb-12">
-        {/* Hero Section */}
+      <Routes>
+        <Route path="/" element={
+          <>
+            <main className="flex-grow pt-12 pb-12">
+              {/* Hero Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-terracotta/10 rounded-full blur-[120px] -z-10"></div>
           <div className="flex justify-center mb-6">
@@ -2969,7 +2973,11 @@ const App = () => {
             </div>
           </div>
         </footer>
-      </main>
+            </main>
+          </>
+        } />
+        <Route path="/dashboard" element={<Dashboard user={user} refreshUser={refreshUser} />} />
+      </Routes>
 
       {/* Profile Modal */}
       {isProfileModalOpen && user && (
