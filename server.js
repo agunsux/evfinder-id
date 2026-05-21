@@ -957,8 +957,8 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
           history: user.history 
         });
       }
-
-      res.json({ audioContent: finalAudioContent, voice: actualVoice });
+      const wavBase64 = pcmToWav(finalAudioContent, 24000);
+      res.json({ audioContent: wavBase64, voice: actualVoice });
     } catch (error) {
       console.error('TTS error details:', {
         message: error.message,

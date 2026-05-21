@@ -1264,7 +1264,7 @@ const App = () => {
         const generationTime = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`[TTS] Synthesis successful in ${generationTime}s. Audio Size: ${Math.round(data.audioContent.length / 1024)} KB`);
         
-        const mimeType = 'audio/mpeg';
+        const mimeType = 'audio/wav';
         
         let url;
         const blob = base64ToBlob(data.audioContent, mimeType);
