@@ -34,6 +34,7 @@ if (!authAdmin) {
 import { rateLimit } from 'express-rate-limit';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { PLANS } from './src/lib/plans.js';
+import { buildInstruction } from './src/lib/orchestration/build-instruction.js';
 
 const clean = (val) => {
   if (val === null || val === undefined) return "";
@@ -834,30 +835,15 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       const tier = user.tier || 'FREE';
       
       // Voice Authorization - STABLE VOICE ROUTING
-      let actualVoice = voice || 'id-ID-Standard-A';
+      let actualVoice = voice || 'flow';
       
-      const isWavenetVoice = actualVoice.includes('Wavenet');
-      const isStudioVoice = actualVoice.includes('Studio');
+      const { voiceName, finalInstruction, optimizedText } = buildInstruction({
+        voice: actualVoice,
+        mode: req.body.mode,
+        text: text
+      });
 
-      const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
-      const userTierIndex = tierOrder.indexOf(tier);
-
-      if (!isSample) {
-        if (isStudioVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
-          return res.status(403).json({ error: 'Suara Premium ini hanya tersedia untuk paket BISNIS ke atas. Silakan upgrade paket Anda.' });
-        }
-        if (isWavenetVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
-          return res.status(403).json({ error: 'Suara ini hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
-        }
-      }
-
-      // Multiplier logic
-      let voiceTierName = 'Standard';
-      if (isWavenetVoice) voiceTierName = 'Wavenet';
-      else if (isStudioVoice) voiceTierName = 'Studio';
-
-      const multiplier = voiceConfig.tiers[voiceTierName] || 1;
-      const totalCharCost = isSample ? 0 : text.length * multiplier;
+      const totalCharCost = isSample ? 0 : text.length;
 
       const totalAvailable = (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0);
       let remaining = totalAvailable - (user.used_chars || 0);
@@ -866,73 +852,34 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         return res.status(402).json({ error: 'Kredit karakter tidak mencukupi (Membutuhkan ' + totalCharCost + ' kredit).' });
       }
 
-      // Rungu Engine logic
-      const modifiedText = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&apos;");
+      console.log(`[Gemini TTS] Requesting voice: ${voiceName} for input length: ${optimizedText.length}`);
 
-      // Interpret Expressive Prosody Cues for SSML
-      const expressiveText = modifiedText
-        .replace(/\[semangat\]/gi, '<prosody rate="1.1" pitch="+2st">')
-        .replace(/\[\/semangat\]/gi, '</prosody>')
-        .replace(/\[sedih\]/gi, '<prosody rate="0.85" pitch="-2st" volume="soft">')
-        .replace(/\[\/sedih\]/gi, '</prosody>')
-        .replace(/\[serius\]/gi, '<prosody rate="0.95" pitch="-1st" volume="medium">')
-        .replace(/\[\/serius\]/gi, '</prosody>')
-        .replace(/\[bisik\]/gi, '<prosody volume="x-soft" rate="0.9">')
-        .replace(/\[\/bisik\]/gi, '</prosody>')
-        .replace(/\[teriak\]/gi, '<emphasis level="strong"><prosody volume="loud" pitch="+3st">')
-        .replace(/\[\/teriak\]/gi, '</prosody></emphasis>');
-
-      // Pronunciation Global Dictionary
-      const globalPhonetics = { "AI": "ey ay", "IT": "ay ti", "Shinerva": "shi ner va", "RUNGU": "ru ngu" };
-      const allPronunciations = { ...globalPhonetics, ...(user.pronunciations || {}) };
-      
-      let processedText = expressiveText;
-      Object.entries(allPronunciations).forEach(([word, pron]) => {
-        const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
-        processedText = processedText.replace(regex, pron);
-      });
-
-      const finalProcessedText = (processedText || "").trim() || "Halo.";
-      const ssmlText = `<speak>${finalProcessedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Dihasilkan melalui Rungu Engine di Shinerva dot ay di.</prosody>' : ''}</speak>`;
-      const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
-      
-      console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode}). SSML Length: ${ssmlText.length}`);
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[Google TTS] Payload: ${ssmlText.slice(0, 200)}...`);
-      }
-      
-      const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          input: { ssml: ssmlText },
-          voice: { languageCode: languageCode, name: actualVoice },
-          audioConfig: { 
-            audioEncoding: 'MP3', 
-            speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
+      const ai = new GoogleGenAI({ apiKey: apiKey });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `Instruction:\n${finalInstruction}\n\nNarration:\n${optimizedText}`,
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: voiceName
+              }
+            }
           }
-        })
-      });
-      
-      const data = await response.json();
-      if (!response.ok) {
-        console.error(`[Google TTS] Error Status ${response.status}:`, data.error);
-        if (data.error?.message?.includes("API key not valid")) {
-            throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
         }
-        throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
+      });
+
+      let finalAudioContent = null;
+      if (response?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data) {
+        finalAudioContent = response.candidates[0].content.parts[0].inlineData.data;
       }
-      const finalAudioContent = data.audioContent;
+
       if (finalAudioContent) {
-        console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}. Length: ${finalAudioContent.length}. Start: ${finalAudioContent.substring(0, 20)}...`);
+        console.log(`[Gemini TTS] Success. Length: ${finalAudioContent.length}`);
       } else {
-        console.warn(`[Google TTS] Warning: Empty audioContent returned for ${actualVoice}`);
+        console.warn(`[Gemini TTS] Warning: Empty audio content returned`);
+        throw new Error("Gagal menghasilkan suara dari AI Engine.");
       }
 
       if (!isSample) {

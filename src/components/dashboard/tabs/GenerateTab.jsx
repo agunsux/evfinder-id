@@ -18,8 +18,9 @@ const TEMPLATES = [
 ];
 
 const GenerateTab = ({ user, refreshUser }) => {
-  const [text, setText] = useState('');
-  const [voice, setVoice] = useState('aura');
+  const [text, setText] = useState(() => localStorage.getItem('shinerva_draft_text') || '');
+  const [voice, setVoice] = useState(() => localStorage.getItem('shinerva_draft_voice') || 'aura');
+  const [mode, setMode] = useState('');
   const [status, setStatus] = useState('idle'); // idle, loading, success, error
   const [audioUrl, setAudioUrl] = useState(null);
   
@@ -35,10 +36,17 @@ const GenerateTab = ({ user, refreshUser }) => {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 400)}px`;
     }
+    localStorage.setItem('shinerva_draft_text', text);
   }, [text]);
+
+  useEffect(() => {
+    localStorage.setItem('shinerva_draft_voice', voice);
+    if (voice !== 'aura') setMode('');
+  }, [voice]);
 
   const handleTemplateClick = (template) => {
     setVoice(template.voice);
+    if (template.mode) setMode(template.mode);
     toast.success(`Template ${template.label} diterapkan!`);
   };
 
@@ -67,12 +75,11 @@ const GenerateTab = ({ user, refreshUser }) => {
         body: JSON.stringify({
           text,
           voice,
-          speed: 1.0,
-          pitch: 0.0
+          mode
         })
       };
 
-      const res = await fetch("/api/tts/generate", options);
+      const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
 
       if (data.audioContent) {
@@ -156,12 +163,44 @@ const GenerateTab = ({ user, refreshUser }) => {
             ))}
           </div>
 
-          {/* Char Counter */}
-          <div className={`text-xs font-bold ${isOverLimit ? 'text-red-500' : 'text-zinc-500'}`}>
-            {charCount.toLocaleString('id-ID')} <span className="font-normal opacity-50">/ {MAX_CHARS.toLocaleString('id-ID')}</span>
+          {/* Char Counter & Estimator */}
+          <div className="flex flex-col items-end">
+            <div className={`text-xs font-bold ${isOverLimit ? 'text-red-500' : 'text-zinc-500'}`}>
+              {charCount.toLocaleString('id-ID')} <span className="font-normal opacity-50">/ {MAX_CHARS.toLocaleString('id-ID')}</span>
+            </div>
+            {charCount > 0 && (
+              <div className="text-[10px] text-zinc-600 mt-1">
+                ≈ {Math.max(1, Math.round(charCount / 15))} detik audio
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Aura Premium Modes */}
+      {voice === 'aura' && (
+        <div className="animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="w-4 h-4 text-purple-500" />
+            <span className="text-sm font-bold text-zinc-300">Aura Premium Modes</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {['Documentary', 'Midnight', 'Philosophy', 'Cinematic'].map(m => (
+              <button
+                key={m}
+                onClick={() => setMode(m === mode ? '' : m)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  mode === m
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/50'
+                    : 'bg-surface2 text-zinc-400 border border-transparent hover:text-zinc-200'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Templates */}
       <div className="flex flex-wrap items-center gap-2">

@@ -16,9 +16,9 @@ const CreditsTab = ({ user }) => {
     : `≈ ${estimatedMinutes} menit narasi`;
 
   const packages = [
-    { name: 'Creator Mini', hours: '1 Jam', price: 'Rp 49.000', chars: '60.000 kredit', popular: false },
-    { name: 'Creator Pro', hours: '5 Jam', price: 'Rp 149.000', chars: '300.000 kredit', popular: true },
-    { name: 'Studio', hours: '20 Jam', price: 'Rp 499.000', chars: '1.200.000 kredit', popular: false },
+    { name: 'Starter', hours: '45 Menit', price: 'Rp 29.000', chars: '40.000 kredit', popular: false },
+    { name: 'Creator', hours: '2+ Jam', price: 'Rp 79.000', chars: '120.000 kredit', popular: true },
+    { name: 'Pro', hours: '6 Jam', price: 'Rp 249.000', chars: '350.000 kredit', popular: false },
   ];
 
   return (
