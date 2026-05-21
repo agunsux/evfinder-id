@@ -2527,7 +2527,7 @@ const App = () => {
 
         {/* Pronunciation Management Section */}
         {user && (
-          <section id="pronunciation" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32">
+          <section id="pronunciation" className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 my-16">
             <div className="bg-surface rounded-3xl p-8 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
               
@@ -2607,7 +2607,7 @@ const App = () => {
         {/* Pricing Section */}
         <section
           id="pricing-temporarily-renamed"
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 my-16"
         >
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black mb-4">
