@@ -1109,51 +1109,15 @@ const App = () => {
   }, [audioUrl]);
 
   const handlePreviewVoice = async () => {
-    if (!user) {
-      toast.error("Silakan login untuk mencoba suara.");
-      return;
-    }
-    
-    setTestLoading(true);
     try {
-      const idToken = await auth.currentUser.getIdToken();
-      const options = {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          voice,
-          speed,
-          pitch,
-          volume,
-          isSample: true
-        })
-      };
-      const res = await fetch("/api/tts", options);
-      const data = await checkResponse(res, 0, options);
-      if (data.audioContent) {
-        const mimeType = 'audio/mpeg';
-        const blob = base64ToBlob(data.audioContent, mimeType);
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audio.play().catch(e => console.error("[Preview] Play error:", e));
-          toast.success(`Berhasil memutar contoh suara ${getVoiceDisplayName(voice)}`);
-        } else {
-          toast.error("Gagal memproses data suara.");
-        }
-      }
+      const voiceName = voice.replace('shinerva-', '').split('-')[0]; // aura, pulse, flow
+      const url = `/samples/${voiceName}.mp3`;
+      const audio = new Audio(url);
+      audio.play().catch(e => console.error("[Preview] Play error:", e));
+      toast.success(`Berhasil memutar contoh suara ${getVoiceDisplayName(voice)}`);
     } catch (err) {
-      console.error(`[TTS Preview] Generation failed for voice: ${voice}`, err?.message || err);
-      if (err.data && err.data.error) {
-        toast.error(`Gagal: ${err.data.error}`);
-      } else {
-        toast.error(err.message || "Gagal tes suara");
-      }
-    } finally {
-      setTestLoading(false);
+      console.error(`[TTS Preview] Playback failed for voice: ${voice}`, err);
+      toast.error("Gagal memutar sampel suara.");
     }
   };
 
