@@ -12,24 +12,17 @@
 }
 
 :root {
-  --bg-dark: #F5F5F5;
-  --bg-surface: #FFFFFF;
-  --bg-surface2: #E5E5E5;
-  --text-main: #1A1A1A;
-  --text-muted: #666666;
-}
-
-.dark {
-  --bg-dark: #0F0F0F;
-  --bg-surface: #1A1A1A;
-  --bg-surface2: #242424;
-  --text-main: #FFFFFF;
-  --text-muted: #999999;
+  --bg-dark: #000000;
+  --bg-surface: #0A0A0A;
+  --bg-surface2: #171717;
+  --text-main: #FAFAFA;
+  --text-muted: #A3A3A3;
+  --color-gold: #C5A059;
 }
 
 body {
-  background-color: var(--color-dark);
-  color: var(--color-text);
+  background-color: var(--bg-dark);
+  color: var(--text-main);
   @apply transition-colors duration-300;
 }
 
