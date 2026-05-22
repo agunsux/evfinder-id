@@ -686,7 +686,14 @@ const App = () => {
       return;
     }
 
+    // Timeout fallback for browsers that block indexedDB/cookies (e.g. strict tracking prevention)
+    const authTimeout = setTimeout(() => {
+      setIsAuthInitializing(false);
+      console.warn("[Auth] Initialization timed out. Proceeding to app...");
+    }, 3000);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(authTimeout);
       console.log("[Auth] Firebase state changed:", firebaseUser?.email || "No User");
       if (firebaseUser) {
         // Set basic user info immediately for a better UX
@@ -728,8 +735,10 @@ const App = () => {
       }
       setIsAuthInitializing(false);
     });
-
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(authTimeout);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
