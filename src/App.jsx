@@ -2020,14 +2020,14 @@ const App = () => {
                             </button>
                           ))}
                         </div>
-                        <div className="relative flex-1" ref={voiceDropdownRef}>
+                        <div className="relative flex-1 min-w-0" ref={voiceDropdownRef}>
                           <button
                             type="button"
                             onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
                             className="w-full h-full min-h-[44px] bg-dark text-text rounded-xl py-2 px-4 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
                           >
                             <span className="truncate">{getVoiceDisplayName(voice)}</span>
-                            <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''} shrink-0 ml-2`} />
                           </button>
 
                           <AnimatePresence>
@@ -2037,7 +2037,7 @@ const App = () => {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                 transition={{ duration: 0.15 }}
-                                className="absolute z-50 left-0 right-0 mt-2 bg-surface rounded-2xl border border-surface2 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar"
+                                className="absolute z-50 left-0 right-0 bottom-full mb-2 bg-surface rounded-2xl border border-surface2 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar origin-bottom"
                               >
                                 {Object.entries(VOICES[language]).map(([category, voiceList]) => (
                                   <div key={category}>
@@ -2111,7 +2111,42 @@ const App = () => {
                             )}
                           </AnimatePresence>
                         </div>
-
+                        
+                        <button
+                          onClick={handleGenerate}
+                          disabled={status === "loading" || status === "success" || cooldown > 0}
+                          className={`flex-shrink-0 px-4 rounded-xl font-bold flex flex-col justify-center items-center transition-all shadow-lg border-none cursor-pointer min-h-[44px] ${
+                            status === "success"
+                              ? "bg-green-600 text-white"
+                              : status === "loading"
+                                ? "bg-terracotta/75 text-text cursor-not-allowed"
+                                : (cooldown > 0)
+                                  ? "bg-surface2 text-text-muted cursor-not-allowed border border-surface2"
+                                  : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-text"
+                          }`}
+                          title="Hasilkan Suara"
+                        >
+                          <div className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+                            {status === "idle" && cooldown === 0 && (
+                              isCappedByRequest ? (
+                                <><AlertTriangle className="w-4 h-4" /> <span className="hidden lg:inline">Limit</span></>
+                              ) : isCappedByQuota ? (
+                                <><AlertCircle className="w-4 h-4" /> <span className="hidden lg:inline">Habis</span></>
+                              ) : (
+                                <><Mic className="w-4 h-4" /> <span className="hidden lg:inline">Buat Suara</span></>
+                              )
+                            )}
+                            {status === "idle" && cooldown > 0 && (
+                              <><Loader2 className="w-4 h-4 animate-spin" /> <span className="hidden lg:inline">{cooldown}s</span></>
+                            )}
+                            {status === "loading" && (
+                              <><Loader2 className="w-4 h-4 animate-spin" /> <span className="hidden lg:inline">Proses</span></>
+                            )}
+                            {status === "success" && (
+                              <><CheckCircle className="w-4 h-4" /> <span className="hidden lg:inline">Selesai</span></>
+                            )}
+                          </div>
+                        </button>
                     </div>
 
                     {(!user || user.tier === 'FREE') && (
@@ -2237,56 +2272,7 @@ const App = () => {
                     </div>
                   )}
 
-                  <button
-                    onClick={handleGenerate}
-                    disabled={status === "loading" || status === "success" || cooldown > 0}
-                    className={`w-full py-4 rounded-xl font-bold flex flex-col justify-center items-center transition-all shadow-lg border-none cursor-pointer 
-                      ${
-                        status === "success"
-                          ? "bg-green-600 text-white"
-                          : status === "loading"
-                            ? "bg-terracotta/75 text-text cursor-not-allowed"
-                            : (cooldown > 0)
-                              ? "bg-surface2 text-text-muted cursor-not-allowed border border-surface2"
-                              : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-text"
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {status === "idle" && cooldown === 0 && (
-                        isCappedByRequest ? (
-                          <>
-                             <AlertTriangle className="w-5 h-5" /> Naskah Terlalu Panjang
-                          </>
-                        ) : isCappedByQuota ? (
-                          <>
-                             <AlertCircle className="w-5 h-5" /> Kredit Tidak Cukup
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="w-5 h-5" /> Hasilkan Suara
-                          </>
-                        )
-                      )}
-                      {status === "idle" && cooldown > 0 && (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" /> Tunggu {cooldown}s...
-                        </>
-                      )}
-                      {status === "loading" && (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" /> Sedang Proses...
-                        </>
-                      )}
-                      {status === "success" && (
-                        <>
-                          <CheckCircle className="w-5 h-5" /> Suara Berhasil Dibuat
-                        </>
-                      )}
-                    </div>
-                    {status === "loading" && loadingMessage && (
-                      <span className="text-[10px] font-medium opacity-80 mt-1 animate-pulse">{loadingMessage}</span>
-                    )}
-                  </button>
+
 
                   {showFallback && (
                     <div className="mt-4 p-4 bg-terracotta/10 border border-terracotta/20 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
