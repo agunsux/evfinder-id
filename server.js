@@ -806,7 +806,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
     console.log(`[TTS Handler] Method: ${req.method} Path: ${req.url} Body:`, { ...req.body, text: req.body?.text?.slice(0, 20) + '...' });
     try {
       let { text, voice, speed, pitch, volume, isSample } = req.body;
-      const apiKey = clean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
+      const apiKey = clean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.VITE_FIREBASE_API_KEY);
       let user = req.user;
       const isGeminiVoice = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr', 'Aoife', 'Eos'].includes(voice);
 
