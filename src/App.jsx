@@ -185,7 +185,7 @@ const FAQS = {
     },
     {
       question: "Apakah kredit saya bisa hangus?",
-      answer: "Tergantung jenis paket Anda.\n\n• Paket FREE memiliki masa aktif tertentu.\n• Paket berbayar menggunakan sistem rollover credits.\n• Kredit top-up memiliki masa aktif lebih panjang dan tidak langsung hangus setiap bulan.\n\nKami percaya creator seharusnya bisa berkarya sesuai ritme mereka sendiri — tanpa tekanan subscription berlebihan."
+      answer: "Tidak seperti kebanyakan platform AI lain, Shinerva tidak memaksa Anda berlangganan bulanan hanya untuk tetap bisa memakai layanan.\n\nMayoritas paket Shinerva menggunakan sistem:\nsekali beli → pakai sesuai ritme Anda sendiri.\n\n• Paket FREE memiliki masa aktif tertentu.\n• Paket berbayar menggunakan sistem rollover credits dengan masa aktif yang jauh lebih panjang.\n• Kredit top-up tidak langsung hangus setiap bulan seperti subscription tradisional.\n\nKami percaya creator seharusnya bisa berkarya dengan fleksibel — tanpa tekanan tagihan bulanan yang terus berjalan saat sedang tidak aktif membuat konten."
     },
     {
       question: "Apakah hasil suara bisa dipakai untuk kebutuhan komersial?",
@@ -217,8 +217,7 @@ const FAQS = {
     },
     {
       question: "Will my credits expire?",
-      answer:
-        "It depends on your plan. Credits from Top-Up packs never expire. For monthly plans (Creator and above), unused credits roll over to the next month. For FREE plans, the quota is refreshed every month.",
+      answer: "Unlike most other AI platforms, Shinerva does not force you into a monthly subscription just to keep using the service.\n\nThe majority of Shinerva's packages use a 'buy once → use at your own pace' system.\n\n• FREE plans have a specific active period.\n• Paid plans use a rollover credits system with a much longer active period.\n• Top-up credits do not immediately expire every month like traditional subscriptions.\n\nWe believe creators should be able to work flexibly — without the pressure of a running monthly bill when they aren't actively creating content."
     },
     {
       question: "Can these AI voices be used on TikTok or YouTube?",
@@ -442,8 +441,8 @@ const VOICES = {
         id: "id-ID-Wavenet-B", 
         name: "Pulse", 
         type: "GeminiFlash", 
-        premium: true, 
-        tier: "STARTER",
+        premium: false, 
+        tier: "FREE",
         desc: "Modern, energetic creator voice.",
         useCase: "TikTok, Ads, Shorts"
       }
@@ -2043,9 +2042,7 @@ const App = () => {
                                         const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
                                         const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
                                         const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
-                                        const isWavenet = v.type === 'Wavenet' || v.id.includes('Wavenet');
-                                        const isUserFree = userTierIndex < 1;
-                                        const isLocked = (v.premium && userTierIndex < requiredTierIndex) || (isWavenet && isUserFree) || v.comingSoon;
+                                        const isLocked = (v.premium && userTierIndex < requiredTierIndex) || v.comingSoon;
                                         const isSelected = voice === v.id;
                                         const isStudio = v.type === 'Studio' || v.glow;
 
@@ -2065,7 +2062,7 @@ const App = () => {
                                             <div className="flex flex-col relative z-20">
                                               <div className="flex items-center gap-2">
                                                 <span className={`text-sm font-bold ${isSelected ? 'text-terracotta' : 'text-text'}`}>
-                                                  {isLocked && !v.comingSoon && "🔒 "}{v.name}
+                                                  {isLocked && !v.comingSoon && "🔒 "}{v.name} {isLocked && !v.comingSoon && <span className="text-xs text-text-muted font-normal ml-1">(Premium Only)</span>}
                                                 </span>
                                                 {v.comingSoon && (
                                                   <span className="text-[8px] font-black bg-surface2 text-text-muted px-1.5 py-0.5 rounded border border-surface2/5 uppercase">
@@ -2395,22 +2392,22 @@ const App = () => {
         >
           <div className="text-center mb-16">
             <div className="inline-block bg-terracotta/20 text-terracotta px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-4">
-              {language === 'ID' ? 'Pembaruan Fitur' : 'Feature Update'}
+              Custom Packages
             </div>
             <h2 className="text-3xl md:text-4xl font-black mb-4 text-text">
-              {t('nav.packs')} <span className="text-text-muted">({language === 'ID' ? 'Segera Hadir' : 'Coming Soon'})</span>
+              {language === 'ID' ? 'Paket Kustom' : 'Custom Packages'} <span className="text-text-muted">({language === 'ID' ? 'Berdasarkan Permintaan' : 'By Request'})</span>
             </h2>
             <p className="text-text-muted mx-auto max-w-2xl">
               {language === 'ID' 
-                ? 'Template naskah siap pakai dengan gaya bacaan yang sudah dioptimasi AI. Segera hadir untuk membantu produktivitas Anda.' 
-                : 'Ready-to-use script templates with AI-optimized reading styles. Coming soon to help your productivity.'}
+                ? 'Kami menyediakan paket kustom sesuai kebutuhan proyek Anda. Hubungi kami untuk mendiskusikan gaya bacaan atau fitur spesifik yang Anda perlukan.' 
+                : 'We provide custom packages tailored to your project needs. Contact us to discuss specific reading styles or features you require.'}
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(PACKS[language] || PACKS['ID']).map((pack) => (
               <div
                 key={pack.id}
-                className={`bg-surface rounded-2xl p-6 border transition-colors flex flex-col items-start relative group opacity-60 ${pack.trending ? "border-terracotta/30 shadow-[0_0_15px_rgba(226,114,91,0.1)]" : "border-surface2"}`}
+                className={`bg-surface rounded-2xl p-6 border transition-colors flex flex-col items-start relative group ${pack.trending ? "border-terracotta/30 shadow-[0_0_15px_rgba(226,114,91,0.1)]" : "border-surface2"}`}
               >
                 <div className="flex justify-between w-full mb-4">
                   <span className="text-xs font-black px-2 py-1 bg-surface2 text-text-muted rounded-md uppercase tracking-widest">
@@ -2418,7 +2415,7 @@ const App = () => {
                   </span>
                   {pack.trending && (
                     <span className="text-[10px] font-black px-2 py-1 bg-terracotta/50 text-text rounded-md uppercase tracking-widest">
-                      SOON
+                      POPULAR
                     </span>
                   )}
                 </div>
@@ -2426,12 +2423,12 @@ const App = () => {
                 <p className="text-text-muted text-sm mb-6 flex-grow">
                   {pack.desc}
                 </p>
-                <button
-                  disabled
-                  className="w-full bg-dark/50 border border-gray-700 text-text-muted font-bold py-2.5 rounded-lg transition-all text-sm cursor-not-allowed"
+                <a
+                  href="#contact"
+                  className="w-full bg-dark/50 border border-gray-700 hover:border-terracotta hover:bg-terracotta/10 text-text-muted hover:text-terracotta font-bold py-2.5 rounded-lg transition-all text-sm text-center block"
                 >
-                  {language === 'ID' ? 'Aktifkan Paket' : 'Activate Pack'}
-                </button>
+                  {language === 'ID' ? 'Hubungi Kami' : 'Contact Us'}
+                </a>
               </div>
             ))}
           </div>
@@ -2577,12 +2574,12 @@ const App = () => {
               </div>
             </div>
                     <div className="flex flex-col md:flex-row justify-between items-center pt-10 border-t border-surface2 text-text-muted text-xs gap-4">
-              <p>© 2024 Shinerva AI Text To Speech. All rights reserved.</p>
+              <p>© 2026 Shinerva AI Voice. All rights reserved.</p>
               <div className="flex gap-6">
-                <a href="#" className="hover:text-text transition-colors">
+                <a href="/privacy.html" target="_blank" className="hover:text-text transition-colors">
                   Privacy Policy
                 </a>
-                <a href="#" className="hover:text-text transition-colors">
+                <a href="/terms.html" target="_blank" className="hover:text-text transition-colors">
                   Terms of Service
                 </a>
               </div>
