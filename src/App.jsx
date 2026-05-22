@@ -538,7 +538,7 @@ const App = () => {
   const [volume, setVolume] = useState(0);
   const [status, setStatus] = useState("idle"); // idle, loading, success
   const [loadingMessage, setLoadingMessage] = useState("");
-  const [showFallback, setShowFallback] = useState(false);
+
   const [isAudioVisible, setIsAudioVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [notification, setNotification] = useState(null);
@@ -1249,7 +1249,7 @@ const App = () => {
   const proceedWithGenerate = async () => {
     setStatus("loading");
     setLoadingMessage("Menghubungkan ke Rungu Engine...");
-    setShowFallback(false);
+
     const startTime = Date.now();
 
     try {
@@ -1332,7 +1332,6 @@ const App = () => {
       console.error("[TTS] Critical error in proceedWithGenerate:", err?.message || err);
       setStatus("idle");
       setLoadingMessage("");
-      setShowFallback(true);
       
       if (err.status === 429 && err.data?.cooldownRemaining) {
         setCooldown(err.data.cooldownRemaining);
@@ -1344,7 +1343,12 @@ const App = () => {
       } else if (err.message?.includes("kredit tidak mencukupi")) {
          toast.error("Kredit karakter Anda habis.");
       } else {
-         handleApiError(err, "Gagal memproses suara. Pastikan naskah dan pilihan suara sudah benar.");
+         // Auto-fallback to Browser TTS!
+         toast.success("Voice engine sibuk. Menggunakan Browser TTS...", {
+           icon: '⚙️',
+           duration: 3000
+         });
+         fallbackTTS();
       }
     }
   };
@@ -2282,34 +2286,7 @@ const App = () => {
 
 
 
-                  {showFallback && (
-                    <div className="mt-4 p-4 bg-terracotta/10 border border-terracotta/20 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
-                       <div className="flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-terracotta shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                             <p className="text-xs font-bold text-text">Gagal Menghasilkan Suara?</p>
-                              <p className="text-[11px] text-text-muted mt-1">Voice engine sedang sibuk. Coba lagi beberapa detik atau gunakan Browser TTS gratis sebagai cadangan.</p>
-                             <div className="flex gap-2 mt-3">
-                                <button 
-                                  onClick={handleGenerate}
-                                  className="text-[11px] font-bold bg-terracotta text-white px-3 py-1.5 rounded-lg border-none cursor-pointer"
-                                >
-                                  Coba Lagi
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    fallbackTTS();
-                                    setShowFallback(false);
-                                  }}
-                                  className="text-[11px] font-bold bg-surface2 text-text px-3 py-1.5 rounded-lg border border-surface3 cursor-pointer"
-                                >
-                                  Browser TTS (Cepat)
-                                </button>
-                             </div>
-                          </div>
-                       </div>
-                    </div>
-                  )}
+
                 </div>
               </div>
             </div>
