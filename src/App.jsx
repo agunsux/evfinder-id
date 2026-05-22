@@ -1998,35 +1998,33 @@ const App = () => {
                     </div>
                   )}
                 </div>
-                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                    <label className="block text-sm font-bold text-text-muted">
-                      {t('studio.voicesSelection')}
-                    </label>
-                    <div className="flex bg-dark p-1 rounded-xl border border-surface2">
-                      {LANGUAGES.map((lang) => (
-                        <button
-                          key={lang.code}
-                          onClick={() => handleLanguageChange(lang.code)}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black transition-all border-none cursor-pointer ${
-                            language === lang.code 
-                            ? "bg-terracotta text-white shadow-lg shadow-terracotta/20" 
-                            : "text-text-muted hover:text-text hover:bg-surface2/50"
-                          }`}
-                        >
-                          <span>{lang.flag}</span>
-                          <span className="hidden xs:inline">{lang.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                   <div className="space-y-4">
                     <div>
-                      <div className="flex gap-2">
+                      <label className="block text-sm font-bold text-text-muted mb-2">
+                        {t('studio.voicesSelection')}
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex bg-dark p-1 rounded-xl border border-surface2 flex-shrink-0">
+                          {LANGUAGES.map((lang) => (
+                            <button
+                              key={lang.code}
+                              onClick={() => handleLanguageChange(lang.code)}
+                              className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black transition-all border-none cursor-pointer flex-1 ${
+                                language === lang.code 
+                                ? "bg-terracotta text-white shadow-lg shadow-terracotta/20" 
+                                : "text-text-muted hover:text-text hover:bg-surface2/50"
+                              }`}
+                            >
+                              <span>{lang.flag}</span>
+                              <span className="hidden xs:inline">{lang.name}</span>
+                            </button>
+                          ))}
+                        </div>
                         <div className="relative flex-1" ref={voiceDropdownRef}>
                           <button
                             type="button"
                             onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
-                            className="w-full bg-dark text-text rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
+                            className="w-full h-full min-h-[44px] bg-dark text-text rounded-xl py-2 px-4 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
                           >
                             <span className="truncate">{getVoiceDisplayName(voice)}</span>
                             <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
@@ -2113,19 +2111,7 @@ const App = () => {
                             )}
                           </AnimatePresence>
                         </div>
-                      <button
-                        onClick={handlePreviewVoice}
-                        disabled={testLoading}
-                        className="bg-surface2 hover:bg-surface3 text-text px-4 rounded-xl flex items-center gap-2 transition-all disabled:opacity-50 border border-surface2"
-                        title="Tes Suara Ini"
-                      >
-                        {testLoading ? (
-                          <div className="w-4 h-4 border-2 border-terracotta border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                          <Play className="w-4 h-4 text-terracotta" />
-                        )}
-                        <span className="hidden sm:inline text-xs font-bold whitespace-nowrap">Tes Suara</span>
-                      </button>
+
                     </div>
 
                     {(!user || user.tier === 'FREE') && (
@@ -2277,7 +2263,7 @@ const App = () => {
                           </>
                         ) : (
                           <>
-                            <Mic className="w-5 h-5" /> Hasilkan Suara Sekarang
+                            <Mic className="w-5 h-5" /> Hasilkan Suara
                           </>
                         )
                       )}
