@@ -1762,8 +1762,8 @@ const App = () => {
 
       {/* Verification Banner */}
       {user && !user.emailVerified && auth?.currentUser && !isVerificationDismissed && (
-        <div className="fixed top-24 left-4 right-4 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="max-w-4xl mx-auto bg-terracotta text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 border border-surface2/10">
+        <div className="fixed top-24 left-0 right-0 z-50 animate-in fade-in slide-in-from-top-4 duration-500 pointer-events-none px-4">
+          <div className="max-w-4xl mx-auto bg-terracotta text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 border border-surface2/10 pointer-events-auto">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="w-5 h-5 text-text" />
@@ -2253,14 +2253,14 @@ const App = () => {
 
                   <button
                     onClick={handleGenerate}
-                    disabled={status === "loading" || status === "success" || cooldown > 0 || isCappedByRequest || isCappedByQuota}
+                    disabled={status === "loading" || status === "success" || cooldown > 0}
                     className={`w-full py-4 rounded-xl font-bold flex flex-col justify-center items-center transition-all shadow-lg border-none cursor-pointer 
                       ${
                         status === "success"
                           ? "bg-green-600 text-white"
                           : status === "loading"
                             ? "bg-terracotta/75 text-text cursor-not-allowed"
-                            : (cooldown > 0 || isCappedByRequest || isCappedByQuota)
+                            : (cooldown > 0)
                               ? "bg-surface2 text-text-muted cursor-not-allowed border border-surface2"
                               : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-text"
                       }`}
