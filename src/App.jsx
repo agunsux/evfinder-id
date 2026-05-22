@@ -198,6 +198,10 @@ const FAQS = {
     {
       question: "Bagaimana cara menghubungi bantuan?",
       answer: "Anda dapat menghubungi tim Shinerva melalui WhatsApp atau Email untuk:\n• bantuan teknis\n• pertanyaan pembayaran\n• kerja sama agency\n• integrasi API\n• kebutuhan bisnis khusus"
+    },
+    {
+      question: "Apakah tersedia paket untuk korporasi atau kebutuhan custom?",
+      answer: "Tentu bisa! Silakan hubungi kami via email untuk berdiskusi lebih lanjut mengenai paket korporasi, kebutuhan kustom, atau integrasi khusus untuk perusahaan Anda."
     }
   ],
   EN: [
@@ -236,6 +240,11 @@ const FAQS = {
       answer:
         "You can contact our team via WhatsApp or Email for technical assistance, agency partnerships, or custom API integration needs.",
     },
+    {
+      question: "Are there corporate or custom plans available?",
+      answer:
+        "Absolutely! Please contact us via email to discuss corporate plans, custom requirements, or specialized integrations for your company.",
+    }
   ]
 };
 
@@ -1680,6 +1689,13 @@ const App = () => {
             <div className="flex items-center justify-end flex-1 gap-2">
               <div className="flex items-center gap-3">
                 <button
+                  onClick={() => handleLanguageChange(language === 'ID' ? 'EN' : 'ID')}
+                  className="px-3 md:px-4 py-2 md:py-2.5 rounded-full bg-surface2 text-text text-xs md:text-sm font-bold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
+                  title={language === 'ID' ? "Switch to English" : "Ganti ke Bahasa Indonesia"}
+                >
+                  {language === 'ID' ? 'EN' : 'ID'}
+                </button>
+                <button
                   onClick={toggleTheme}
                   className="p-2 md:p-2.5 rounded-full bg-[#FDFBF7] text-terracotta shadow-sm border border-terracotta/10 hover:bg-[#F5EFE6] transition-all cursor-pointer flex items-center justify-center"
                   title={theme === 'dark' ? "Buka Mode Terang" : "Buka Mode Gelap"}
@@ -2106,11 +2122,14 @@ const App = () => {
                       </button>
                     </div>
 
-
                     {(!user || user.tier === 'FREE') && (
                       <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20">
                         <Gift className="w-3 h-3" />
-                        <span className="font-bold">{t('studio.unlock_aura')} <a href="#pricing" className="underline">{t('studio.view_packs')}</a></span>
+                        <span className="font-bold">
+                          {language === 'ID' 
+                            ? "✨ Psst.. fitur Voice Cloning bakal segera hadir lho! Stay tuned ya!" 
+                            : "✨ Psst.. Voice Cloning is coming soon! Stay tuned!"}
+                        </span>
                       </div>
                     )}
                 </div>
