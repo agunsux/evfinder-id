@@ -1994,7 +1994,7 @@ const App = () => {
                         <div className="flex items-center gap-1.5 text-text-muted border-l border-surface2/30 pl-4">
                           <span>{t('studio.remaining')}:</span>
                           <span className={remainingCredits < 1000 ? "text-terracotta" : "text-text"}>
-                            {remainingCredits.toLocaleString("id-ID")}
+                            {remainingCredits.toLocaleString("id-ID")} karakter (~{Math.ceil(remainingCredits / 1000)} menit durasi)
                           </span>
                         </div>
                       </div>
@@ -2288,7 +2288,7 @@ const App = () => {
                           <AlertCircle className="w-5 h-5 text-terracotta shrink-0 mt-0.5" />
                           <div className="flex-1">
                              <p className="text-xs font-bold text-text">Gagal Menghasilkan Suara?</p>
-                             <p className="text-[11px] text-text-muted mt-1">Kami mengalami kendala teknis sementara. Anda bisa mencoba lagi atau gunakan Browser TTS gratis sebagai cadangan.</p>
+                              <p className="text-[11px] text-text-muted mt-1">Voice engine sedang sibuk. Coba lagi beberapa detik atau gunakan Browser TTS gratis sebagai cadangan.</p>
                              <div className="flex gap-2 mt-3">
                                 <button 
                                   onClick={handleGenerate}
