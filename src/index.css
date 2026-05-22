@@ -12,6 +12,15 @@
 }
 
 :root {
+  --bg-dark: #FDFBF7; /* Beige/broken white that harmonizes with terracotta */
+  --bg-surface: #FFFFFF;
+  --bg-surface2: #F5EFE6;
+  --text-main: #2A2422;
+  --text-muted: #7A6964;
+  --color-gold: #C5A059;
+}
+
+.dark {
   --bg-dark: #000000;
   --bg-surface: #0A0A0A;
   --bg-surface2: #171717;

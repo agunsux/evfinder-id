@@ -93,7 +93,7 @@ const LiveAudioDemo = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {voices.map((voice) => (
           <div key={voice.id} className={`p-6 rounded-3xl border transition-all ${playingId === voice.id ? 'bg-zinc-800 border-amber-500' : 'bg-zinc-900 border-zinc-700'}`}>
-            <h3 className="text-xl font-black text-white mb-1">{voice.name}</h3>
+            <h3 className="text-xl font-black text-text mb-1">{voice.name}</h3>
             <p className="text-zinc-400 text-sm mb-4">{voice.description}</p>
             
             <audio

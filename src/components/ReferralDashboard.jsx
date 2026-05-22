@@ -87,15 +87,15 @@ export default function ReferralDashboard({ user, auth }) {
           </p>
         </div>
 
-        <div className="relative z-10 bg-dark/50 backdrop-blur-md p-4 rounded-2xl border border-white/5 flex flex-col items-center gap-3 min-w-[200px]">
+        <div className="relative z-10 bg-dark/50 backdrop-blur-md p-4 rounded-2xl border border-surface2/5 flex flex-col items-center gap-3 min-w-[200px]">
           <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Kode Referral Anda</span>
           <div className="flex items-center gap-3">
-            <span className="text-2xl font-mono font-bold text-white tracking-widest leading-none">
+            <span className="text-2xl font-mono font-bold text-text tracking-widest leading-none">
               {stats?.referral_code || '---'}
             </span>
             <button 
               onClick={() => copyToClipboard(stats?.referral_code)}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-text-muted hover:text-white"
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-text-muted hover:text-text"
             >
               {copied ? <CheckCircle2 size={18} className="text-green-500" /> : <Copy size={18} />}
             </button>
@@ -136,7 +136,7 @@ export default function ReferralDashboard({ user, auth }) {
           </h3>
           
           <div className="space-y-4">
-            <div className="bg-dark/40 p-4 rounded-xl border border-white/5 flex items-center justify-between">
+            <div className="bg-dark/40 p-4 rounded-xl border border-surface2/5 flex items-center justify-between">
               <span className="text-xs font-mono text-text-muted truncate max-w-[200px]">{referralLink}</span>
               <button 
                 onClick={() => copyToClipboard(referralLink)}
@@ -149,13 +149,13 @@ export default function ReferralDashboard({ user, auth }) {
             <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={shareWhatsApp}
-                className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-3 rounded-xl transition-all"
+                className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-text font-bold py-3 rounded-xl transition-all"
               >
                 <MessageCircle size={18} /> WhatsApp
               </button>
               <button 
                 onClick={shareTwitter}
-                className="flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#0c85d0] text-white font-bold py-3 rounded-xl transition-all"
+                className="flex items-center justify-center gap-2 bg-[#1DA1F2] hover:bg-[#0c85d0] text-text font-bold py-3 rounded-xl transition-all"
               >
                 <Twitter size={18} /> X / Twitter
               </button>
@@ -164,7 +164,7 @@ export default function ReferralDashboard({ user, auth }) {
         </div>
 
         {/* How it works */}
-        <div className="bg-gradient-to-br from-terracotta to-trdark p-8 rounded-3xl text-white space-y-6 shadow-xl relative overflow-hidden group">
+        <div className="bg-gradient-to-br from-terracotta to-trdark p-8 rounded-3xl text-text space-y-6 shadow-xl relative overflow-hidden group">
           <div className="absolute -bottom-10 -right-10 opacity-10 group-hover:opacity-20 transition-opacity">
             <TrendingUp size={240} />
           </div>
@@ -202,7 +202,7 @@ export default function ReferralDashboard({ user, auth }) {
 function StatCard({ icon, label, value, description, highlight }) {
   return (
     <div className={`p-6 rounded-3xl border ${highlight ? 'border-terracotta/30 bg-terracotta/5' : 'border-surface2 bg-surface1'} space-y-4`}>
-      <div className="p-3 bg-dark/50 w-fit rounded-2xl border border-white/5">
+      <div className="p-3 bg-dark/50 w-fit rounded-2xl border border-surface2/5">
         {React.cloneElement(icon, { size: 24 })}
       </div>
       <div>

@@ -164,40 +164,41 @@ const PACKS = {
 const FAQS = {
   ID: [
     {
-      question: "Apa itu Shinerva AI TTS?",
-      answer:
-        "Shinerva AI TTS adalah teknologi yang mengubah tulisan menjadi suara manusia yang sangat natural menggunakan kecerdasan buatan (AI). Sederhananya, ini adalah suara robot yang kini sudah semanusiawi aslinya—lengkap dengan emosi, intonasi, dan napas—sehingga cocok untuk mengisi suara video Anda tanpa perlu rekam suara sendiri.",
+      question: "Apa itu Shinerva?",
+      answer: "Shinerva adalah platform AI Voice emosional untuk kreator modern. Kami membantu mengubah tulisan menjadi narasi yang terasa lebih manusiawi — lengkap dengan emosi, ritme, dan karakter suara yang natural.\n\nDirancang khusus untuk creator Indonesia:\nYouTube, TikTok, podcast, audiobook, presentasi, hingga voice over bisnis."
     },
     {
-      question: "Apa itu Shinerva?",
-      answer:
-        "Shinerva adalah platform AI Voice emosional pertama di Asia Tenggara. Kami melampaui Text To Speech (TTS) biasa dengan memberikan jiwa, emosi, dan karakter pada setiap narasi untuk kreator modern.",
+      question: "Apakah suara AI di Shinerva terdengar natural?",
+      answer: "Ya.\n\nShinerva menggunakan teknologi AI Voice generasi terbaru yang mampu menghasilkan intonasi, jeda, emosi, dan ritme bicara yang jauh lebih alami dibanding text-to-speech biasa.\n\nFokus kami bukan sekadar \"suara robot yang bicara\", tetapi narasi yang nyaman didengar dalam durasi panjang."
+    },
+    {
+      question: "Apakah saya perlu mengerti AI atau setting teknis?",
+      answer: "Tidak perlu sama sekali.\n\nShinerva dirancang sesederhana mungkin:\npilih suara → tempel teks → generate.\n\nAnda tidak perlu memahami prompt, SSML, atau pengaturan teknis audio yang rumit."
+    },
+    {
+      question: "Apakah suara Shinerva bisa dipakai untuk YouTube, TikTok, dan monetisasi?",
+      answer: "Bisa.\n\nHasil audio Shinerva dirancang untuk kebutuhan konten modern:\nYouTube, TikTok, Reels, Shorts, podcast, audiobook, dan kebutuhan komersial lainnya."
+    },
+    {
+      question: "Apa perbedaan Flow, Pulse, dan Aura?",
+      answer: "• Flow\nTenang, jelas, dan nyaman didengar untuk durasi panjang. Cocok untuk e-learning, audiobook, berita, dan presentasi.\n\n• Pulse\nLebih energik dan dinamis. Cocok untuk promo, TikTok, YouTube Shorts, dan konten marketing.\n\n• Aura\nNarasi emosional dengan nuansa sinematik dan storytelling yang lebih dalam. Cocok untuk dokumenter, misteri, filosofi, dan cinematic narration."
     },
     {
       question: "Apakah kredit saya bisa hangus?",
-      answer:
-        "Tergantung paket Anda. Kredit dari paket Top-Up tidak akan pernah hangus. Untuk paket bulanan (Kreator ke atas), sisa kredit akan rollover ke bulan berikutnya. Namun untuk paket FREE, kuota akan diperbarui setiap bulan.",
+      answer: "Tergantung jenis paket Anda.\n\n• Paket FREE memiliki masa aktif tertentu.\n• Paket berbayar menggunakan sistem rollover credits.\n• Kredit top-up memiliki masa aktif lebih panjang dan tidak langsung hangus setiap bulan.\n\nKami percaya creator seharusnya bisa berkarya sesuai ritme mereka sendiri — tanpa tekanan subscription berlebihan."
     },
     {
-      question: "Apakah suara AI ini bisa dipakai di TikTok atau YouTube?",
-      answer:
-        "Sangat bisa! Suara emosional kami dirancang khusus agar lolos verifikasi monetisasi sosial media (YouTube/TikTok/Reels). Kami membantu cerita Anda terasa lebih manusiawi dan mengonversi audiens lebih baik.",
+      question: "Apakah hasil suara bisa dipakai untuk kebutuhan komersial?",
+      answer: "Ya, untuk paket yang mendukung lisensi komersial.\n\nAnda dapat menggunakan hasil audio untuk:\n• konten monetisasi\n• iklan\n• bisnis\n• agency\n• audiobook\n• media sosial"
     },
     {
       question: "Apa itu Voice Cloning?",
-      answer:
-        "Voice Cloning adalah teknologi canggih yang memungkinkan Anda membuat versi digital dari suara Anda sendiri hanya dengan mengunggah sampel rekaman berdurasi 30 detik. Suara hasil kloning ini dapat digunakan untuk menghasilkan narasi apa pun dengan tingkat kemiripan hingga 99%.",
-    },
-    {
-      question: "Apa perbedaan teknologi Basic dan Aura?",
-      answer:
-        "Basic adalah teknologi standar untuk narasi fungsional. Pulse (Segera Hadir) menambahkan ekspresi emosional, sementara Aura (Segera Hadir) adalah teknologi flagship multimodal kami yang menghasilkan tekstur suara, napas, dan intonasi yang hampir mustahil dibedakan dari rekaman manusia.",
+      answer: "Voice Cloning memungkinkan Anda membuat versi digital dari suara sendiri menggunakan sampel rekaman suara.\n\nFitur ini masih dalam pengembangan dan akan hadir bertahap untuk kebutuhan kreator dan bisnis tertentu."
     },
     {
       question: "Bagaimana cara menghubungi bantuan?",
-      answer:
-        "Anda bisa menghubungi tim kami melalui WhatsApp atau Email untuk bantuan teknis, kerja sama agency, atau kebutuhan integrasi API khusus.",
-    },
+      answer: "Anda dapat menghubungi tim Shinerva melalui WhatsApp atau Email untuk:\n• bantuan teknis\n• pertanyaan pembayaran\n• kerja sama agency\n• integrasi API\n• kebutuhan bisnis khusus"
+    }
   ],
   EN: [
     {
@@ -1616,13 +1617,13 @@ const App = () => {
             {initError || clientInitError || "Konfigurasi Firebase ditemukan namun terjadi kegagalan saat inisialisasi layanan (Check Console for details)."}
           </p>
           
-          <div className="mt-4 p-3 bg-black/20 rounded border border-white/5 font-mono text-[10px] space-y-1">
-            <div className="flex justify-between"><span className="text-gray-500">Client Config:</span> <span className="text-green-400 font-bold">{isConfigValid ? "Healthy" : "Invalid"}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Client Error:</span> <span className={clientInitError ? "text-red-400" : "text-green-400"}>{clientInitError || "Healthy"}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Server Error:</span> <span className={initError ? "text-red-400" : "text-green-400"}>{initError || "Healthy"}</span></div>
-            <div className="flex justify-between border-t border-white/5 mt-1 pt-1"><span className="text-gray-500">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">API Key:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_API_KEY ? (import.meta.env.VITE_FIREBASE_API_KEY.slice(0, 6) + "...") : "Missing"}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">App ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_APP_ID ? "Present" : "Missing"}</span></div>
+          <div className="mt-4 p-3 bg-dark/20 rounded border border-surface2/5 font-mono text-[10px] space-y-1">
+            <div className="flex justify-between"><span className="text-text-muted">Client Config:</span> <span className="text-green-400 font-bold">{isConfigValid ? "Healthy" : "Invalid"}</span></div>
+            <div className="flex justify-between"><span className="text-text-muted">Client Error:</span> <span className={clientInitError ? "text-red-400" : "text-green-400"}>{clientInitError || "Healthy"}</span></div>
+            <div className="flex justify-between"><span className="text-text-muted">Server Error:</span> <span className={initError ? "text-red-400" : "text-green-400"}>{initError || "Healthy"}</span></div>
+            <div className="flex justify-between border-t border-surface2/5 mt-1 pt-1"><span className="text-text-muted">Project ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_PROJECT_ID || "Missing"}</span></div>
+            <div className="flex justify-between"><span className="text-text-muted">API Key:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_API_KEY ? (import.meta.env.VITE_FIREBASE_API_KEY.slice(0, 6) + "...") : "Missing"}</span></div>
+            <div className="flex justify-between"><span className="text-text-muted">App ID:</span> <span className="text-blue-300">{import.meta.env.VITE_FIREBASE_APP_ID ? "Present" : "Missing"}</span></div>
           </div>
 
           <h3 className="text-xs font-black text-blue-400 uppercase mb-2 border-t border-surface/50 pt-4 mt-4">Saran Perbaikan:</h3>
@@ -1636,7 +1637,7 @@ const App = () => {
         </div>
         <button 
           onClick={() => window.location.reload()} 
-          className="mt-8 bg-terracotta px-6 py-3 rounded-full font-bold text-white border-none cursor-pointer hover:bg-trdark transition-colors"
+          className="mt-8 bg-terracotta px-6 py-3 rounded-full font-bold text-text border-none cursor-pointer hover:bg-trdark transition-colors"
         >
           Coba Muat Ulang
         </button>
@@ -1670,7 +1671,7 @@ const App = () => {
             <div className="flex-1"></div>
             
             <div className="flex items-center justify-center gap-4 flex-1">
-              <ShinervaLogo className="w-12 h-12 text-terracotta" />
+              <img src="/shinerva-icon.svg" alt="Shinerva Logo" className="w-12 h-12" />
               <span className="font-black text-3xl tracking-tight text-terracotta cursor-pointer">
                 SHINERVA
               </span>
@@ -1678,6 +1679,13 @@ const App = () => {
 
             <div className="flex items-center justify-end flex-1 gap-2">
               <div className="flex items-center gap-3">
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 md:p-2.5 rounded-full bg-[#FDFBF7] text-terracotta shadow-sm border border-terracotta/10 hover:bg-[#F5EFE6] transition-all cursor-pointer flex items-center justify-center"
+                  title={theme === 'dark' ? "Buka Mode Terang" : "Buka Mode Gelap"}
+                >
+                  {theme === 'dark' ? <Sun className="w-4 h-4 md:w-5 md:h-5" /> : <Moon className="w-4 h-4 md:w-5 md:h-5" />}
+                </button>
                 {user ? (
                   <button
                     onClick={() => navigate('/dashboard')}
@@ -1714,14 +1722,14 @@ const App = () => {
         <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[60] bg-dark border border-terracotta p-6 rounded-2xl shadow-2xl max-w-sm text-center">
              <div className="text-4xl mb-4">🎉</div>
              <h3 className="font-black text-xl mb-2">{t('welcome.title')}</h3>
-             <p className="text-gray-400 text-sm mb-4">{t('welcome.subtitle')}</p>
+             <p className="text-text-muted text-sm mb-4">{t('welcome.subtitle')}</p>
              <button 
                onClick={() => {
                  setHasSeenWelcome(true);
                  localStorage.setItem("hasSeenWelcome", "true");
                  refreshUser();
                }} 
-               className="bg-terracotta px-6 py-2 rounded-full font-bold text-sm border-none cursor-pointer text-white"
+               className="bg-terracotta px-6 py-2 rounded-full font-bold text-sm border-none cursor-pointer text-text"
              >
                {t('welcome.cta')}
              </button>
@@ -1731,14 +1739,14 @@ const App = () => {
       {/* Verification Banner */}
       {user && !user.emailVerified && auth?.currentUser && !isVerificationDismissed && (
         <div className="fixed top-24 left-4 right-4 z-50 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="max-w-4xl mx-auto bg-terracotta text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 border border-white/10">
+          <div className="max-w-4xl mx-auto bg-terracotta text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 border border-surface2/10">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-5 h-5 text-white" />
+                <AlertTriangle className="w-5 h-5 text-text" />
               </div>
               <div className="text-left">
                 <p className="font-bold text-sm">Verifikasi Email Anda</p>
-                <p className="text-xs text-white/80">Silakan verifikasi email Anda untuk memastikan keamanan akun. Cek folder Inbox/Spam di email {auth?.currentUser?.email}.</p>
+                <p className="text-xs text-text/80">Silakan verifikasi email Anda untuk memastikan keamanan akun. Cek folder Inbox/Spam di email {auth?.currentUser?.email}.</p>
               </div>
             </div>
             
@@ -1753,13 +1761,13 @@ const App = () => {
               <button 
                 onClick={handleRefreshVerificationStatus}
                 disabled={authLoading}
-                className="flex-1 md:flex-none px-4 py-2 bg-terracotta-dark/20 text-white border border-white/20 rounded-xl text-xs font-black hover:bg-white/10 transition-colors disabled:opacity-50 cursor-pointer"
+                className="flex-1 md:flex-none px-4 py-2 bg-terracotta-dark/20 text-text border border-surface2/20 rounded-xl text-xs font-black hover:bg-white/10 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 Cek Status
               </button>
               <button 
                 onClick={() => setIsVerificationDismissed(true)}
-                className="p-2 hover:bg-white/10 rounded-xl transition-colors text-white/60 hover:text-white border-none bg-transparent cursor-pointer"
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors text-text/60 hover:text-text border-none bg-transparent cursor-pointer"
                 title="Tutup banner"
               >
                 <X className="w-5 h-5" />
@@ -1791,7 +1799,7 @@ const App = () => {
                   setAuthMode("signup");
                   setIsAuthOpen(true);
                 }}
-                className="bg-terracotta hover:bg-trdark text-white px-8 py-4 rounded-full font-black text-lg transition-all transform hover:scale-105 shadow-2xl shadow-terracotta/30 border-none cursor-pointer flex items-center justify-center gap-2"
+                className="bg-terracotta hover:bg-trdark text-text px-8 py-4 rounded-full font-black text-lg transition-all transform hover:scale-105 shadow-2xl shadow-terracotta/30 border-none cursor-pointer flex items-center justify-center gap-2"
               >
                 <span className="text-xl">✨</span>
                 {t('hero.cta_primary')}
@@ -1825,7 +1833,7 @@ const App = () => {
                         (user.used_chars || 0),
                     ).toLocaleString("id-ID")}
                   </span>
-                  <span className="text-sm text-gray-500 mb-1">karakter</span>
+                  <span className="text-sm text-text-muted mb-1">karakter</span>
                 </div>
                 <div className="w-full bg-dark h-2 rounded-full overflow-hidden mb-3">
                   <div
@@ -1865,7 +1873,7 @@ const App = () => {
                       Riwayat Penggunaan
                     </span>
                   </div>
-                  <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
+                  <ChevronDown className="w-4 h-4 text-text-muted -rotate-90" />
                 </button>
                 {user.tier === "ENTERPRISE" && (
                   <button
@@ -1878,7 +1886,7 @@ const App = () => {
                         Voice Management
                       </span>
                     </div>
-                    <ChevronDown className="w-4 h-4 text-gray-500 -rotate-90" />
+                    <ChevronDown className="w-4 h-4 text-text-muted -rotate-90" />
                   </button>
                 )}
                 <button
@@ -1997,7 +2005,7 @@ const App = () => {
                             className="w-full bg-dark text-text rounded-xl py-4 pl-4 pr-10 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
                           >
                             <span className="truncate">{getVoiceDisplayName(voice)}</span>
-                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''}`} />
                           </button>
 
                           <AnimatePresence>
@@ -2011,7 +2019,7 @@ const App = () => {
                               >
                                 {Object.entries(VOICES[language]).map(([category, voiceList]) => (
                                   <div key={category}>
-                                    <div className="px-4 py-2 bg-surface2/30 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md border-b border-surface2/30">
+                                    <div className="px-4 py-2 bg-surface2/30 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md border-b border-surface2/30">
                                       {category}
                                     </div>
                                     <div className="p-1">
@@ -2044,7 +2052,7 @@ const App = () => {
                                                   {isLocked && !v.comingSoon && "🔒 "}{v.name}
                                                 </span>
                                                 {v.comingSoon && (
-                                                  <span className="text-[8px] font-black bg-surface2 text-gray-400 px-1.5 py-0.5 rounded border border-white/5 uppercase">
+                                                  <span className="text-[8px] font-black bg-surface2 text-text-muted px-1.5 py-0.5 rounded border border-surface2/5 uppercase">
                                                     SOON
                                                   </span>
                                                 )}
@@ -2054,7 +2062,7 @@ const App = () => {
                                                   </span>
                                                 )}
                                               </div>
-                                              <span className="text-[10px] text-gray-500 font-medium">
+                                              <span className="text-[10px] text-text-muted font-medium">
                                                 {v.comingSoon 
                                                   ? (language === 'ID' ? 'Segera Hadir' : 'Coming Soon')
                                                   : `Beban: ${voiceConfig.tiers[v.type] || 1}x Kredit`
@@ -2158,7 +2166,7 @@ const App = () => {
                       <div className="flex items-center gap-4 mb-4">
                         <button
                           onClick={togglePlay}
-                          className="w-12 h-12 rounded-full bg-terracotta flex items-center justify-center text-white hover:bg-trdark cursor-pointer border-none flex-shrink-0 transition-transform hover:scale-105"
+                          className="w-12 h-12 rounded-full bg-terracotta flex items-center justify-center text-text hover:bg-trdark cursor-pointer border-none flex-shrink-0 transition-transform hover:scale-105"
                         >
                           {isPlaying ? (
                             <Pause className="w-6 h-6 fill-current" />
@@ -2195,7 +2203,7 @@ const App = () => {
                               <a
                                 href={audioUrl}
                                 download="shinerva-audio.mp3"
-                                className="flex-1 bg-terracotta hover:bg-trdark text-white font-bold py-2.5 rounded-lg transition-all border-none flex items-center justify-center gap-2 text-sm cursor-pointer"
+                                className="flex-1 bg-terracotta hover:bg-trdark text-text font-bold py-2.5 rounded-lg transition-all border-none flex items-center justify-center gap-2 text-sm cursor-pointer"
                               >
                                 <Download className="w-4 h-4" /> Unduh
                               </a>
@@ -2226,10 +2234,10 @@ const App = () => {
                         status === "success"
                           ? "bg-green-600 text-white"
                           : status === "loading"
-                            ? "bg-terracotta/75 text-white cursor-not-allowed"
+                            ? "bg-terracotta/75 text-text cursor-not-allowed"
                             : (cooldown > 0 || isCappedByRequest || isCappedByQuota)
                               ? "bg-surface2 text-text-muted cursor-not-allowed border border-surface2"
-                              : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-white"
+                              : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-text"
                       }`}
                   >
                     <div className="flex items-center gap-2">
@@ -2347,7 +2355,7 @@ const App = () => {
                       ? "bg-surface2 text-text-muted" 
                       : plan.price === 0 
                       ? "bg-transparent border border-surface2 text-text"
-                      : "bg-terracotta hover:bg-trdark text-white"
+                      : "bg-terracotta hover:bg-trdark text-text"
                   }`}
                 >
                   {plan.price === 0 ? "Mulai Gratis" : purchaseLoading === plan.id ? <Loader2 className="animate-spin w-4 h-4" /> : "Beli Sekarang"}
@@ -2390,7 +2398,7 @@ const App = () => {
                     {pack.tag}
                   </span>
                   {pack.trending && (
-                    <span className="text-[10px] font-black px-2 py-1 bg-terracotta/50 text-white rounded-md uppercase tracking-widest">
+                    <span className="text-[10px] font-black px-2 py-1 bg-terracotta/50 text-text rounded-md uppercase tracking-widest">
                       SOON
                     </span>
                   )}
@@ -2401,7 +2409,7 @@ const App = () => {
                 </p>
                 <button
                   disabled
-                  className="w-full bg-dark/50 border border-gray-700 text-gray-500 font-bold py-2.5 rounded-lg transition-all text-sm cursor-not-allowed"
+                  className="w-full bg-dark/50 border border-gray-700 text-text-muted font-bold py-2.5 rounded-lg transition-all text-sm cursor-not-allowed"
                 >
                   {language === 'ID' ? 'Aktifkan Paket' : 'Activate Pack'}
                 </button>
@@ -2429,7 +2437,7 @@ const App = () => {
                 <h3 className="font-bold text-lg mb-2 flex items-center gap-3 text-text">
                   <span className="text-terracotta font-black">Q:</span> {faq.question}
                 </h3>
-                <p className="text-text-muted leading-relaxed">
+                <p className="text-text-muted leading-relaxed whitespace-pre-wrap">
                   {faq.answer}
                 </p>
               </div>
@@ -2451,13 +2459,13 @@ const App = () => {
                 href="https://wa.me/628123456789"
                 target="_blank"
                 rel="noreferrer"
-                className="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-2xl font-black transition-all flex items-center gap-3"
+                className="bg-green-600 hover:bg-green-700 text-text px-10 py-4 rounded-2xl font-black transition-all flex items-center gap-3"
               >
                 Chat WhatsApp
               </a>
               <a
                 href="mailto:hello.shinerva@gmail.com"
-                className="bg-surface2 hover:bg-gray-700 text-white px-10 py-4 rounded-2xl font-black transition-all border border-gray-700 flex items-center gap-3"
+                className="bg-surface2 hover:bg-gray-700 text-text px-10 py-4 rounded-2xl font-black transition-all border border-gray-700 flex items-center gap-3"
               >
                 Email Support
               </a>
@@ -2568,7 +2576,7 @@ const App = () => {
       {isProfileModalOpen && user && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/95 backdrop-blur-md"
+            className="absolute inset-0 bg-dark/95 backdrop-blur-md"
             onClick={() => setIsProfileModalOpen(false)}
           ></div>
           <div className="bg-dark border border-surface2 rounded-[2.5rem] w-full max-w-lg relative z-10 shadow-3xl overflow-hidden border-gradient animate-in zoom-in duration-300">
@@ -2585,7 +2593,7 @@ const App = () => {
                     <User className="w-12 h-12 text-terracotta" />
                     <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-dark"></div>
                   </div>
-                  <h2 className="text-3xl font-black text-white mb-2">{user.name || "Pengguna Shinerva"}</h2>
+                  <h2 className="text-3xl font-black text-text mb-2">{user.name || "Pengguna Shinerva"}</h2>
                   <p className="text-text-muted font-medium">{user.email}</p>
                 </div>
 
@@ -2640,7 +2648,7 @@ const App = () => {
                     setIsProfileModalOpen(false);
                     window.location.hash = "pricing";
                   }}
-                  className="w-full mt-10 bg-terracotta hover:bg-trdark text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-terracotta/20 border-none cursor-pointer"
+                  className="w-full mt-10 bg-terracotta hover:bg-trdark text-text font-black py-4 rounded-2xl transition-all shadow-xl shadow-terracotta/20 border-none cursor-pointer"
                 >
                   Upgrade Keanggotaan
                 </button>
@@ -2653,7 +2661,7 @@ const App = () => {
       {isStudioWarningOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            className="absolute inset-0 bg-dark/90 backdrop-blur-md"
             onClick={() => setIsStudioWarningOpen(false)}
           ></div>
           <div className="bg-dark border border-surface2 rounded-[2rem] w-full max-w-md relative z-10 shadow-2xl overflow-hidden">
@@ -2668,7 +2676,7 @@ const App = () => {
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => setIsStudioWarningOpen(false)}
-                  className="w-full bg-terracotta hover:bg-trdark text-white font-black py-4 rounded-xl transition-all shadow-lg shadow-terracotta/20 border-none cursor-pointer"
+                  className="w-full bg-terracotta hover:bg-trdark text-text font-black py-4 rounded-xl transition-all shadow-lg shadow-terracotta/20 border-none cursor-pointer"
                 >
                   Paham, Kembali
                 </button>
@@ -2684,7 +2692,7 @@ const App = () => {
       {isAuthOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
             onClick={() => setIsAuthOpen(false)}
           ></div>
           <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-md relative z-10 shadow-2xl mx-4">
@@ -2786,7 +2794,7 @@ const App = () => {
               ) : (
                 <div className="bg-terracotta/10 border border-terracotta/20 rounded-2xl p-6 text-center">
                   <CheckCircle className="w-12 h-12 text-terracotta mx-auto mb-4" />
-                  <h3 className="text-lg font-black text-white mb-2 text-center">Cek Email Anda!</h3>
+                  <h3 className="text-lg font-black text-text mb-2 text-center">Cek Email Anda!</h3>
                   <p className="text-sm text-text-muted leading-relaxed">
                     Kami telah mengirimkan link masuk ke <b>{authEmail}</b>. 
                     Klik link di email tersebut untuk masuk secara otomatis.
@@ -2836,20 +2844,20 @@ const App = () => {
       {isPronunciationOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
             onClick={() => setIsPronunciationOpen(false)}
           ></div>
           <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-lg relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
             <button
               onClick={() => setIsPronunciationOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
+              className="absolute top-4 right-4 text-text-muted hover:text-text cursor-pointer bg-transparent border-none"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="text-center mb-6">
               <BookOpen className="w-16 h-16 text-terracotta mx-auto mb-4" />
-              <h2 className="text-2xl font-black text-white">Panduan Pengucapan</h2>
-              <p className="text-gray-400 text-sm mt-2">
+              <h2 className="text-2xl font-black text-text">Panduan Pengucapan</h2>
+              <p className="text-text-muted text-sm mt-2">
                 Atur cara AI menyebutkan kata-kata tertentu (misal: "Shinerva" dibaca "shi ner va").
               </p>
             </div>
@@ -2873,8 +2881,8 @@ const App = () => {
                     }}
                     className="flex flex-col items-start p-2 rounded-lg bg-dark hover:bg-surface2 transition-colors border border-surface2 text-left cursor-pointer"
                   >
-                    <span className="text-[10px] text-gray-500 font-bold">{tip.w} →</span>
-                    <span className="text-xs text-white font-medium">{tip.p}</span>
+                    <span className="text-[10px] text-text-muted font-bold">{tip.w} →</span>
+                    <span className="text-xs text-text font-medium">{tip.p}</span>
                   </button>
                 ))}
               </div>
@@ -2883,7 +2891,7 @@ const App = () => {
             <div className="space-y-4 mb-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-400 mb-2">Kata Asli</label>
+                  <label className="block text-sm font-bold text-text-muted mb-2">Kata Asli</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2907,8 +2915,8 @@ const App = () => {
                             }}
                             className="w-full text-left px-4 py-2.5 hover:bg-surface2 transition-colors flex items-center justify-between group cursor-pointer bg-transparent border-none"
                           >
-                            <span className="text-sm text-white font-bold">{key}</span>
-                            <span className="text-[10px] text-gray-500 group-hover:text-terracotta transition-colors italic">
+                            <span className="text-sm text-text font-bold">{key}</span>
+                            <span className="text-[10px] text-text-muted group-hover:text-terracotta transition-colors italic">
                               Baca: {globalPhonetics[key]}
                             </span>
                           </button>
@@ -2918,7 +2926,7 @@ const App = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-400 mb-2">Cara Baca</label>
+                  <label className="block text-sm font-bold text-text-muted mb-2">Cara Baca</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -2946,14 +2954,14 @@ const App = () => {
                     setNewPronunciation("");
                   }
                 }}
-                className="w-full bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border-none cursor-pointer"
+                className="w-full bg-terracotta hover:bg-trdark text-text py-3 rounded-xl font-bold flex items-center justify-center gap-2 border-none cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Simpan Aturan
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+              <h3 className="font-bold text-text mb-4 flex items-center gap-2">
                 Aturan Tersimpan ({Object.keys(user?.pronunciations || {}).length})
               </h3>
               <div className="space-y-3">
@@ -2961,21 +2969,21 @@ const App = () => {
                   Object.entries(user.pronunciations).map(([word, pron]) => (
                     <div key={word} className="flex items-center justify-between bg-dark p-4 rounded-xl border border-surface2">
                       <div className="flex flex-col">
-                        <span className="text-white font-bold">{word}</span>
+                        <span className="text-text font-bold">{word}</span>
                         <span className="text-terracotta text-sm">Dibaca: {pron}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleTestPronunciation(word, pron)}
                           disabled={testLoading}
-                          className="text-gray-500 hover:text-terracotta transition-colors p-2 cursor-pointer bg-transparent border-none"
+                          className="text-text-muted hover:text-terracotta transition-colors p-2 cursor-pointer bg-transparent border-none"
                           title="Tes suara"
                         >
                           <Play className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleUpdatePronunciation(word, null)}
-                          className="text-gray-500 hover:text-red-500 transition-colors p-2 cursor-pointer bg-transparent border-none"
+                          className="text-text-muted hover:text-red-500 transition-colors p-2 cursor-pointer bg-transparent border-none"
                           title="Hapus"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -2984,7 +2992,7 @@ const App = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-500 italic text-sm">
+                  <div className="text-center py-8 text-text-muted italic text-sm">
                     Belum ada aturan pengucapan khusus.
                   </div>
                 )}
@@ -2998,20 +3006,20 @@ const App = () => {
       {isHistoryOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
             onClick={() => setIsHistoryOpen(false)}
           ></div>
           <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-2xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
             <button
               onClick={() => setIsHistoryOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
+              className="absolute top-4 right-4 text-text-muted hover:text-text cursor-pointer bg-transparent border-none"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="text-center mb-8">
               <History className="w-16 h-16 text-terracotta mx-auto mb-4" />
-              <h2 className="text-2xl font-black text-white">Riwayat Penggunaan</h2>
-              <p className="text-gray-400 text-sm mt-2">
+              <h2 className="text-2xl font-black text-text">Riwayat Penggunaan</h2>
+              <p className="text-text-muted text-sm mt-2">
                 Daftar penggunaan kredit karakter untuk setiap suara yang dihasilkan.
               </p>
             </div>
@@ -3020,7 +3028,7 @@ const App = () => {
               {historyLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 text-terracotta animate-spin mb-4" />
-                  <p className="text-gray-500">Memuat data riwayat...</p>
+                  <p className="text-text-muted">Memuat data riwayat...</p>
                 </div>
               ) : history.length > 0 ? (
                 <div className="overflow-x-auto">
@@ -3084,14 +3092,14 @@ const App = () => {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-500 italic">Belum ada riwayat penggunaan.</p>
+                  <p className="text-text-muted italic">Belum ada riwayat penggunaan.</p>
                 </div>
               )}
             </div>
             <div className="mt-6 pt-6 border-t border-surface2 text-center">
                <button 
                 onClick={() => setIsHistoryOpen(false)}
-                className="bg-surface2 hover:bg-gray-700 text-white px-8 py-2.5 rounded-xl font-bold cursor-pointer border-none"
+                className="bg-surface2 hover:bg-gray-700 text-text px-8 py-2.5 rounded-xl font-bold cursor-pointer border-none"
                >
                  Tutup
                </button>
@@ -3104,20 +3112,20 @@ const App = () => {
       {isVoiceMgmtOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
             onClick={() => setIsVoiceMgmtOpen(false)}
           ></div>
           <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
             <button
               onClick={() => setIsVoiceMgmtOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer bg-transparent border-none"
+              className="absolute top-4 right-4 text-text-muted hover:text-text cursor-pointer bg-transparent border-none"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="text-center mb-8">
               <Settings2 className="w-16 h-16 text-terracotta mx-auto mb-4" />
-              <h2 className="text-2xl font-black text-white">Voice Management</h2>
-              <p className="text-gray-400 text-sm mt-2">
+              <h2 className="text-2xl font-black text-text">Voice Management</h2>
+              <p className="text-text-muted text-sm mt-2">
                 Atur pengali biaya kredit (multiplier) untuk setiap tingkatan suara.
               </p>
             </div>
@@ -3126,14 +3134,14 @@ const App = () => {
               {voiceConfigLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 text-terracotta animate-spin mb-4" />
-                  <p className="text-gray-500">Memuat data...</p>
+                  <p className="text-text-muted">Memuat data...</p>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {Object.entries(voiceConfig.tiers).map(([tier, multiplier]) => (
                     <div key={tier} className="bg-dark p-4 rounded-xl border border-surface2">
                       <div className="flex items-center justify-between mb-2">
-                        <label className="font-bold text-white uppercase text-xs tracking-wider">
+                        <label className="font-bold text-text uppercase text-xs tracking-wider">
                           Tier: {tier}
                         </label>
                         <span className="text-terracotta font-bold">{multiplier}x Multiplier</span>
@@ -3159,62 +3167,62 @@ const App = () => {
                             const newTiers = { ...voiceConfig.tiers, [tier]: val };
                             setVoiceConfig({ ...voiceConfig, tiers: newTiers });
                           }}
-                          className="w-16 bg-dark text-white border border-surface2 rounded px-2 py-1 text-center font-bold text-xs"
+                          className="w-16 bg-dark text-text border border-surface2 rounded px-2 py-1 text-center font-bold text-xs"
                         />
                       </div>
-                      <p className="text-[10px] text-gray-500 mt-2">
+                      <p className="text-[10px] text-text-muted mt-2">
                         1 Karakter = {multiplier} Kredit
                       </p>
                     </div>
                   ))}
 
                   <div className="pt-6 border-t border-surface2">
-                    <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                    <h3 className="text-text font-bold mb-4 flex items-center gap-2">
                        <Settings2 className="w-4 h-4 text-terracotta" /> Global Limits Configuration
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-dark p-4 rounded-xl border border-surface2">
-                        <label className="block text-[10px] text-gray-400 font-bold uppercase mb-2">Free Char Limit</label>
+                        <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Free Char Limit</label>
                         <input
                            type="number"
                            value={voiceConfig.limits?.free_request_chars || 500}
                            onChange={(e) => {
                              setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, free_request_chars: parseInt(e.target.value) || 0 } });
                            }}
-                           className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
+                           className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
                         />
                       </div>
                       <div className="bg-dark p-4 rounded-xl border border-surface2">
-                        <label className="block text-[10px] text-gray-400 font-bold uppercase mb-2">Paid Char Limit</label>
+                        <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Paid Char Limit</label>
                         <input
                            type="number"
                            value={voiceConfig.limits?.paid_request_chars || 5000}
                            onChange={(e) => {
                              setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, paid_request_chars: parseInt(e.target.value) || 0 } });
                            }}
-                           className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
+                           className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
                         />
                       </div>
                       <div className="bg-dark p-4 rounded-xl border border-surface2">
-                        <label className="block text-[10px] text-gray-400 font-bold uppercase mb-2">Free Cooldown (sec)</label>
+                        <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Free Cooldown (sec)</label>
                         <input
                            type="number"
                            value={voiceConfig.limits?.free_cooldown_sec || 15}
                            onChange={(e) => {
                              setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, free_cooldown_sec: parseInt(e.target.value) || 0 } });
                            }}
-                           className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
+                           className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
                         />
                       </div>
                       <div className="bg-dark p-4 rounded-xl border border-surface2">
-                        <label className="block text-[10px] text-gray-400 font-bold uppercase mb-2">Paid Cooldown (sec)</label>
+                        <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Paid Cooldown (sec)</label>
                         <input
                            type="number"
                            value={voiceConfig.limits?.paid_cooldown_sec || 2}
                            onChange={(e) => {
                              setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, paid_cooldown_sec: parseInt(e.target.value) || 0 } });
                            }}
-                           className="w-full bg-surface2 text-white border border-surface2 rounded px-3 py-2 font-bold text-sm"
+                           className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
                         />
                       </div>
                     </div>
@@ -3226,13 +3234,13 @@ const App = () => {
             <div className="mt-8 flex gap-4">
                <button 
                 onClick={() => setIsVoiceMgmtOpen(false)}
-                className="flex-1 bg-surface2 hover:bg-gray-700 text-white py-3 rounded-xl font-bold cursor-pointer border-none"
+                className="flex-1 bg-surface2 hover:bg-gray-700 text-text py-3 rounded-xl font-bold cursor-pointer border-none"
                >
                  Batal
                </button>
                <button 
                 onClick={() => saveVoiceConfig(voiceConfig.tiers, voiceConfig.limits)}
-                className="flex-2 bg-terracotta hover:bg-trdark text-white py-3 rounded-xl font-bold cursor-pointer border-none"
+                className="flex-2 bg-terracotta hover:bg-trdark text-text py-3 rounded-xl font-bold cursor-pointer border-none"
                >
                  Simpan Perubahan
                </button>

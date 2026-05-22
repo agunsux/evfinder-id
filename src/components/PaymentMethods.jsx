@@ -15,7 +15,7 @@ const PaymentMethods = () => {
         <motion.img whileHover={{ scale: 1.1 }} src="/payment/shopeepay.png" alt="ShopeePay" className="h-8 cursor-pointer" />
         <div className="relative">
           <motion.img whileHover={{ scale: 1.1 }} src="/payment/qris.png" alt="QRIS" className="h-10 cursor-pointer" />
-          <span className="absolute -top-1 -right-2 bg-green-500 text-white text-[8px] font-bold px-1 rounded-full whitespace-nowrap">
+          <span className="absolute -top-1 -right-2 bg-green-500 text-text text-[8px] font-bold px-1 rounded-full whitespace-nowrap">
             Secure
           </span>
         </div> 

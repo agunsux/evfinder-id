@@ -175,11 +175,11 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
             <div>
-              <h2 className="text-3xl font-black text-white tracking-tighter flex items-center gap-3">
+              <h2 className="text-3xl font-black text-text tracking-tighter flex items-center gap-3">
                 {t('title')} <Sparkles className="text-terracotta w-6 h-6 animate-pulse" />
               </h2>
               <div className="flex items-center gap-4 mt-2">
-                <p className="text-gray-400 text-sm font-medium leading-relaxed">
+                <p className="text-text-muted text-sm font-medium leading-relaxed">
                   {t('subtitle')}
                 </p>
                 {setLanguage && (
@@ -194,7 +194,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                         className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest transition-all border-none cursor-pointer ${
                           language === lang.code 
                           ? "bg-terracotta text-white shadow-lg shadow-terracotta/20" 
-                          : "text-gray-500 hover:text-white"
+                          : "text-text-muted hover:text-text"
                         }`}
                       >
                         <span>{lang.flag}</span>
@@ -218,7 +218,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
       <div className="flex flex-col lg:flex-row min-h-[600px]">
         {/* Tier Sidebar */}
         <div className="w-full lg:w-72 bg-surface/30 border-r border-surface2 p-6 space-y-3">
-          <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 px-2">{t('tech')}</p>
+          <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-4 px-2">{t('tech')}</p>
           {currentVoices.map((tier, idx) => (
             <button
               key={tier.tier}
@@ -237,12 +237,12 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${activeTierIdx === idx ? 'bg-terracotta text-white' : 'bg-surface2 text-gray-400 group-hover:text-white'}`}>
+                <div className={`p-2 rounded-xl ${activeTierIdx === idx ? 'bg-terracotta text-white' : 'bg-surface2 text-text-muted group-hover:text-text'}`}>
                   {getTierIcon(tier.tier)}
                 </div>
                 <div className="text-left">
-                  <p className={`font-bold text-sm ${activeTierIdx === idx ? 'text-white' : 'text-gray-400'}`}>{tier.tier}</p>
-                  <p className="text-[10px] text-gray-500 font-medium">{(tier.tier === 'Aura' || tier.tier === 'Pulse' || tier.tier === 'Cloning') ? t('coming_soon') : `${tier.voices.length} ${t('variants')}`}</p>
+                  <p className={`font-bold text-sm ${activeTierIdx === idx ? 'text-text' : 'text-text-muted'}`}>{tier.tier}</p>
+                  <p className="text-[10px] text-text-muted font-medium">{(tier.tier === 'Aura' || tier.tier === 'Pulse' || tier.tier === 'Cloning') ? t('coming_soon') : `${tier.voices.length} ${t('variants')}`}</p>
                 </div>
               </div>
               <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
@@ -250,7 +250,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                 tier.badge === 'EXOTIC' ? 'bg-emerald-500/20 text-emerald-400' :
                 tier.badge === 'PRO' ? 'bg-purple-500/20 text-purple-400' :
                 tier.badge === 'PLUS' ? 'bg-blue-500/20 text-blue-400' :
-                'bg-gray-500/20 text-gray-400'
+                'bg-gray-500/20 text-text-muted'
               }`}>
                 {tier.badge}
               </span>
@@ -268,12 +268,12 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                    activeTier.tier === 'Pulse' ? <TrendingUp className="w-10 h-10 text-terracotta animate-pulse" /> :
                    <ShieldCheck className="w-10 h-10 text-terracotta animate-pulse" />}
                 </div>
-                <h3 className="text-2xl font-black text-white mb-4">
+                <h3 className="text-2xl font-black text-text mb-4">
                   {activeTier.tier === 'Aura' ? t('quality_title_aura') : 
                    activeTier.tier === 'Pulse' ? t('quality_title_pulse') : 
                    t('quality_title_cloning')}
                 </h3>
-                <p className="text-gray-400 text-sm leading-relaxed mb-8">
+                <p className="text-text-muted text-sm leading-relaxed mb-8">
                   {activeTier.tier === 'Aura' ? t('quality_desc_aura') : 
                    activeTier.tier === 'Pulse' ? t('quality_desc_pulse') : 
                    t('quality_desc_cloning')}
@@ -297,8 +297,8 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                 onClick={() => setActiveCategoryIdx(idx)}
                 className={`relative px-6 py-2.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all border overflow-hidden group ${
                   activeCategoryIdx === idx 
-                  ? 'text-white border-terracotta shadow-[0_8px_25px_rgba(226,114,91,0.4)]' 
-                  : 'text-gray-400 border-surface2/60 hover:text-white hover:border-terracotta/50 bg-surface2/20 backdrop-blur-sm'
+                  ? 'text-text border-terracotta shadow-[0_8px_25px_rgba(226,114,91,0.4)]' 
+                  : 'text-text-muted border-surface2/60 hover:text-text hover:border-terracotta/50 bg-surface2/20 backdrop-blur-sm'
                 }`}
               >
                 {activeCategoryIdx === idx && (
@@ -322,7 +322,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
             animate={{ opacity: 1, x: 0 }}
             className="mb-8 p-4 bg-surface2/20 border-l-2 border-terracotta rounded-r-xl"
           >
-            <p className="text-gray-400 text-xs font-medium flex items-center gap-2">
+            <p className="text-text-muted text-xs font-medium flex items-center gap-2">
               <ShieldCheck className="w-3 h-3 text-terracotta" /> {activeCategory.description}
             </p>
           </motion.div>
@@ -358,7 +358,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="text-white font-black text-sm">{sample.title}</h4>
+                          <h4 className="text-text font-black text-sm">{sample.title}</h4>
                           {activeCategory.slug === 'mystery' && (
                             <span className="flex items-center gap-1 text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/30 font-black uppercase tracking-tighter">
                               <Ghost className="w-2 h-2" /> Dramatic
@@ -370,7 +370,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Voice: {sample.voiceId.split('-').pop()}</p>
+                        <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Voice: {sample.voiceId.split('-').pop()}</p>
                       </div>
                     </div>
                     <button 
@@ -380,7 +380,7 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                         currentlyPlaying === sample.id 
                         ? 'bg-terracotta text-white scale-110' 
                         : loadingIds[sample.id]
-                        ? 'bg-surface2 text-gray-500 animate-pulse'
+                        ? 'bg-surface2 text-text-muted animate-pulse'
                         : 'bg-white text-black hover:scale-105 active:scale-95'
                       }`}
                     >
@@ -445,8 +445,8 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
                   {activeTier.tier === 'Aura' ? <Sparkles className="w-12 h-12 text-terracotta" /> : <TrendingUp className="w-12 h-12 text-terracotta" />}
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-white mb-2 tracking-tight">{activeTier.tier === 'Aura' ? t('quality_title_aura') : t('quality_title_pulse')}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed max-w-xl">
+                  <h3 className="text-xl font-black text-text mb-2 tracking-tight">{activeTier.tier === 'Aura' ? t('quality_title_aura') : t('quality_title_pulse')}</h3>
+                  <p className="text-text-muted text-sm leading-relaxed max-w-xl">
                     {activeTier.tier === 'Aura' ? t('quality_desc_aura') : t('quality_desc_pulse')} <strong>{t('quality_cta')}</strong>
                   </p>
                 </div>
@@ -461,25 +461,25 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
         <div className="flex items-center gap-4">
           <div className="flex -space-x-3">
             {[1,2,3].map(i => (
-              <div key={i} className="w-10 h-10 rounded-full border-2 border-surface2 bg-surface flex items-center justify-center text-[10px] font-black text-gray-400">
+              <div key={i} className="w-10 h-10 rounded-full border-2 border-surface2 bg-surface flex items-center justify-center text-[10px] font-black text-text-muted">
                 AI
               </div>
             ))}
           </div>
           <p className="text-sm font-bold text-gray-300">
-            {t('join')} <span className="text-white">{t('creators')}</span> {t('upgraded')}
+            {t('join')} <span className="text-text">{t('creators')}</span> {t('upgraded')}
           </p>
         </div>
         <div className="flex items-center gap-4">
           <button 
             onClick={onUpgrade}
-            className="text-white hover:text-terracotta text-sm font-bold transition-all"
+            className="text-text hover:text-terracotta text-sm font-bold transition-all"
           >
             {t('pricing')}
           </button>
           <button 
             onClick={onUpgrade}
-            className="bg-terracotta hover:bg-terracotta/80 text-white px-8 py-4 rounded-2xl font-black text-sm shadow-[0_10px_30px_rgba(231,76,60,0.3)] transition-all hover:scale-105 active:scale-95"
+            className="bg-terracotta hover:bg-terracotta/80 text-text px-8 py-4 rounded-2xl font-black text-sm shadow-[0_10px_30px_rgba(231,76,60,0.3)] transition-all hover:scale-105 active:scale-95"
           >
             {activeTier.tier === 'Aura' ? t('activate_aura') : activeTier.tier === 'Pulse' ? t('activate_pulse') : t('upgrade')} &rarr;
           </button>
