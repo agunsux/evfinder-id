@@ -1712,10 +1712,10 @@ const App = () => {
                 </button>
                 {user ? (
                   <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => setIsProfileModalOpen(true)}
                     className="text-text px-4 py-2 md:px-6 md:py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
                   >
-                    Akun Saya
+                    {language === 'ID' ? 'Akun Saya' : 'My Account'}
                   </button>
                 ) : (
                   <button
@@ -1725,7 +1725,7 @@ const App = () => {
                     }}
                     className="text-text px-4 py-2 md:px-6 md:py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
                   >
-                    Masuk
+                    {language === 'ID' ? 'Masuk' : 'Sign In'}
                   </button>
                 )}
               </div>
