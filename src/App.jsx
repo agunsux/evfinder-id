@@ -1374,9 +1374,17 @@ const App = () => {
     // map volume -10 to 10 into 0 to 1
     utterance.volume = 0.5 + (parseFloat(volume) / 20);
 
-    const voices = synth.getVoices();
-    const idVoices = voices.filter((v) => v.lang.includes("id"));
-    if (idVoices.length > 0) utterance.voice = idVoices[0];
+    let voices = synth.getVoices();
+    let idVoices = voices.filter((v) => v.lang.toLowerCase().replace('_', '-').includes("id-id") || v.lang.toLowerCase() === "id");
+    
+    if (idVoices.length > 0) {
+      // Try to find a female voice if possible
+      const femaleVoice = idVoices.find(v => v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("perempuan"));
+      utterance.voice = femaleVoice || idVoices[0];
+    } else {
+      // Fallback: Just set the language to id-ID so the browser tries to use a default Indonesian voice
+      utterance.lang = 'id-ID';
+    }
 
     utterance.onend = () => setIsPlaying(false);
 
