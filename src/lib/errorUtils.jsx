@@ -6,8 +6,8 @@ export const checkResponse = async (res, retryCount = 0, optionsOrMethod = 'GET'
     const isBackend = res.headers.get("x-backend-server") === "Shinerva";
 
     // If we get HTML from an API route with 200 status, it's likely the "Starting Server" infrastructure page.
-    // Also retry on 503 Service Unavailable which often happens during cold starts.
-    const isRetryableError = res.status === 503;
+    // Also retry on 503 Service Unavailable which often happens during cold starts (only if NOT from our backend).
+    const isRetryableError = res.status === 503 && !isBackend;
     let text = "";
     if (res.ok && !isJson) {
         try {
