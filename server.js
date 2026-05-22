@@ -277,7 +277,7 @@ async function createServer() {
           has_received_referral_bonus: false,
           social_bonus_status: 'none',
           social_url: '',
-          signup_bonus_chars: 10000, 
+          signup_bonus_chars: 0, 
           monthly_chars: 10000,     
           earned_chars: referredBy ? 5000 : 0,
           used_chars: 0,
@@ -318,6 +318,14 @@ async function createServer() {
         updates.monthly_chars = 10000;
         updates.subscription_expires_at = null;
         userUpdated = true;
+      }
+
+      // Normalize FREE users who previously had the 10k signup bonus
+      if (user.tier === 'FREE' && user.signup_bonus_chars > 0) {
+        user.signup_bonus_chars = 0;
+        updates.signup_bonus_chars = 0;
+        userUpdated = true;
+        console.log(`[Server] Normalized signup_bonus_chars to 0 for FREE user ${user.email}`);
       }
 
       const lastCheck = user.last_reset_check ? new Date(user.last_reset_check) : new Date(user.signup_date);

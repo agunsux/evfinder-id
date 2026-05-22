@@ -2640,15 +2640,26 @@ const App = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setIsProfileModalOpen(false);
-                    window.location.hash = "pricing";
-                  }}
-                  className="w-full mt-10 bg-terracotta hover:bg-trdark text-text font-black py-4 rounded-2xl transition-all shadow-xl shadow-terracotta/20 border-none cursor-pointer"
-                >
-                  Upgrade Keanggotaan
-                </button>
+                <div className="mt-10 flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setIsProfileModalOpen(false);
+                      document.getElementById('pricing-temporarily-renamed')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="w-full bg-terracotta hover:bg-trdark text-text font-black py-4 rounded-2xl transition-all shadow-xl shadow-terracotta/20 border-none cursor-pointer"
+                  >
+                    Upgrade Keanggotaan
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await logout();
+                      setIsProfileModalOpen(false);
+                    }}
+                    className="w-full bg-transparent hover:bg-red-500/10 text-red-500 font-bold py-3 rounded-2xl transition-all border border-red-500/20 cursor-pointer"
+                  >
+                    Keluar Akun
+                  </button>
+                </div>
              </div>
           </div>
         </div>
