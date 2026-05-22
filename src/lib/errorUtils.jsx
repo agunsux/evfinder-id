@@ -26,7 +26,7 @@ export const checkResponse = async (res, retryCount = 0, optionsOrMethod = 'GET'
     const isStartingPage = (res.ok || res.status === 200) && !isJson && (textLower.includes("starting server") || textLower.includes("starting container") || textLower.includes("wait while your application starts") || isHtml);
 
     // Critical check: if it's an API route but NOT our backend, it's intercepted by the infrastructure
-    const isIntercepted = isApiRoute && !isBackend;
+    const isIntercepted = isApiRoute && !isBackend && (res.status === 503 || res.status === 502 || res.status === 200);
 
     if ((isStartingPage || isRetryableError || isIntercepted) && isApiRoute && retryCount < 100) {
         const platformReason = isRetryableError ? '503 Service Unavailable' : (isIntercepted ? 'Platform Interception (Missing X-Backend-Server)' : 'Infrastructure Starting Page (HTML 200)');
@@ -83,8 +83,7 @@ export const checkResponse = async (res, retryCount = 0, optionsOrMethod = 'GET'
         
         // Re-check for starting page here just in case it escaped detection above
         const isDefinitelyStarting = textLow.includes("starting server") || textLow.includes("starting container") || textLow.includes("wait while") || (textLow.includes("<html") && textLow.includes("<title"));
-
-        if ((isDefinitelyStarting || !isBackend) && isApiRoute && retryCount < 100) {
+        if (isDefinitelyStarting && isApiRoute && retryCount < 100) {
             console.warn(`[API Emergency Retry] Deep inspection found non-JSON infrastructure page on ${res.url}. Retrying... (Attempt ${retryCount + 1}/100)`);
             await new Promise(resolve => setTimeout(resolve, 6000));
             const fetchOptions = typeof optionsOrMethod === 'string' ? { method: optionsOrMethod } : optionsOrMethod;
