@@ -147,14 +147,17 @@ export const getFirestoreDb = (databaseId) => {
   if (!app) return null;
   try {
     const dbId = (!databaseId || databaseId === "(default)" || databaseId === "") ? undefined : databaseId;
-    return admin.firestore(app, dbId);
+    const db = admin.firestore(app, dbId);
+    db.settings({ preferRest: true });
+    return db;
   } catch (err) {
     console.warn("[Firebase Admin] Firestore instance warning (might be offline):", err.message);
-    // If it fails because of databaseId, try (default)
     if (databaseId && databaseId !== "(default)") {
       console.log("[Firebase Admin] Retrying with (default) database...");
       try {
-        return admin.firestore(app);
+        const fallbackDb = admin.firestore(app);
+        fallbackDb.settings({ preferRest: true });
+        return fallbackDb;
       } catch (e2) {
         return null;
       }
