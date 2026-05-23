@@ -9,6 +9,10 @@ import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
 import admin, { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
 import { fileURLToPath } from 'url';
+import { deductCredits } from './services/credits.js';
+import adminOnly from './middleware/adminOnly.js';
+import { getActiveCount, increment, decrement } from './rateLimiterStore.js';
+
 import { GoogleAuth } from 'google-auth-library';
 import { checkAudioCache, uploadAudioToR2, getAudioPublicUrl } from './src/lib/r2Storage.js';
 import { generateGeminiTts } from './server/services/geminiTts.js';
@@ -197,7 +201,15 @@ async function createServer() {
   await loadInitialConfig();
   
   const app = express();
-  app.use(cors());
+  // Trust proxy for correct client IP handling behind Vercel/Railway
+  app.set('trust proxy', 1);
+  // Strict CORS configuration - only allow origins specified in CORS_ORIGIN env var
+  const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').map(o => o.trim()).filter(o => o);
+  app.use(cors({
+    origin: allowedOrigins.length ? allowedOrigins : false,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  }));
   app.use(express.json({ limit: '32kb' }));
   app.use(express.urlencoded({ extended: true, limit: '32kb' }));
 
@@ -442,8 +454,8 @@ async function createServer() {
     res.json(voiceConfig);
   });
 
-  app.post('/api/admin/voice-config', authenticate, async (req, res) => {
-    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+  app.post('/api/admin/voice-config', authenticate, adminOnly, async (req, res) => {
+    // Admin check moved to middleware
     const { tiers, limits } = req.body;
     if (tiers) {
       voiceConfig.tiers = { ...voiceConfig.tiers, ...tiers };
@@ -497,8 +509,8 @@ async function createServer() {
   });
 
   // --- ADMIN EXPORTS ---
-  app.get('/api/admin/export/email', authenticate, async (req, res) => {
-    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+  app.get('/api/admin/export/email', authenticate, adminOnly, async (req, res) => {
+    // Admin check moved to middleware
     if (!dbAdmin) return res.status(503).json({ error: 'Firestore unavailable' });
 
     const snapshot = await dbAdmin.collection('users').where('email_subscribed', '==', true).get();
@@ -674,8 +686,8 @@ async function createServer() {
     }
   });
 
-  app.get('/api/admin/export/whatsapp', authenticate, async (req, res) => {
-    if (!req.user || req.user.tier !== 'ENTERPRISE') return res.status(403).json({error: 'Forbidden'});
+  app.get('/api/admin/export/whatsapp', authenticate, adminOnly, async (req, res) => {
+    // Admin check moved to middleware
     if (!dbAdmin) return res.status(503).json({ error: 'Firestore unavailable' });
 
     const snapshot = await dbAdmin.collection('users').where('whatsapp_opted_in', '==', true).get();
@@ -692,7 +704,7 @@ async function createServer() {
   });
   
   // --- RATE LIMITERS ---
-  const activeRequests = new Map();
+  // In-memory active request tracking moved to rateLimiterStore
   const getClientIp = (req) => req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
   const TIER_LIMITS = {
@@ -753,16 +765,16 @@ async function createServer() {
     const clientId = user ? user.id : getClientIp(req);
     const maxSimultaneous = TIER_LIMITS[tier]?.simultaneous || 1;
 
-    const activeCount = activeRequests.get(clientId) || 0;
+    const activeCount = getActiveCount(clientId);
     if (activeCount >= maxSimultaneous) {
       return res.status(429).json({ error: 'Terlalu banyak antrean proses bersamaan. Harap tunggu proses sebelumnya selesai.' });
     }
 
-    activeRequests.set(clientId, activeCount + 1);
+    increment(clientId);
 
     const decrementActive = () => {
-      const currentActive = activeRequests.get(clientId) || 1;
-      activeRequests.set(clientId, Math.max(0, currentActive - 1));
+      const currentActive = getActiveCount(clientId) || 1;
+      decrement(clientId);
     };
 
     res.on('finish', decrementActive);
@@ -963,12 +975,28 @@ async function createServer() {
       }
 
       if (!isSample) {
-        user.used_chars += totalCharCost;
-        user.generation_count += 1;
-        user.last_generation_at = Date.now();
+        // Atomic credit deduction and generation event logging
+        const generationId = generateId();
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+        try {
+          await deductCredits({
+            uid: req.user.id,
+            charCost: totalCharCost,
+            generationId,
+            ip: clientIp,
+            model: 'gemini',
+            // Token counts are not tracked here; placeholders
+            promptTokens: null,
+            completionTokens: null
+          });
+        } catch (e) {
+          console.error('Credit deduction failed:', e.message);
+          return res.status(400).json({ error: e.message });
+        }
+        // Update user history locally (credits already updated in DB)
         if (!user.history) user.history = [];
         user.history.unshift({
-          id: generateId(),
+          id: generationId,
           date: Date.now(),
           text_length: text.length,
           voice: actualVoice,
@@ -977,13 +1005,8 @@ async function createServer() {
           credits_used: totalCharCost,
           audioUrl: finalAudioUrl
         });
-
-        await saveUser(req.user.id, {
-          used_chars: user.used_chars,
-          generation_count: user.generation_count,
-          last_generation_at: user.last_generation_at,
-          history: user.history 
-        });
+        // Save only history (used_chars etc already handled)
+        await saveUser(req.user.id, { history: user.history });
       }
 
       res.json({ audioContent: finalAudioContent, audioUrl: finalAudioUrl, voice: actualVoice });
