@@ -694,46 +694,49 @@ const App = () => {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       clearTimeout(authTimeout);
-      console.log("[Auth] Firebase state changed:", firebaseUser?.email || "No User");
-      if (firebaseUser) {
-        // Set basic user info immediately for a better UX
-        setUser(prev => prev || { 
-          email: firebaseUser.email, 
-          uid: firebaseUser.uid,
-          emailVerified: firebaseUser.emailVerified,
-          tier: 'FREE',
-          generation_count: 0,
-          used_chars: 0,
-          monthly_chars: 10000,
-          signup_bonus_chars: 10000,
-          earned_chars: 0,
-          valid_referrals: 0,
-          has_received_referral_bonus: false,
-          referral_code: "",
-          social_bonus_status: "none"
-        });
+      try {
+        console.log("[Auth] Firebase state changed:", firebaseUser?.email || "No User");
+        if (firebaseUser) {
+          // Set basic user info immediately for a better UX
+          setUser(prev => prev || {
+            email: firebaseUser.email,
+            uid: firebaseUser.uid,
+            emailVerified: firebaseUser.emailVerified,
+            tier: 'FREE',
+            generation_count: 0,
+            used_chars: 0,
+            monthly_chars: 10000,
+            signup_bonus_chars: 10000,
+            earned_chars: 0,
+            valid_referrals: 0,
+            has_received_referral_bonus: false,
+            referral_code: "",
+            social_bonus_status: "none"
+          });
 
-        // Sync with backend to get full profile
-        try {
-          const idToken = await firebaseUser.getIdToken(true);
-          const options = {
-            headers: { 
-              "Authorization": `Bearer ${idToken}`
-            },
-          };
-          const res = await fetch("/api/user/me", options);
-          const data = await checkResponse(res, 0, options);
-          if (data.user) {
-            console.log("[Auth] Profile synced from backend:", data.user.email, "Verified:", data.user.emailVerified);
-            setUser(data.user);
+          // Sync with backend to get full profile
+          try {
+            const idToken = await firebaseUser.getIdToken(true);
+            const options = {
+              headers: {
+                "Authorization": `Bearer ${idToken}`
+              },
+            };
+            const res = await fetch("/api/user/me", options);
+            const data = await checkResponse(res, 0, options);
+            if (data.user) {
+              console.log("[Auth] Profile synced from backend:", data.user.email, "Verified:", data.user.emailVerified);
+              setUser(data.user);
+            }
+          } catch (e) {
+            console.warn("[Auth] Failed to sync profile:", e);
           }
-        } catch (e) {
-          console.warn("[Auth] Failed to sync profile:", e);
+        } else {
+          setUser(null);
         }
-      } else {
-        setUser(null);
+      } finally {
+        setIsAuthInitializing(false);
       }
-      setIsAuthInitializing(false);
     });
     return () => {
       clearTimeout(authTimeout);
@@ -903,29 +906,6 @@ const App = () => {
     }
 
     fetchHistory();
-    // Watch for auth changes
-    let unsubscribe = () => {};
-    if (auth) {
-      try {
-        unsubscribe = auth.onAuthStateChanged(async (u) => {
-          if (u) {
-            await refreshUser();
-          } else {
-            setUser(null);
-          }
-          setIsAuthInitializing(false);
-        }, (error) => {
-          console.error("Auth state change error:", error?.message || error);
-          setIsAuthInitializing(false);
-        });
-      } catch (e) {
-        console.error("onAuthStateChanged setup failed:", e?.message || e);
-        setIsAuthInitializing(false);
-      }
-    } else {
-      setIsAuthInitializing(false);
-    }
-    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -1565,7 +1545,6 @@ const App = () => {
         console.error("[Auth] Background sync error:", syncErr?.message || syncErr);
       }
 
-      await refreshUser();
       setIsAuthOpen(false);
       toast.success("Login Google berhasil!");
     } catch (err) {
