@@ -24,6 +24,7 @@
     "express-rate-limit": "^8.5.1",
     "firebase": "^11.0.1",
     "firebase-admin": "^13.0.0",
+    "google-auth-library": "^10.6.2",
     "lucide-react": "^0.378.0",
     "midtrans-client": "^1.4.3",
     "motion": "^12.39.0",

@@ -9,6 +9,25 @@ import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
 import { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
 import { fileURLToPath } from 'url';
+import { GoogleAuth } from 'google-auth-library';
+
+let googleAuthClient = null;
+function getGoogleAuthClient() {
+  if (!googleAuthClient && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+    let pk = process.env.FIREBASE_PRIVATE_KEY;
+    if (pk.startsWith('{')) {
+      try { pk = JSON.parse(pk).private_key; } catch(e){}
+    }
+    googleAuthClient = new GoogleAuth({
+      credentials: {
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        private_key: pk.replace(/\\n/g, '\n')
+      },
+      scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    });
+  }
+  return googleAuthClient;
+}
 
 const getFilename = () => {
   try {
@@ -807,6 +826,18 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
     try {
       let { text, voice, speed, pitch, volume, isSample } = req.body;
       const apiKey = clean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.VITE_FIREBASE_API_KEY);
+      
+      let tokenStr = "";
+      try {
+        const authClient = getGoogleAuthClient();
+        if (authClient) {
+          const client = await authClient.getClient();
+          const tokenObj = await client.getAccessToken();
+          tokenStr = tokenObj.token;
+        }
+      } catch(err) {
+        console.error("GoogleAuth Error:", err);
+      }
       let user = req.user;
       const isGeminiVoice = ['Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr', 'Aoife', 'Eos'].includes(voice);
 
@@ -842,8 +873,8 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         return res.status(400).json({ error: 'Teks diperlukan untuk konversi suara.' });
       }
 
-      if (!apiKey) {
-        console.error('[TTS Configuration Error] Missing API Key. GOOGLE_API_KEY or GEMINI_API_KEY must be set.');
+      if (!apiKey && !tokenStr) {
+        console.error('[TTS Configuration Error] Missing API Key or Service Account credentials.');
         return res.status(503).json({ error: 'Layanan TTS sedang dalam pemeliharaan (Konfigurasi API tidak ditemukan).' });
       }
 
@@ -924,10 +955,15 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       }
       
       let finalAudioContent = null;
+      let fetchUrl = `https://texttospeech.googleapis.com/v1/text:synthesize`;
+      if (!tokenStr) fetchUrl += `?key=${apiKey}`;
+      const headers = { 'Content-Type': 'application/json' };
+      if (tokenStr) headers['Authorization'] = `Bearer ${tokenStr}`;
+
       try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
+        const response = await fetch(fetchUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headers,
           body: JSON.stringify({
             input: { ssml: ssmlText },
             voice: { languageCode: languageCode, name: actualVoice },
@@ -948,9 +984,9 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       } catch (err) {
         console.warn(`[Google TTS] Primary Voice ${actualVoice} Failed: ${err.message}. Attempting Secondary Fallback...`);
         const fallbackVoice = 'id-ID-Standard-C';
-        const response2 = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`, {
+        const response2 = await fetch(fetchUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headers,
           body: JSON.stringify({
             input: { ssml: ssmlText },
             voice: { languageCode: 'id-ID', name: fallbackVoice },
