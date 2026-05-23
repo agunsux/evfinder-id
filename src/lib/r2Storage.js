@@ -17,6 +17,7 @@ if (accountId && accessKeyId && secretAccessKey) {
       accessKeyId: accessKeyId,
       secretAccessKey: secretAccessKey,
     },
+    maxAttempts: 3, // Retry logic for resilience
   });
 }
 
@@ -61,7 +62,7 @@ export async function uploadAudioToR2(filename, base64Content) {
       Bucket: bucketName,
       Key: filename,
       Body: buffer,
-      ContentType: "audio/mp3",
+      ContentType: filename.endsWith('.wav') ? "audio/wav" : "audio/mpeg",
       // Optional: Add cache control for CDN optimization
       CacheControl: "public, max-age=31536000, immutable",
     });

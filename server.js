@@ -7,10 +7,15 @@ import path from 'path';
 import cors from 'cors';
 import crypto from 'crypto';
 import midtransClient from 'midtrans-client';
-import { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
+import admin, { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
 import { fileURLToPath } from 'url';
 import { GoogleAuth } from 'google-auth-library';
 import { checkAudioCache, uploadAudioToR2, getAudioPublicUrl } from './src/lib/r2Storage.js';
+import { generateGeminiTts } from './server/services/geminiTts.js';
+import { validateEnv } from './server/lib/env.js';
+import { verifyTurnstile } from './server/middleware/verifyTurnstile.js';
+
+validateEnv();
 
 let googleAuthClient = null;
 function getGoogleAuthClient() {
@@ -193,8 +198,8 @@ async function createServer() {
   
   const app = express();
   app.use(cors());
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: '32kb' }));
+  app.use(express.urlencoded({ extended: true, limit: '32kb' }));
 
   // Force JSON for all API routes and prevent HTML fallthrough
   app.use('/api', (req, res, next) => {
@@ -702,10 +707,10 @@ async function createServer() {
   const ttsRateLimiterMiddleware = rateLimit({
     windowMs: 60 * 1000,
     max: (req) => {
+      if (req.body && req.body.isSample === true) return 5;
       const tier = req.user ? req.user.tier : 'FREE';
       return TIER_LIMITS[tier]?.requests || 2;
     },
-    skip: (req) => req.body && req.body.isSample === true,
     keyGenerator: (req) => req.user ? req.user.id : getClientIp(req),
     message: { error: 'Batas request per menit tercapai. Silakan coba lagi beberapa saat lagi.' },
     standardHeaders: true,
@@ -771,7 +776,6 @@ async function createServer() {
   const hourlyFreeLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: (req) => (req.user && req.user.tier === 'FREE' ? 3 : 1000),
-    skip: (req) => req.body && req.body.isSample === true,
     keyGenerator: (req) => req.user ? req.user.id : getClientIp(req),
     message: { error: 'Batas 3 generasi per jam untuk paket FREE tercapai. Upgrade untuk akses tak terbatas!' },
     standardHeaders: true,
@@ -781,45 +785,12 @@ async function createServer() {
   const dailyFreeLimiter = rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     max: (req) => (req.user && req.user.tier === 'FREE' ? 10 : 5000),
-    skip: (req) => req.body && req.body.isSample === true,
     keyGenerator: (req) => req.user ? req.user.id : getClientIp(req),
     message: { error: 'Batas 10 generasi per hari untuk paket FREE tercapai. Nikmati tak terbatas dengan paket STARTER hanya Rp19rb!' },
     standardHeaders: true,
     legacyHeaders: false,
   });
 
-// Helper to convert Raw PCM to WAV
-function pcmToWav(pcmBase64, sampleRate = 24000) {
-  const pcmData = Buffer.from(pcmBase64, 'base64');
-  const buffer = new ArrayBuffer(44 + pcmData.length);
-  const view = new DataView(buffer);
-
-  // RIFF identifier
-  view.setUint32(0, 0x52494646, false); // "RIFF"
-  view.setUint32(4, 36 + pcmData.length, true);
-  // WAVE identifier
-  view.setUint32(8, 0x57415645, false); // "WAVE"
-
-  // fmt chunk identifier
-  view.setUint32(12, 0x666d7420, false); // "fmt "
-  view.setUint32(16, 16, true); // format chunk size
-  view.setUint16(20, 1, true); // sample format (PCM)
-  view.setUint16(22, 1, true); // channel count (mono)
-  view.setUint32(24, sampleRate, true); // sample rate
-  view.setUint32(28, sampleRate * 2, true); // byte rate (sample rate * block align)
-  view.setUint16(32, 2, true); // block align (channel count * bytes per sample)
-  view.setUint16(34, 16, true); // bits per sample
-
-  // data chunk identifier
-  view.setUint32(36, 0x64617461, false); // "data"
-  view.setUint32(40, pcmData.length, true);
-
-  // PCM data
-  const pcmBytes = new Uint8Array(pcmData);
-  new Uint8Array(buffer, 44).set(pcmBytes);
-
-  return Buffer.from(buffer).toString('base64');
-}
 
   // --- TTS GENERATION ---
   const handleTtsRequest = async (req, res) => {
@@ -881,28 +852,33 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
 
       const tier = user.tier || 'FREE';
       
-      // Voice Authorization - STABLE VOICE ROUTING
-      let actualVoice = voice || 'id-ID-Standard-A';
+      const maxChars = isSample ? 500 : (tier === 'FREE' ? voiceConfig.limits.free_request_chars : voiceConfig.limits.paid_request_chars);
+      if (text.length > maxChars) {
+        return res.status(400).json({ error: `Teks terlalu panjang (maksimal ${maxChars} karakter untuk tier ini).` });
+      }
       
-      const isWavenetVoice = actualVoice.includes('Wavenet');
-      const isStudioVoice = actualVoice.includes('Studio');
+      // Voice Authorization - STABLE VOICE ROUTING
+      let actualVoice = voice || 'FLOW_F';
+      
+      const isPremiumVoice = ['AURA_F', 'AURA_M', 'PULSE_F', 'PULSE_M'].includes(actualVoice);
+      const isUltraVoice = ['AURA_F', 'AURA_M'].includes(actualVoice);
 
       const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
       const userTierIndex = tierOrder.indexOf(tier);
 
       if (!isSample) {
-        if (isStudioVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
+        if (isUltraVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
           return res.status(403).json({ error: 'Suara Premium ini hanya tersedia untuk paket BISNIS ke atas. Silakan upgrade paket Anda.' });
         }
-        if (isWavenetVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
+        if (isPremiumVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
           return res.status(403).json({ error: 'Suara ini hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
         }
       }
 
       // Multiplier logic
       let voiceTierName = 'Standard';
-      if (isWavenetVoice) voiceTierName = 'Wavenet';
-      else if (isStudioVoice) voiceTierName = 'Studio';
+      if (isPremiumVoice) voiceTierName = 'Wavenet';
+      if (isUltraVoice) voiceTierName = 'Studio';
 
       const multiplier = voiceConfig.tiers[voiceTierName] || 1;
       const totalCharCost = isSample ? 0 : text.length * multiplier;
@@ -922,18 +898,18 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&apos;");
 
-      // Interpret Expressive Prosody Cues for SSML
+      // Interpret Expressive Prosody Cues for Gemini Audio
       const expressiveText = modifiedText
-        .replace(/\[semangat\]/gi, '<prosody rate="1.1" pitch="+2st">')
-        .replace(/\[\/semangat\]/gi, '</prosody>')
-        .replace(/\[sedih\]/gi, '<prosody rate="0.85" pitch="-2st" volume="soft">')
-        .replace(/\[\/sedih\]/gi, '</prosody>')
-        .replace(/\[serius\]/gi, '<prosody rate="0.95" pitch="-1st" volume="medium">')
-        .replace(/\[\/serius\]/gi, '</prosody>')
-        .replace(/\[bisik\]/gi, '<prosody volume="x-soft" rate="0.9">')
-        .replace(/\[\/bisik\]/gi, '</prosody>')
-        .replace(/\[teriak\]/gi, '<emphasis level="strong"><prosody volume="loud" pitch="+3st">')
-        .replace(/\[\/teriak\]/gi, '</prosody></emphasis>');
+        .replace(/\[semangat\]/gi, '[enthusiasm]')
+        .replace(/\[\/semangat\]/gi, '')
+        .replace(/\[sedih\]/gi, '[sadness]')
+        .replace(/\[\/sedih\]/gi, '')
+        .replace(/\[serius\]/gi, '[serious]')
+        .replace(/\[\/serius\]/gi, '')
+        .replace(/\[bisik\]/gi, '[whispers]')
+        .replace(/\[\/bisik\]/gi, '')
+        .replace(/\[teriak\]/gi, '[shouting]')
+        .replace(/\[\/teriak\]/gi, '');
 
       // Pronunciation Global Dictionary
       const globalPhonetics = { "AI": "ey ay", "IT": "ay ti", "Shinerva": "shi ner va", "RUNGU": "ru ngu" };
@@ -947,17 +923,14 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       });
 
       const finalProcessedText = (processedText || "").trim() || "Halo.";
-      const ssmlText = `<speak>${finalProcessedText}${tier === 'FREE' ? '<break time="600ms"/><prosody volume="-6dB" rate="0.95">Suara ini dibuat oleh Rungu Engine by Shinerva dot ey ay.</prosody>' : ''}</speak>`;
-      const languageCode = actualVoice.includes('-') ? actualVoice.split('-').slice(0, 2).join('-') : 'id-ID';
+      const watermark = tier === 'FREE' ? ' [short pause] Suara ini dibuat oleh Rungu Engine by Shinerva dot ey ay.' : '';
+      const promptText = finalProcessedText + watermark;
       
-      console.log(`[Google TTS] Requesting: ${actualVoice} (${languageCode}). SSML Length: ${ssmlText.length}`);
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[Google TTS] Payload: ${ssmlText.slice(0, 200)}...`);
-      }
+      console.log(`[Gemini TTS] Requesting preset: ${actualVoice}. Text Length: ${promptText.length}`);
       
-      const hashData = `${ssmlText}|${actualVoice}|${speed || 1.0}|${pitch || 0.0}|${volume || 0.0}`;
+      const hashData = `${promptText}|${actualVoice}|${speed || 1.0}|${pitch || 0.0}|${volume || 0.0}`;
       const cacheHash = crypto.createHash('sha256').update(hashData).digest('hex');
-      const cacheFilename = `audio_${cacheHash}.mp3`;
+      const cacheFilename = `audio_${cacheHash}.wav`;
       
       let finalAudioContent = null;
       let finalAudioUrl = null;
@@ -966,66 +939,26 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
       
       if (isCached) {
         finalAudioUrl = getAudioPublicUrl(cacheFilename);
-        console.log(`[Google TTS] Cache hit for ${cacheFilename}. Returning R2 URL.`);
+        console.log(`[Gemini TTS] Cache hit for ${cacheFilename}. Returning R2 URL.`);
       } else {
-        let fetchUrl = `https://texttospeech.googleapis.com/v1/text:synthesize`;
-        if (!tokenStr) fetchUrl += `?key=${apiKey}`;
-        const headers = { 'Content-Type': 'application/json' };
-        if (tokenStr) headers['Authorization'] = `Bearer ${tokenStr}`;
-
         try {
-          const response = await fetch(fetchUrl, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({
-              input: { ssml: ssmlText },
-              voice: { languageCode: languageCode, name: actualVoice },
-              audioConfig: { 
-                audioEncoding: 'MP3', 
-                speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
-              }
-            })
-          });
-          const data = await response.json();
-          if (!response.ok) {
-             if (data.error?.message?.includes("API key not valid")) {
-                 throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
-             }
-             throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
+          console.log(`[Gemini TTS] Generating audio for preset ${actualVoice}...`);
+          finalAudioContent = await generateGeminiTts(promptText, actualVoice);
+          
+          if (finalAudioContent) {
+            console.log(`[Gemini TTS] Success. Uploading to R2...`);
+            try {
+              finalAudioUrl = await uploadAudioToR2(cacheFilename, finalAudioContent);
+              // Delete base64 payload to save bandwidth if upload successful
+              finalAudioContent = undefined;
+            } catch (r2Err) {
+              console.error(`[R2 Storage] Upload failed, falling back to base64:`, r2Err.message);
+              // fallback: keep finalAudioContent
+            }
           }
-          finalAudioContent = data.audioContent;
         } catch (err) {
-          console.warn(`[Google TTS] Primary Voice ${actualVoice} Failed: ${err.message}. Attempting Secondary Fallback...`);
-          const fallbackVoice = 'id-ID-Standard-C';
-          const response2 = await fetch(fetchUrl, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({
-              input: { ssml: ssmlText },
-              voice: { languageCode: 'id-ID', name: fallbackVoice },
-              audioConfig: { 
-                audioEncoding: 'MP3', 
-                speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
-              }
-            })
-          });
-          const data2 = await response2.json();
-          if (!response2.ok) throw new Error(data2.error?.message || `Google TTS Error (${response2.status})`);
-          finalAudioContent = data2.audioContent;
-        }
-        
-        if (finalAudioContent) {
-          console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}. Uploading to R2...`);
-          try {
-            finalAudioUrl = await uploadAudioToR2(cacheFilename, finalAudioContent);
-            // Delete base64 payload to save bandwidth if upload successful
-            finalAudioContent = undefined;
-          } catch (r2Err) {
-            console.error(`[R2 Storage] Upload failed, falling back to base64:`, r2Err.message);
-            // fallback: keep finalAudioContent
-          }
-        } else {
-          console.warn(`[Google TTS] Warning: Empty audioContent returned for ${actualVoice}`);
+          console.error(`[Gemini TTS] Failed: ${err.message}`);
+          throw new Error(`Voice generation failed: ${err.message}`);
         }
       }
 
@@ -1097,20 +1030,19 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
     });
   });
 
-  app.get("/api/debug-env", (req, res) => {
-    res.json({
-      VITE_FIREBASE_PROJECT_ID: process.env.VITE_FIREBASE_PROJECT_ID,
-      FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-      hasApiKey: !!process.env.VITE_FIREBASE_API_KEY,
-      hasGoogleApiKey: !!process.env.GOOGLE_API_KEY,
-      hasGeminiApiKey: !!process.env.GEMINI_API_KEY,
-      apiKeyPrefix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(0, 6) : "(none)",
-      nodeEnv: process.env.NODE_ENV
-    });
-  });
+
 
   app.post(['/api/tts', '/api/tts/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
-  app.post(['/api/tts/sample'], (req, res, next) => { req.body.isSample = true; next(); }, ttsRateLimiterMiddleware, handleTtsRequest);
+  const sampleRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    keyGenerator: getClientIp,
+    message: { error: 'Terlalu banyak permintaan sampel suara. Silakan coba lagi nanti atau buat akun.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.post('/api/tts/sample', verifyTurnstile, sampleRateLimiter, (req, res, next) => { req.body.isSample = true; next(); }, ttsRateLimiterMiddleware, handleTtsRequest);
   app.post(['/api/generate-voice', '/api/generate-voice/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
 
   // --- FINAL API SAFETY NET ---

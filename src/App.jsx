@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
@@ -55,424 +55,21 @@ import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
 import LiveAudioDemo from "./components/landing/LiveAudioDemo";
 import PaymentMethods from "./components/PaymentMethods";
+import TurnstileWidget from "./components/TurnstileWidget";
 
-const PACKS = {
-  ID: [
-    {
-      id: 1,
-      tag: "Epic Storytelling",
-      title: "Cinematic Narrator",
-      desc: "Narasi berbobot tinggi untuk dokumenter, sejarah, atau video pendek dramatis.",
-      content:
-        "Di balik kabut pagi yang menyelimuti Jakarta, sebuah rahasia besar terkubur selama puluhan tahun. Kini, saatnya dunia mendengarkan kebenaran yang selama ini dibisikkan oleh angin.",
-    },
-    {
-      id: 2,
-      tag: "Viral Tech",
-      title: "The Explainer",
-      desc: "Gaya bicara jernih, persuasif, dan modern untuk breakdown konten teknologi atau tren global.",
-      content:
-        "Kenapa desain Apple selalu terasa berbeda? Ini bukan soal minimalisme biasa. Ini soal bagaimana sebuah produk memahami cara kerja pikiran manusia sebelum kita menyadarinya sendiri.",
-    },
-    {
-      id: 3,
-      tag: "TikTok & Reels",
-      title: "Human Fast-Paced",
-      trending: true,
-      desc: "Energik, natural, dan penuh emosi. Didesain untuk menahan audiens agar tidak scroll ke video lain.",
-      content:
-        "Tunggu sebentar! Kalian sadar nggak kalau cara kita bikin konten selama ini salah total? Sini gue spill rahasianya cuma dalam lima belas detik biar video kalian langsung FYP!",
-    },
-    {
-      id: 4,
-      tag: "Audiobook",
-      title: "Emotional Storyteller",
-      desc: "Deep breaths, smooth transitions, and emotional layers for books and long-form content.",
-      content:
-        "Dia berjalan menyusuri lorong yang sepi itu, merasakan detak jantungnya sendiri yang berdegup kencang. 'Apakah ini akhirnya?' tanyanya dalam hati, sambil menatap cahaya di ujung jalan.",
-    },
-    {
-      id: 5,
-      tag: "Marketing",
-      title: "Premium Branding",
-      desc: "Mewah, elegan, dan meyakinkan. Sangat cocok untuk brand high-end yang menginginkan otoritas.",
-      content:
-        "Kemewahan sejati bukanlah tentang apa yang Anda lihat, melainkan tentang apa yang Anda rasakan. Rasakan kenyamanan tanpa kompromi dengan koleksi terbaru kami.",
-    },
-    {
-      id: 6,
-      tag: "Podcast",
-      title: "The Intimate Host",
-      desc: "Santai, dekat, dan hangat. Memberikan kesan obrolan asli di pagi hari.",
-      content:
-        "Halo semuanya, selamat datang kembali di podcast gue. Hari ini kita bakal ngobrol santai soal gimana caranya tetap tenang di tengah hiruk pikuk kehidupan kota besar.",
-    },
-  ],
-  EN: [
-    {
-      id: 1,
-      tag: "Epic Storytelling",
-      title: "Cinematic Narrator",
-      desc: "High-stakes narration for documentaries, history, or dramatic short videos.",
-      content:
-        "Behind the morning mist that covers London, a great secret has been buried for decades. Now, it's time for the world to hear the truth that has been whispered by the wind.",
-    },
-    {
-      id: 2,
-      tag: "Viral Tech",
-      title: "The Explainer",
-      desc: "Clear, persuasive, and modern speaking style for breaking down tech content or global trends.",
-      content:
-        "Why does Apple's design always feel different? It's not just about simple minimalism. It's about how a product understands the way the human mind works before we even realize it ourselves.",
-    },
-    {
-      id: 3,
-      tag: "TikTok & Reels",
-      title: "Human Fast-Paced",
-      trending: true,
-      desc: "Energetic, natural, and full of emotion. Designed to keep viewers from scrolling past.",
-      content:
-        "Wait a second! Do you realize that the way we've been making content is completely wrong? Here's the secret in just fifteen seconds so your videos can go viral instantly!",
-    },
-    {
-      id: 4,
-      tag: "Audiobook",
-      title: "Emotional Storyteller",
-      desc: "Deep breaths, smooth transitions, and emotional layers for books and long-form content.",
-      content:
-        "He walked down the quiet hallway, feeling his own heart beating fast. 'Is this the end?' he asked himself, while staring at the light at the end of the road.",
-    },
-    {
-      id: 5,
-      tag: "Marketing",
-      title: "Premium Branding",
-      desc: "Luxurious, elegant, and persuasive. Perfect for high-end brands wanting authority.",
-      content:
-        "True luxury is not about what you see, but what you feel. Experience uncompromising comfort with our latest collection.",
-    },
-    {
-      id: 6,
-      tag: "Podcast",
-      title: "The Intimate Host",
-      desc: "Relaxed, close, and warm. Gives the impression of a real morning conversation.",
-      content:
-        "Hi everyone, welcome back to my podcast. Today we're going to have a relaxed chat about how to stay calm amidst the hustle and bustle of big city life.",
-    },
-  ]
-};
+import { PACKS } from "./constants/packs";
+import { FAQS } from "./constants/faqs";
+import { VOICES, LANGUAGES, DEFAULT_VOICES, getVoiceDisplayName } from "./constants/voices";
+import { TRANSLATIONS } from "./constants/translations";
+import StudioSection from "./components/StudioSection";
+import AudioPlayer from "./components/AudioPlayer";
+import PricingSection from "./components/PricingSection";
+import { useStudio } from "./context/StudioContext";
 
-const FAQS = {
-  ID: [
-    {
-      question: "Apa itu Shinerva?",
-      answer: "Shinerva adalah platform AI Voice emosional untuk kreator modern. Kami membantu mengubah tulisan menjadi narasi yang terasa lebih manusiawi — lengkap dengan emosi, ritme, dan karakter suara yang natural.\n\nDirancang khusus untuk creator Indonesia:\nYouTube, TikTok, podcast, audiobook, presentasi, hingga voice over bisnis."
-    },
-    {
-      question: "Apakah suara AI di Shinerva terdengar natural?",
-      answer: "Ya.\n\nShinerva menggunakan teknologi AI Voice generasi terbaru yang mampu menghasilkan intonasi, jeda, emosi, dan ritme bicara yang jauh lebih alami dibanding text-to-speech biasa.\n\nFokus kami bukan sekadar \"suara robot yang bicara\", tetapi narasi yang nyaman didengar dalam durasi panjang."
-    },
-    {
-      question: "Apakah saya perlu mengerti AI atau setting teknis?",
-      answer: "Tidak perlu sama sekali.\n\nShinerva dirancang sesederhana mungkin:\npilih suara → tempel teks → generate.\n\nAnda tidak perlu memahami prompt, SSML, atau pengaturan teknis audio yang rumit."
-    },
-    {
-      question: "Apakah suara Shinerva bisa dipakai untuk YouTube, TikTok, dan monetisasi?",
-      answer: "Bisa.\n\nHasil audio Shinerva dirancang untuk kebutuhan konten modern:\nYouTube, TikTok, Reels, Shorts, podcast, audiobook, dan kebutuhan komersial lainnya."
-    },
-    {
-      question: "Apa perbedaan Flow, Pulse, dan Aura?",
-      answer: "• Flow\nTenang, jelas, dan nyaman didengar untuk durasi panjang. Cocok untuk e-learning, audiobook, berita, dan presentasi.\n\n• Pulse\nLebih energik dan dinamis. Cocok untuk promo, TikTok, YouTube Shorts, dan konten marketing.\n\n• Aura\nNarasi emosional dengan nuansa sinematik dan storytelling yang lebih dalam. Cocok untuk dokumenter, misteri, filosofi, dan cinematic narration."
-    },
-    {
-      question: "Apakah kredit saya bisa hangus?",
-      answer: "Tidak seperti kebanyakan platform AI lain, Shinerva tidak memaksa Anda berlangganan bulanan hanya untuk tetap bisa memakai layanan.\n\nMayoritas paket Shinerva menggunakan sistem:\nsekali beli → pakai sesuai ritme Anda sendiri.\n\n• Paket FREE memiliki masa aktif tertentu.\n• Paket berbayar menggunakan sistem rollover credits dengan masa aktif yang jauh lebih panjang.\n• Kredit top-up tidak langsung hangus setiap bulan seperti subscription tradisional.\n\nKami percaya creator seharusnya bisa berkarya dengan fleksibel — tanpa tekanan tagihan bulanan yang terus berjalan saat sedang tidak aktif membuat konten."
-    },
-    {
-      question: "Apakah hasil suara bisa dipakai untuk kebutuhan komersial?",
-      answer: "Ya, untuk paket yang mendukung lisensi komersial.\n\nAnda dapat menggunakan hasil audio untuk:\n• konten monetisasi\n• iklan\n• bisnis\n• agency\n• audiobook\n• media sosial"
-    },
-    {
-      question: "Apa itu Voice Cloning?",
-      answer: "Voice Cloning memungkinkan Anda membuat versi digital dari suara sendiri menggunakan sampel rekaman suara.\n\nFitur ini masih dalam pengembangan dan akan hadir bertahap untuk kebutuhan kreator dan bisnis tertentu."
-    },
-    {
-      question: "Bagaimana cara menghubungi bantuan?",
-      answer: "Anda dapat menghubungi tim Shinerva melalui WhatsApp atau Email untuk:\n• bantuan teknis\n• pertanyaan pembayaran\n• kerja sama agency\n• integrasi API\n• kebutuhan bisnis khusus"
-    },
-    {
-      question: "Apakah tersedia paket untuk korporasi atau kebutuhan custom?",
-      answer: "Tentu bisa! Silakan hubungi kami via email untuk berdiskusi lebih lanjut mengenai paket korporasi, kebutuhan kustom, atau integrasi khusus untuk perusahaan Anda."
-    }
-  ],
-  EN: [
-    {
-      question: "What is Shinerva AI TTS?",
-      answer:
-        "Shinerva AI TTS is a technology that transforms written text into highly natural human speech using Artificial Intelligence. Simply put, it's a 'robot voice' that now sounds as human as the real thing—complete with emotions, intonations, and breaths—making it perfect for voiceovers without needing to record yourself.",
-    },
-    {
-      question: "What is Shinerva?",
-      answer:
-        "Shinerva is the first emotional AI Voice platform in Southeast Asia. We go beyond standard Text To Speech (TTS) by giving soul, emotion, and character to every narration for modern creators.",
-    },
-    {
-      question: "Will my credits expire?",
-      answer: "Unlike most other AI platforms, Shinerva does not force you into a monthly subscription just to keep using the service.\n\nThe majority of Shinerva's packages use a 'buy once → use at your own pace' system.\n\n• FREE plans have a specific active period.\n• Paid plans use a rollover credits system with a much longer active period.\n• Top-up credits do not immediately expire every month like traditional subscriptions.\n\nWe believe creators should be able to work flexibly — without the pressure of a running monthly bill when they aren't actively creating content."
-    },
-    {
-      question: "Can these AI voices be used on TikTok or YouTube?",
-      answer:
-        "Absolutely! Our emotional voices are specifically designed to pass monetization verification on social media (YouTube/TikTok/Reels). We help your stories feel more human and convert audiences better.",
-    },
-    {
-      question: "What is Voice Cloning?",
-      answer:
-        "Voice Cloning is advanced technology that allows you to create a digital version of your own voice just by uploading a 30-second recording sample. The cloned voice can then be used to generate any narration with up to 99% accuracy.",
-    },
-    {
-      question: "What is the difference between Basic and Aura technology?",
-      answer:
-        "Basic is standard technology for functional narration. Pulse (Coming Soon) adds emotional expression, while Aura (Coming Soon) is our flagship multimodal technology that produces voice textures, breaths, and intonations almost indistinguishable from human recordings.",
-    },
-    {
-      question: "How do I contact support?",
-      answer:
-        "You can contact our team via WhatsApp or Email for technical assistance, agency partnerships, or custom API integration needs.",
-    },
-    {
-      question: "Are there corporate or custom plans available?",
-      answer:
-        "Absolutely! Please contact us via email to discuss corporate plans, custom requirements, or specialized integrations for your company.",
-    }
-  ]
-};
-
-const LANGUAGES = [
-  { code: "ID", name: "Indonesia", flag: "🇮🇩" }
-];
-
-const DEFAULT_VOICES = {
-  "ID": "id-ID-Wavenet-D",
-  "CMN": "cmn-CN-Standard-A"
-};
-
-const TRANSLATIONS = {
-  ID: {
-    nav: {
-      home: "Beranda",
-      packs: "Harga Paket",
-      faq: "Tanya Jawab",
-      contact: "Hubungi Kami",
-      pronunciation: "Aturan Pengucapan",
-      referral: "Bonus Referral",
-      profile: "Profil Akun",
-      history_voices: "Riwayat Suara",
-      referral_bonus: "Referral & Bonus",
-      subscription: "Langganan & Paket",
-      dev_console: "Voice Dev Console",
-      logout: "Keluar Sekarang",
-      login: "Masuk",
-      signup: "Mulai Gratis",
-      account: "Akun Saya",
-      remaining: "Karakter Tersisa"
-    },
-    hero: {
-      tag: "Platform AI Voice Emosional Pertama di Asia Tenggara",
-      title_part1: "Suara AI yang",
-      title_accent: "Sangat Manusiawi",
-      subtitle: "Beri jiwa pada konten Anda. Platform AI Voice pertama yang mengutamakan tekstur emosi, napas, dan intonasi manusiawi untuk kreator.",
-      cta_primary: "Mulai & Dapat Bonus",
-      cta_secondary: "Dengarkan Sampel"
-    },
-    welcome: {
-      title: "Selamat Datang!",
-      subtitle: "Kamu dapat 10.000 karakter gratis untuk memulai (~6 menit audio).",
-      cta: "Siap!"
-    },
-    studio: {
-      title: "Rungu Engine Studio",
-      label: "Editor Naskah",
-      placeholder: "Ketik atau tempel naskah Anda di sini...",
-      generate: "Hasilkan Suara",
-      generating: "Sedang Memproses...",
-      sample: "Tes Suara",
-      voicesSelection: "Bahasa & Suara",
-      settings: "Pengaturan Pro",
-      speed: "Kecepatan",
-      pitch: "Nada",
-      volume: "Volume",
-      remaining: "Sisa Kredit",
-      cost: "Beban",
-      cost_est: "Estimasi Biaya",
-      chars: "Karakter",
-      limit_reached: "Batas Request Tercapai!",
-      insufficient: "Kredit Tidak Mencukupi!",
-      near_limit: "Hampir Mencapai Batas!",
-      length: "Panjang Naskah",
-      quota: "Kuota Harian",
-      preview: "Tes Suara",
-      download: "Unduh",
-      share: "Bagikan",
-      unlock_aura: "Aura Flagship & Voice Cloning (Segera Hadir) — Tekstur emosi paling manusiawi & kloning suara Anda sendiri.",
-      view_packs: "Lihat Paket"
-    },
-    pricing: {
-      title: "Pilih Paket Keajaiban Anda",
-      subtitle: "Akses teknologi AI Voice tercanggih di Asia Tenggara. Hemat hingga 40% dengan paket tahunan.",
-      monthly: "Bulanan",
-      yearly: "Tahunan",
-      current: "Paket Saat Ini",
-      upgrade: "Upgrade Sekarang",
-      cta: "Pilih Paket",
-      save: "Hemat"
-    },
-    playground: {
-      title: "Voice Playground",
-      subtitle: "Eksplorasi kualitas suara AI terbaik kami dalam berbagai bahasa. Dengar perbedaannya dan pilih karakter yang paling cocok.",
-      upgrade: "Upgrade Sekarang",
-      tech: "Pilih Teknologi",
-      variants: "Varian Suara",
-      quality_title: "Kualitas Flagship yang Tak Terkalahkan",
-      quality_desc: "Aura (Segera Hadir) menggunakan algoritma canggih untuk memberikan 'jiwa' di setiap suku kata.",
-      join: "Bergabung dengan",
-      creators: "Kreator",
-      upgraded: "yang sudah upgrade."
-    }
-  },
-  EN: {
-    nav: {
-      home: "Home",
-      packs: "Pricing",
-      faq: "FAQ",
-      contact: "Contact Us",
-      pronunciation: "Pronunciation Rules",
-      referral: "Referral Bonus",
-      profile: "Account Profile",
-      history_voices: "Voice History",
-      referral_bonus: "Referral & Bonus",
-      subscription: "Subscription & Plans",
-      dev_console: "Voice Dev Console",
-      logout: "Logout Now",
-      login: "Login",
-      signup: "Start for Free",
-      account: "My Account",
-      remaining: "Credits Remaining"
-    },
-    hero: {
-      tag: "Southeast Asia’s Emotional AI Voice Platform",
-      title_part1: "AI Voices That",
-      title_accent: "Actually Feel Human",
-      subtitle: "Give soul to your content. The first AI voice platform prioritizing emotional texture, breath, and human-like intonation for creators.",
-      cta_primary: "Start & Get Bonus",
-      cta_secondary: "Listen to Samples"
-    },
-    welcome: {
-      title: "Welcome!",
-      subtitle: "You got 10,000 free credits to start (~6 minutes of audio).",
-      cta: "Ready!"
-    },
-    studio: {
-      title: "Rungu Engine Studio",
-      label: "Script Editor",
-      placeholder: "Type or paste your script here...",
-      generate: "Generate Voice",
-      generating: "Generating Audio...",
-      sample: "Test Voice",
-      voicesSelection: "Language & Voice",
-      settings: "Pro Settings",
-      speed: "Speed",
-      pitch: "Pitch",
-      volume: "Volume",
-      remaining: "Credits Left",
-      cost: "Cost",
-      cost_est: "Cost Estimate",
-      chars: "Characters",
-      limit_reached: "Request Limit Reached!",
-      insufficient: "Insufficient Credits!",
-      near_limit: "Near Request Limit!",
-      length: "Script Length",
-      quota: "Daily Quota",
-      preview: "Test Voice",
-      download: "Download",
-      share: "Share",
-      unlock_aura: "Aura Flagship (Coming Soon) — The most human emotional texture for your content.",
-      view_packs: "View Packs"
-    },
-    pricing: {
-      title: "Choose Your Magic Plan",
-      subtitle: "Access the most advanced AI Voice technology in Southeast Asia. Save up to 40% with annual plans.",
-      monthly: "Monthly",
-      yearly: "Yearly",
-      current: "Current Plan",
-      upgrade: "Upgrade Now",
-      cta: "Select Plan",
-      save: "Save"
-    },
-    playground: {
-      title: "Voice Playground",
-      subtitle: "Explore our best AI voices across multiple languages. Hear the difference and choose your character.",
-      upgrade: "Upgrade Now",
-      tech: "Select Technology",
-      variants: "Voice Variants",
-      quality_title: "Unbeatable Flagship Quality",
-      quality_desc: "Aura (Coming Soon) is our next-gen engine that mimics human vocal fry, breaths, and deep emotion.",
-      join: "Join over",
-      creators: "Creators",
-      upgraded: "who have upgraded."
-    }
-  }
-};
-
-const VOICES = {
-  "ID": {
-    "Flow": [
-      { 
-        id: "id-ID-Wavenet-D", 
-        name: "Flow", 
-        type: "GeminiFlash", 
-        premium: false, 
-        tier: "FREE",
-        desc: "Calm, articulated narrator.",
-        useCase: "Audiobook, Presentations"
-      }
-    ],
-    "Pulse": [
-      { 
-        id: "id-ID-Wavenet-B", 
-        name: "Pulse", 
-        type: "GeminiFlash", 
-        premium: false, 
-        tier: "FREE",
-        desc: "Modern, energetic creator voice.",
-        useCase: "TikTok, Ads, Shorts"
-      }
-    ],
-    "Aura": [
-      { 
-        id: "id-ID-Wavenet-C", 
-        name: "Aura", 
-        type: "GeminiFlash", 
-        premium: true, 
-        tier: "CREATOR",
-        desc: "Cinematic, emotional storyteller.",
-        useCase: "Documentary, Storytelling"
-      }
-    ]
-  }
-};
-
-const getVoiceDisplayName = (id) => {
-  if (!id) return "-";
-  for (const lang in VOICES) {
-    for (const category in VOICES[lang]) {
-      const voice = VOICES[lang][category].find(v => v.id === id);
-      if (voice) return voice.name.split(" (")[0];
-    }
-  }
-  return id.split("-").slice(-2).join("-");
-};
-
-
+// Lazy load heavy modals
+const ProfileModal = React.lazy(() => import("./components/ProfileModal"));
+const HistoryModal = React.lazy(() => import("./components/HistoryModal"));
+const VoiceManagementModal = React.lazy(() => import("./components/VoiceManagementModal"));
 const formatDuration = (seconds) => {
   if (seconds === undefined || seconds === null) return "-";
   if (seconds === 0) return "< 1s";
@@ -532,12 +129,13 @@ const App = () => {
     </div>
   );
   const [text, setText] = useState("");
-  const [voice, setVoice] = useState("id-ID-Wavenet-D");
+  const [voice, setVoice] = useState("FLOW_F");
   const [speed, setSpeed] = useState(1);
   const [pitch, setPitch] = useState(0);
   const [volume, setVolume] = useState(0);
   const [status, setStatus] = useState("idle"); // idle, loading, success
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const [isAudioVisible, setIsAudioVisible] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -578,7 +176,7 @@ const App = () => {
     if (isPlayingHero) return;
     setIsPlayingHero(true);
     const sampleText = "Platform AI Voice pertama yang mengutamakan tekstur emosi, napas, dan intonasi manusiawi untuk kreator.";
-    const voiceId = "id-ID-Standard-A";
+    const voiceId = "FLOW_F";
     
     const url = await generateSample(sampleText, voiceId);
     if (url) {
@@ -986,8 +584,9 @@ const App = () => {
           text: testText, 
           voice, 
           speed: 1, 
-          pitch: 0, 
-          volume: 0 
+          pitch: pitch,
+          volume: volume,
+          turnstileToken
         }),
       };
       const res = await fetch("/api/tts", options);
@@ -1173,7 +772,8 @@ const App = () => {
         body: JSON.stringify({ 
           text: sampleText, 
           voice: voiceId, 
-          isSample: true 
+          isSample: true,
+          turnstileToken
         }),
       };
 
@@ -1944,224 +1544,18 @@ const App = () => {
             <div className="flex flex-col md:flex-row gap-8">
               {/* Left Column */}
               <div className="flex-1 space-y-6">
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="font-bold text-text-muted">
-                      {t('studio.label')}
-                    </label>
-                    <div className="flex flex-col items-end">
-                      <div className="flex items-center gap-2">
-                        {estimatedCost > 0 && (
-                          <span className="text-[10px] font-bold text-text-muted bg-surface2 px-2 py-0.5 rounded">
-                            {t('studio.cost')}: {estimatedCost.toLocaleString(language === 'ID' ? "id-ID" : "en-US")} {language === 'ID' ? 'Kredit' : 'Credits'}
-                          </span>
-                        )}
-                      </div>
-                      {(isCappedByRequest || isCappedByQuota) && (
-                        <span className="text-[10px] text-terracotta font-bold mt-1 animate-pulse">
-                          {isCappedByRequest ? t('studio.limit_reached') : t('studio.insufficient')}
-                        </span>
-                      )}
-                      {!isCappedByRequest && !isCappedByQuota && isNearLimit && (
-                        <span className="text-[10px] text-terracotta font-bold mt-1">
-                          Hampir Mencapai Batas!
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <textarea
-                    ref={textAreaRef}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className={`w-full h-48 bg-dark text-text rounded-lg p-4 border border-surface2 focus:border-terracotta focus:ring-1 focus:ring-terracotta outline-none resize-none transition-all ${(isNearLimit || isCappedByRequest || isCappedByQuota) ? "border-terracotta ring-1 ring-terracotta" : ""}`}
-                    placeholder={t('studio.placeholder')}
-                  />
-                  {user && (
-                    <div className="mt-2 flex justify-between items-center text-[10px] font-bold">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1.5 text-text-muted">
-                          <span>{t('studio.length')}:</span>
-                          <span className={`${isCappedByRequest ? "text-terracotta" : "text-text"} font-mono`}>
-                            {text.length.toLocaleString("id-ID")} / {currentMaxRequestChars.toLocaleString("id-ID")}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-text-muted border-l border-surface2/30 pl-4">
-                          <span>{t('studio.remaining')}:</span>
-                          <span className={remainingCredits < 1000 ? "text-terracotta" : "text-text"}>
-                            {remainingCredits.toLocaleString("id-ID")} karakter (~{Math.ceil(remainingCredits / 1000)} menit durasi)
-                          </span>
-                        </div>
-                      </div>
-                      {user.tier === 'FREE' && (
-                        <div className="text-terracotta bg-terracotta/5 px-2 py-0.5 rounded border border-terracotta/10">
-                          {t('studio.quota')}: {Math.max(0, 20 - user.generation_count)} / 20
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-text-muted mb-2">
-                        {t('studio.voicesSelection')}
-                      </label>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <div className="flex bg-dark p-1 rounded-xl border border-surface2 flex-shrink-0">
-                          {LANGUAGES.map((lang) => (
-                            <button
-                              key={lang.code}
-                              onClick={() => handleLanguageChange(lang.code)}
-                              className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black transition-all border-none cursor-pointer flex-1 ${
-                                language === lang.code 
-                                ? "bg-terracotta text-white shadow-lg shadow-terracotta/20" 
-                                : "text-text-muted hover:text-text hover:bg-surface2/50"
-                              }`}
-                            >
-                              <span>{lang.flag}</span>
-                              <span className="hidden xs:inline">{lang.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <div className="relative flex-1 min-w-0" ref={voiceDropdownRef}>
-                          <button
-                            type="button"
-                            onClick={() => setIsVoiceDropdownOpen(!isVoiceDropdownOpen)}
-                            className="w-full h-full min-h-[44px] bg-dark text-text rounded-xl py-2 px-4 border border-surface2 focus:border-terracotta focus:outline-none focus:ring-1 focus:ring-terracotta cursor-pointer font-bold text-sm tracking-wide text-left flex items-center justify-between"
-                          >
-                            <span className="truncate">{getVoiceDisplayName(voice)}</span>
-                            <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${isVoiceDropdownOpen ? 'rotate-180' : ''} shrink-0 ml-2`} />
-                          </button>
-
-                          <AnimatePresence>
-                            {isVoiceDropdownOpen && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                transition={{ duration: 0.15 }}
-                                className="absolute z-50 left-0 right-0 bottom-full mb-2 bg-surface rounded-2xl border border-surface2 shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar origin-bottom"
-                              >
-                                {Object.entries(VOICES[language]).map(([category, voiceList]) => (
-                                  <div key={category}>
-                                    <div className="px-4 py-2 bg-surface2/30 text-[10px] font-black text-text-muted uppercase tracking-[0.2em] sticky top-0 z-10 backdrop-blur-md border-b border-surface2/30">
-                                      {category}
-                                    </div>
-                                    <div className="p-1">
-                                      {voiceList.map((v) => {
-                                        const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
-                                        const userTierIndex = tierOrder.indexOf(user?.tier || "FREE");
-                                        const requiredTierIndex = tierOrder.indexOf(v.tier || "FREE");
-                                        const isLocked = (v.premium && userTierIndex < requiredTierIndex) || v.comingSoon;
-                                        const isSelected = voice === v.id;
-                                        const isStudio = v.type === 'Studio' || v.glow;
-
-                                        return (
-                                          <button
-                                            key={v.id}
-                                            type="button"
-                                            disabled={isLocked}
-                                            onClick={() => {
-                                              setVoice(v.id);
-                                              setIsVoiceDropdownOpen(false);
-                                            }}
-                                            className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group relative overflow-hidden ${
-                                              isSelected ? 'bg-surface2' : 'hover:bg-surface2/50'
-                                            } ${isLocked ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
-                                          >
-                                            <div className="flex flex-col relative z-20">
-                                              <div className="flex items-center gap-2">
-                                                <span className={`text-sm font-bold ${isSelected ? 'text-terracotta' : 'text-text'}`}>
-                                                  {isLocked && !v.comingSoon && "🔒 "}{v.name} {isLocked && !v.comingSoon && <span className="text-xs text-text-muted font-normal ml-1">(Premium Only)</span>}
-                                                </span>
-                                                {v.comingSoon && (
-                                                  <span className="text-[8px] font-black bg-surface2 text-text-muted px-1.5 py-0.5 rounded border border-surface2/5 uppercase">
-                                                    SOON
-                                                  </span>
-                                                )}
-                                                {isStudio && !v.comingSoon && (
-                                                  <span className="text-[8px] font-black bg-terracotta text-white px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(231,76,60,0.5)]">
-                                                    AURA
-                                                  </span>
-                                                )}
-                                              </div>
-                                              <span className="text-[10px] text-text-muted font-medium">
-                                                {v.comingSoon 
-                                                  ? (language === 'ID' ? 'Segera Hadir' : 'Coming Soon')
-                                                  : `Beban: ${voiceConfig.tiers[v.type] || 1}x Kredit`
-                                                }
-                                              </span>
-                                            </div>
-                                            
-                                            {isStudio && (
-                                              <div className="absolute right-0 top-0 bottom-0 w-1 bg-terracotta/50 shadow-[0_0_15px_rgba(231,76,60,0.5)]"></div>
-                                            )}
-                                            
-                                            {isSelected && (
-                                              <Check className="w-4 h-4 text-terracotta relative z-20" />
-                                            )}
-
-                                            {isStudio && (
-                                              <div className="absolute inset-0 bg-gradient-to-r from-terracotta/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none"></div>
-                                            )}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                ))}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                        
-                        <button
-                          onClick={handleGenerate}
-                          disabled={status === "loading" || status === "success" || cooldown > 0}
-                          className={`flex-shrink-0 px-4 rounded-xl font-bold flex flex-col justify-center items-center transition-all shadow-lg border-none cursor-pointer min-h-[44px] ${
-                            status === "success"
-                              ? "bg-green-600 text-white"
-                              : status === "loading"
-                                ? "bg-terracotta/75 text-text cursor-not-allowed"
-                                : (cooldown > 0)
-                                  ? "bg-surface2 text-text-muted cursor-not-allowed border border-surface2"
-                                  : "bg-terracotta hover:bg-trdark shadow-terracotta/20 text-text"
-                          }`}
-                          title="Hasilkan Suara"
-                        >
-                          <div className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
-                            {status === "idle" && cooldown === 0 && (
-                              isCappedByRequest ? (
-                                <><AlertTriangle className="w-4 h-4" /> <span className="hidden lg:inline">Limit</span></>
-                              ) : isCappedByQuota ? (
-                                <><AlertCircle className="w-4 h-4" /> <span className="hidden lg:inline">Habis</span></>
-                              ) : (
-                                <><Mic className="w-4 h-4" /> <span className="hidden lg:inline">Buat Suara</span></>
-                              )
-                            )}
-                            {status === "idle" && cooldown > 0 && (
-                              <><Loader2 className="w-4 h-4 animate-spin" /> <span className="hidden lg:inline">{cooldown}s</span></>
-                            )}
-                            {status === "loading" && (
-                              <><Loader2 className="w-4 h-4 animate-spin" /> <span className="hidden lg:inline">Proses</span></>
-                            )}
-                            {status === "success" && (
-                              <><CheckCircle className="w-4 h-4" /> <span className="hidden lg:inline">Selesai</span></>
-                            )}
-                          </div>
-                        </button>
-                    </div>
-
-                    {(!user || user.tier === 'FREE') && (
-                      <div className="mt-3 flex items-center gap-2 text-[10px] bg-terracotta/10 text-terracotta p-2 rounded-lg border border-terracotta/20">
-                        <Gift className="w-3 h-3" />
-                        <span className="font-bold">
-                          {language === 'ID' 
-                            ? "✨ Psst.. fitur Voice Cloning bakal segera hadir lho! Stay tuned ya!" 
-                            : "✨ Psst.. Voice Cloning is coming soon! Stay tuned!"}
-                        </span>
-                      </div>
-                    )}
-                </div>
+                <StudioSection
+                  user={user}
+                  handleGenerate={handleGenerate}
+                  cooldown={cooldown}
+                  estimatedCost={estimatedCost}
+                  currentMaxRequestChars={currentMaxRequestChars}
+                  remainingCredits={remainingCredits}
+                  isCappedByRequest={isCappedByRequest}
+                  isCappedByQuota={isCappedByQuota}
+                  isNearLimit={isNearLimit}
+                  t={t}
+                />
               </div>
 
               {/* Right Column */}
@@ -2169,119 +1563,11 @@ const App = () => {
 
 
                 <div className="flex-grow flex flex-col justify-end">
-
-                  {audioUrl && (
-                    <audio
-                      key={audioUrl}
-                      ref={audioRef}
-                      src={audioUrl}
-                      onEnded={() => {
-                        setIsPlaying(false);
-                        setCurrentTime(0);
-                      }}
-                      onTimeUpdate={updateProgress}
-                      onLoadedMetadata={updateProgress}
-                      onError={(e) => {
-                        const error = e.target.error;
-                        console.error("[Audio] Playback error details:", {
-                          code: error?.code,
-                          message: error?.message,
-                          src: audioUrl.slice(0, 50) + "..."
-                        });
-                        // If blob URL fails, try to show error or fallback if needed
-                        if (error?.code === 4) { // MEDIA_ERR_SRC_NOT_SUPPORTED
-                           toast.error("Format audio tidak didukung atau sumber data rusak.");
-                        }
-                      }}
-                      className="hidden"
-                    />
-                  )}
-
-                  {isAudioVisible && (
-                    <div className="bg-dark rounded-2xl p-6 border border-surface2 mb-4 shadow-xl">
-                      {generatedInfo && (
-                        <div className="flex justify-between items-center mb-4 pb-2 border-b border-surface2/30">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">Suara Dipakai</span>
-                            <span className="text-xs text-text font-bold">{getVoiceDisplayName(generatedInfo.voice)}</span>
-                          </div>
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-text-muted uppercase tracking-wider font-bold">Estimasi Durasi</span>
-                            <span className="text-xs text-text font-bold">{formatDuration(generatedInfo.duration)}</span>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-4 mb-4">
-                        <button
-                          onClick={togglePlay}
-                          className="w-12 h-12 rounded-full bg-terracotta flex items-center justify-center text-text hover:bg-trdark cursor-pointer border-none flex-shrink-0 transition-transform hover:scale-105"
-                        >
-                          {isPlaying ? (
-                            <Pause className="w-6 h-6 fill-current" />
-                          ) : (
-                            <Play className="w-6 h-6 fill-current ml-1" />
-                          )}
-                        </button>
-
-                        <div className="flex-1 flex flex-col gap-2">
-                           <div className="flex justify-between text-xs text-text-muted font-mono">
-                            <span>{Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}</span>
-                            <span>{duration ? `${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}` : '0:00'}</span>
-                           </div>
-                           <div className="h-2 bg-surface2 rounded-full overflow-hidden cursor-pointer" onClick={(e) => {
-                             if(audioRef.current && duration) {
-                               const rect = e.currentTarget.getBoundingClientRect();
-                               const x = e.clientX - rect.left;
-                               const percentage = x / rect.width;
-                               audioRef.current.currentTime = percentage * duration;
-                             }
-                           }}>
-                             <div
-                               className="h-full bg-terracotta rounded-full transition-all duration-100 ease-linear"
-                               style={{
-                                 width: `${duration ? (currentTime / duration) * 100 : 0}%`,
-                               }}
-                             ></div>
-                           </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 mt-4 pt-4 border-t border-surface2">
-                        {audioUrl && !isTeaser && user ? (
-                            <>
-                              <a
-                                href={audioUrl}
-                                download="shinerva-audio.mp3"
-                                className="flex-1 bg-terracotta hover:bg-trdark text-text font-bold py-2.5 rounded-lg transition-all border-none flex items-center justify-center gap-2 text-sm cursor-pointer"
-                              >
-                                <Download className="w-4 h-4" /> Unduh
-                              </a>
-                              <button
-                                onClick={handleShare}
-                                className="bg-surface2 hover:bg-gray-700 text-text px-4 py-2.5 rounded-lg transition-all border border-gray-700 flex items-center justify-center gap-2 text-sm cursor-pointer"
-                              >
-                                <Share2 className="w-4 h-4" /> Share
-                              </button>
-                            </>
-                        ) : (
-                           <button
-                            disabled
-                            className="w-full bg-surface2 text-text-muted font-bold py-3 rounded-lg flex items-center justify-center gap-2 text-sm cursor-not-allowed"
-                          >
-                             <Download className="w-4 h-4" /> {user ? "Preview" : "Masuk untuk Unduh"}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-
-
-
+                  <AudioPlayer user={user} isTeaser={isTeaser} generatedInfo={generatedInfo} />
                 </div>
-              </div>
+                </div>
             </div>
           </div>
-        </div>
         </section>
 
 
@@ -2545,99 +1831,16 @@ const App = () => {
       </main>
 
       {/* Profile Modal */}
-      {isProfileModalOpen && user && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-dark/95 backdrop-blur-md"
-            onClick={() => setIsProfileModalOpen(false)}
-          ></div>
-          <div className="bg-dark border border-surface2 rounded-[2.5rem] w-full max-w-lg relative z-10 shadow-3xl overflow-hidden border-gradient animate-in zoom-in duration-300">
-             <div className="p-8 md:p-12">
-                <button
-                  onClick={() => setIsProfileModalOpen(false)}
-                  className="absolute top-8 right-8 text-text-muted hover:text-text cursor-pointer bg-surface2/50 hover:bg-surface2 p-2 rounded-full transition-all border-none"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-
-                <div className="text-center mb-10">
-                  <div className="w-24 h-24 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-terracotta/20 relative">
-                    <User className="w-12 h-12 text-terracotta" />
-                    <div className="absolute -bottom-1 -right-1 bg-green-500 w-6 h-6 rounded-full border-4 border-dark"></div>
-                  </div>
-                  <h2 className="text-3xl font-black text-text mb-2">{user.name || "Pengguna Shinerva"}</h2>
-                  <p className="text-text-muted font-medium">{user.email}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-10">
-                   <div className="bg-surface2/30 p-5 rounded-3xl border border-surface2">
-                      <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">Paket Saat Ini</p>
-                      <p className="text-2xl font-black text-terracotta">{user.tier}</p>
-                   </div>
-                   <div className="bg-surface2/30 p-5 rounded-3xl border border-surface2">
-                      <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">Sisa Karakter</p>
-                      <p className={`text-2xl font-black ${remainingCredits < 1000 ? "text-red-500" : "text-text"}`}>{remainingCredits.toLocaleString("id-ID")}</p>
-                      {remainingCredits < 1000 && (
-                        <p className="text-[10px] text-red-500 font-bold mt-1">Kredit Hampir Habis!</p>
-                      )}
-                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-dark/50 rounded-2xl border border-surface2">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-surface2 flex items-center justify-center">
-                         <ShieldCheck className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-text">Status Verifikasi</p>
-                        <p className="text-xs text-text-muted">{user.emailVerified ? "Email Terverifikasi" : "Belum Verifikasi"}</p>
-                      </div>
-                    </div>
-                    {user.emailVerified ? (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    ) : (
-                      <button onClick={handleResendVerification} className="text-xs font-black text-terracotta hover:underline bg-transparent border-none cursor-pointer">Verifikasi Sekarang</button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-dark/50 rounded-2xl border border-surface2">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-surface2 flex items-center justify-center">
-                         <Gift className="w-5 h-5 text-terracotta" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-text">Referral Aktif</p>
-                        <p className="text-xs text-text-muted">{user.valid_referrals} teman terdaftar</p>
-                      </div>
-                    </div>
-                    <button onClick={() => {setIsReferralOpen(true); setIsProfileModalOpen(false);}} className="text-xs font-black text-terracotta hover:underline bg-transparent border-none cursor-pointer">Detail</button>
-                  </div>
-                </div>
-
-                <div className="mt-10 flex flex-col gap-3">
-                  <button
-                    onClick={() => {
-                      setIsProfileModalOpen(false);
-                      document.getElementById('pricing-temporarily-renamed')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="w-full bg-terracotta hover:bg-trdark text-text font-black py-4 rounded-2xl transition-all shadow-xl shadow-terracotta/20 border-none cursor-pointer"
-                  >
-                    Upgrade Keanggotaan
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await logout();
-                      setIsProfileModalOpen(false);
-                    }}
-                    className="w-full bg-transparent hover:bg-red-500/10 text-red-500 font-bold py-3 rounded-2xl transition-all border border-red-500/20 cursor-pointer"
-                  >
-                    Keluar Akun
-                  </button>
-                </div>
-             </div>
-          </div>
-        </div>
+      {isProfileModalOpen && (
+        <Suspense fallback={null}>
+          <ProfileModal 
+            user={user} 
+            remainingCredits={remainingCredits}
+            setIsProfileModalOpen={setIsProfileModalOpen}
+            handleResendVerification={handleResendVerification}
+            setIsReferralOpen={setIsReferralOpen}
+          />
+        </Suspense>
       )}
 
       {/* Studio Voice Warning Modal */}
@@ -2987,249 +2190,26 @@ const App = () => {
 
       {/* Credit Usage History Modal */}
       {isHistoryOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
-            onClick={() => setIsHistoryOpen(false)}
-          ></div>
-          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-2xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
-            <button
-              onClick={() => setIsHistoryOpen(false)}
-              className="absolute top-4 right-4 text-text-muted hover:text-text cursor-pointer bg-transparent border-none"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="text-center mb-8">
-              <History className="w-16 h-16 text-terracotta mx-auto mb-4" />
-              <h2 className="text-2xl font-black text-text">Riwayat Penggunaan</h2>
-              <p className="text-text-muted text-sm mt-2">
-                Daftar penggunaan kredit karakter untuk setiap suara yang dihasilkan.
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              {historyLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 text-terracotta animate-spin mb-4" />
-                  <p className="text-text-muted">Memuat data riwayat...</p>
-                </div>
-              ) : history.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-surface2 text-text-muted text-xs uppercase tracking-wider">
-                        <th className="py-3 font-bold">Tanggal</th>
-                        <th className="py-3 font-bold">Detail Suara</th>
-                        <th className="py-3 font-bold">Durasi</th>
-                        <th className="py-3 font-bold">Kredit</th>
-                        <th className="py-3 font-bold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-surface2/50">
-                      {history.map((item) => (
-                        <tr key={item.id} className="text-sm">
-                          <td className="py-4">
-                            <div className="text-text font-medium text-xs">
-                              {new Date(item.date).toLocaleDateString("id-ID", {
-                                day: "numeric",
-                                month: "short",
-                              })}
-                            </div>
-                            <div className="text-text-muted text-[10px]">
-                              {new Date(item.date).toLocaleTimeString("id-ID", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <div className="text-text font-bold text-xs uppercase">
-                              {getVoiceDisplayName(item.voice)}
-                            </div>
-                            <div className="text-text-muted text-[10px]">
-                              {item.voice.split("-").slice(-2).join("-")}
-                            </div>
-                            {item.is_teaser && (
-                              <span className="text-[10px] bg-terracotta/20 text-terracotta px-1.5 py-0.5 rounded italic">
-                                Preview
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-4">
-                            <span className="text-text-muted text-xs">
-                              {formatDuration(item.duration)}
-                            </span>
-                          </td>
-                          <td className="py-4">
-                            <span className="text-text font-bold text-xs">
-                              {item.credits_used.toLocaleString("id-ID")}
-                            </span>
-                          </td>
-                          <td className="py-4 text-green-500 font-bold text-[10px] uppercase">
-                            Berhasil
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-text-muted italic">Belum ada riwayat penggunaan.</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-6 pt-6 border-t border-surface2 text-center">
-               <button 
-                onClick={() => setIsHistoryOpen(false)}
-                className="bg-surface2 hover:bg-gray-700 text-text px-8 py-2.5 rounded-xl font-bold cursor-pointer border-none"
-               >
-                 Tutup
-               </button>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={null}>
+          <HistoryModal 
+            historyLoading={historyLoading}
+            history={history}
+            setIsHistoryOpen={setIsHistoryOpen}
+          />
+        </Suspense>
       )}
 
       {/* Voice Management Modal */}
       {isVoiceMgmtOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
-            onClick={() => setIsVoiceMgmtOpen(false)}
-          ></div>
-          <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
-            <button
-              onClick={() => setIsVoiceMgmtOpen(false)}
-              className="absolute top-4 right-4 text-text-muted hover:text-text cursor-pointer bg-transparent border-none"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="text-center mb-8">
-              <Settings2 className="w-16 h-16 text-terracotta mx-auto mb-4" />
-              <h2 className="text-2xl font-black text-text">Voice Management</h2>
-              <p className="text-text-muted text-sm mt-2">
-                Atur pengali biaya kredit (multiplier) untuk setiap tingkatan suara.
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-              {voiceConfigLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 text-terracotta animate-spin mb-4" />
-                  <p className="text-text-muted">Memuat data...</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {Object.entries(voiceConfig.tiers).map(([tier, multiplier]) => (
-                    <div key={tier} className="bg-dark p-4 rounded-xl border border-surface2">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="font-bold text-text uppercase text-xs tracking-wider">
-                          Tier: {tier}
-                        </label>
-                        <span className="text-terracotta font-bold">{multiplier}x Multiplier</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="range"
-                          min="1"
-                          max="100"
-                          step="1"
-                          value={multiplier}
-                          onChange={(e) => {
-                            const newTiers = { ...voiceConfig.tiers, [tier]: parseInt(e.target.value) };
-                            setVoiceConfig({ ...voiceConfig, tiers: newTiers });
-                          }}
-                          className="flex-1 h-1.5 bg-surface2 rounded-lg appearance-none cursor-pointer accent-terracotta"
-                        />
-                        <input
-                          type="number"
-                          value={multiplier}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 1;
-                            const newTiers = { ...voiceConfig.tiers, [tier]: val };
-                            setVoiceConfig({ ...voiceConfig, tiers: newTiers });
-                          }}
-                          className="w-16 bg-dark text-text border border-surface2 rounded px-2 py-1 text-center font-bold text-xs"
-                        />
-                      </div>
-                      <p className="text-[10px] text-text-muted mt-2">
-                        1 Karakter = {multiplier} Kredit
-                      </p>
-                    </div>
-                  ))}
-
-                  <div className="pt-6 border-t border-surface2">
-                    <h3 className="text-text font-bold mb-4 flex items-center gap-2">
-                       <Settings2 className="w-4 h-4 text-terracotta" /> Global Limits Configuration
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-dark p-4 rounded-xl border border-surface2">
-                        <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Free Char Limit</label>
-                        <input
-                           type="number"
-                           value={voiceConfig.limits?.free_request_chars || 500}
-                           onChange={(e) => {
-                             setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, free_request_chars: parseInt(e.target.value) || 0 } });
-                           }}
-                           className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
-                        />
-                      </div>
-                      <div className="bg-dark p-4 rounded-xl border border-surface2">
-                        <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Paid Char Limit</label>
-                        <input
-                           type="number"
-                           value={voiceConfig.limits?.paid_request_chars || 5000}
-                           onChange={(e) => {
-                             setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, paid_request_chars: parseInt(e.target.value) || 0 } });
-                           }}
-                           className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
-                        />
-                      </div>
-                      <div className="bg-dark p-4 rounded-xl border border-surface2">
-                        <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Free Cooldown (sec)</label>
-                        <input
-                           type="number"
-                           value={voiceConfig.limits?.free_cooldown_sec || 15}
-                           onChange={(e) => {
-                             setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, free_cooldown_sec: parseInt(e.target.value) || 0 } });
-                           }}
-                           className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
-                        />
-                      </div>
-                      <div className="bg-dark p-4 rounded-xl border border-surface2">
-                        <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Paid Cooldown (sec)</label>
-                        <input
-                           type="number"
-                           value={voiceConfig.limits?.paid_cooldown_sec || 2}
-                           onChange={(e) => {
-                             setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, paid_cooldown_sec: parseInt(e.target.value) || 0 } });
-                           }}
-                           className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-8 flex gap-4">
-               <button 
-                onClick={() => setIsVoiceMgmtOpen(false)}
-                className="flex-1 bg-surface2 hover:bg-gray-700 text-text py-3 rounded-xl font-bold cursor-pointer border-none"
-               >
-                 Batal
-               </button>
-               <button 
-                onClick={() => saveVoiceConfig(voiceConfig.tiers, voiceConfig.limits)}
-                className="flex-2 bg-terracotta hover:bg-trdark text-text py-3 rounded-xl font-bold cursor-pointer border-none"
-               >
-                 Simpan Perubahan
-               </button>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={null}>
+          <VoiceManagementModal 
+            voiceConfigLoading={voiceConfigLoading}
+            voiceConfig={voiceConfig}
+            setVoiceConfig={setVoiceConfig}
+            setIsVoiceMgmtOpen={setIsVoiceMgmtOpen}
+            saveVoiceConfig={saveVoiceConfig}
+          />
+        </Suspense>
       )}
     </div>
   );
