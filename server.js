@@ -10,6 +10,7 @@ import midtransClient from 'midtrans-client';
 import { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
 import { fileURLToPath } from 'url';
 import { GoogleAuth } from 'google-auth-library';
+import { checkAudioCache, uploadAudioToR2, getAudioPublicUrl } from './src/lib/r2Storage.js';
 
 let googleAuthClient = null;
 function getGoogleAuthClient() {
@@ -954,56 +955,78 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         console.log(`[Google TTS] Payload: ${ssmlText.slice(0, 200)}...`);
       }
       
+      const hashData = `${ssmlText}|${actualVoice}|${speed || 1.0}|${pitch || 0.0}|${volume || 0.0}`;
+      const cacheHash = crypto.createHash('sha256').update(hashData).digest('hex');
+      const cacheFilename = `audio_${cacheHash}.mp3`;
+      
       let finalAudioContent = null;
-      let fetchUrl = `https://texttospeech.googleapis.com/v1/text:synthesize`;
-      if (!tokenStr) fetchUrl += `?key=${apiKey}`;
-      const headers = { 'Content-Type': 'application/json' };
-      if (tokenStr) headers['Authorization'] = `Bearer ${tokenStr}`;
-
-      try {
-        const response = await fetch(fetchUrl, {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify({
-            input: { ssml: ssmlText },
-            voice: { languageCode: languageCode, name: actualVoice },
-            audioConfig: { 
-              audioEncoding: 'MP3', 
-              speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
-            }
-          })
-        });
-        const data = await response.json();
-        if (!response.ok) {
-           if (data.error?.message?.includes("API key not valid")) {
-               throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
-           }
-           throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
-        }
-        finalAudioContent = data.audioContent;
-      } catch (err) {
-        console.warn(`[Google TTS] Primary Voice ${actualVoice} Failed: ${err.message}. Attempting Secondary Fallback...`);
-        const fallbackVoice = 'id-ID-Standard-C';
-        const response2 = await fetch(fetchUrl, {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify({
-            input: { ssml: ssmlText },
-            voice: { languageCode: 'id-ID', name: fallbackVoice },
-            audioConfig: { 
-              audioEncoding: 'MP3', 
-              speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
-            }
-          })
-        });
-        const data2 = await response2.json();
-        if (!response2.ok) throw new Error(data2.error?.message || `Google TTS Error (${response2.status})`);
-        finalAudioContent = data2.audioContent;
-      }
-      if (finalAudioContent) {
-        console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}. Length: ${finalAudioContent.length}. Start: ${finalAudioContent.substring(0, 20)}...`);
+      let finalAudioUrl = null;
+      
+      const isCached = await checkAudioCache(cacheFilename);
+      
+      if (isCached) {
+        finalAudioUrl = getAudioPublicUrl(cacheFilename);
+        console.log(`[Google TTS] Cache hit for ${cacheFilename}. Returning R2 URL.`);
       } else {
-        console.warn(`[Google TTS] Warning: Empty audioContent returned for ${actualVoice}`);
+        let fetchUrl = `https://texttospeech.googleapis.com/v1/text:synthesize`;
+        if (!tokenStr) fetchUrl += `?key=${apiKey}`;
+        const headers = { 'Content-Type': 'application/json' };
+        if (tokenStr) headers['Authorization'] = `Bearer ${tokenStr}`;
+
+        try {
+          const response = await fetch(fetchUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+              input: { ssml: ssmlText },
+              voice: { languageCode: languageCode, name: actualVoice },
+              audioConfig: { 
+                audioEncoding: 'MP3', 
+                speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
+              }
+            })
+          });
+          const data = await response.json();
+          if (!response.ok) {
+             if (data.error?.message?.includes("API key not valid")) {
+                 throw new Error("Kunci API Google Cloud tidak valid atau tidak diizinkan untuk layanan TTS.");
+             }
+             throw new Error(data.error?.message || `Google TTS Error (${response.status})`);
+          }
+          finalAudioContent = data.audioContent;
+        } catch (err) {
+          console.warn(`[Google TTS] Primary Voice ${actualVoice} Failed: ${err.message}. Attempting Secondary Fallback...`);
+          const fallbackVoice = 'id-ID-Standard-C';
+          const response2 = await fetch(fetchUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+              input: { ssml: ssmlText },
+              voice: { languageCode: 'id-ID', name: fallbackVoice },
+              audioConfig: { 
+                audioEncoding: 'MP3', 
+                speakingRate: speed || 1.0, pitch: pitch || 0.0, volumeGainDb: volume || 0.0
+              }
+            })
+          });
+          const data2 = await response2.json();
+          if (!response2.ok) throw new Error(data2.error?.message || `Google TTS Error (${response2.status})`);
+          finalAudioContent = data2.audioContent;
+        }
+        
+        if (finalAudioContent) {
+          console.log(`[Google TTS] Success: Generated audio content for ${actualVoice}. Uploading to R2...`);
+          try {
+            finalAudioUrl = await uploadAudioToR2(cacheFilename, finalAudioContent);
+            // Delete base64 payload to save bandwidth if upload successful
+            finalAudioContent = undefined;
+          } catch (r2Err) {
+            console.error(`[R2 Storage] Upload failed, falling back to base64:`, r2Err.message);
+            // fallback: keep finalAudioContent
+          }
+        } else {
+          console.warn(`[Google TTS] Warning: Empty audioContent returned for ${actualVoice}`);
+        }
       }
 
       if (!isSample) {
@@ -1018,7 +1041,8 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
           voice: actualVoice,
           tier: tier,
           duration: Math.round(text.length / 15),
-          credits_used: totalCharCost
+          credits_used: totalCharCost,
+          audioUrl: finalAudioUrl
         });
 
         await saveUser(req.user.id, {
@@ -1029,7 +1053,7 @@ function pcmToWav(pcmBase64, sampleRate = 24000) {
         });
       }
 
-      res.json({ audioContent: finalAudioContent, voice: actualVoice });
+      res.json({ audioContent: finalAudioContent, audioUrl: finalAudioUrl, voice: actualVoice });
     } catch (error) {
       console.error('TTS error details:', {
         message: error.message,

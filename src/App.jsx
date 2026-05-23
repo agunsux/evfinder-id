@@ -1012,11 +1012,15 @@ const App = () => {
       };
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
-      if (data.audioContent) {
-        const mimeType = 'audio/mpeg';
-        const blob = base64ToBlob(data.audioContent, mimeType);
-        if (blob) {
-          const url = URL.createObjectURL(blob);
+      if (data.audioContent || data.audioUrl) {
+        let url;
+        if (data.audioUrl) url = data.audioUrl;
+        else {
+          const mimeType = 'audio/mpeg';
+          const blob = base64ToBlob(data.audioContent, mimeType);
+          if (blob) url = URL.createObjectURL(blob);
+        }
+        if (url) {
           const audio = new Audio(url);
           audio.play().catch(e => {
             console.error("[Pronunciation Test] Playback failed:", e);
@@ -1151,11 +1155,15 @@ const App = () => {
       };
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
-      if (data.audioContent) {
-        const mimeType = 'audio/mpeg';
-        const blob = base64ToBlob(data.audioContent, mimeType);
-        if (blob) {
-          const url = URL.createObjectURL(blob);
+      if (data.audioContent || data.audioUrl) {
+        let url;
+        if (data.audioUrl) url = data.audioUrl;
+        else {
+          const mimeType = 'audio/mpeg';
+          const blob = base64ToBlob(data.audioContent, mimeType);
+          if (blob) url = URL.createObjectURL(blob);
+        }
+        if (url) {
           const audio = new Audio(url);
           audio.play().catch(e => console.error("[Preview] Play error:", e));
           toast.success(`Berhasil memutar contoh suara ${getVoiceDisplayName(voice)}`);
@@ -1196,7 +1204,8 @@ const App = () => {
       }
       const data = await res.json();
       
-      if (data.audioContent) {
+      if (data.audioContent || data.audioUrl) {
+        if (data.audioUrl) return data.audioUrl;
         const mimeType = 'audio/mpeg';
         const blob = base64ToBlob(data.audioContent, mimeType);
         return blob ? URL.createObjectURL(blob) : null;
@@ -1277,30 +1286,32 @@ const App = () => {
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
 
-      if (data.audioContent) {
+      if (data.audioContent || data.audioUrl) {
         setLoadingMessage("Mengunduh hasil...");
         const generationTime = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`[TTS] Synthesis successful in ${generationTime}s. Audio Size: ${Math.round(data.audioContent.length / 1024)} KB`);
-        
-        const mimeType = 'audio/mpeg';
+        console.log(`[TTS] Synthesis successful in ${generationTime}s. Source: ${data.audioUrl ? 'R2 Cache' : 'API generated'}`);
         
         let url;
-        const blob = base64ToBlob(data.audioContent, mimeType);
-        if (blob) {
-          try {
-            url = URL.createObjectURL(blob);
-            
-            // Clean up previous blob URL
-            if (audioUrl && audioUrl.startsWith('blob:')) {
-              URL.revokeObjectURL(audioUrl);
+        if (data.audioUrl) {
+          url = data.audioUrl;
+        } else {
+          const mimeType = 'audio/mpeg';
+          const blob = base64ToBlob(data.audioContent, mimeType);
+          if (blob) {
+            try {
+              url = URL.createObjectURL(blob);
+              // Clean up previous blob URL
+              if (audioUrl && audioUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(audioUrl);
+              }
+            } catch (blobErr) {
+              console.error("[TTS] Object URL creation failed:", blobErr);
+              url = `data:${mimeType};base64,${data.audioContent}`;
             }
-          } catch (blobErr) {
-            console.error("[TTS] Object URL creation failed:", blobErr);
+          } else {
+            console.warn("[TTS] Blob creation failed, falling back to data URI");
             url = `data:${mimeType};base64,${data.audioContent}`;
           }
-        } else {
-          console.warn("[TTS] Blob creation failed, falling back to data URI");
-          url = `data:${mimeType};base64,${data.audioContent}`;
         }
 
         setAudioUrl(url);
