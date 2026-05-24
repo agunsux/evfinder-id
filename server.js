@@ -10,8 +10,8 @@ import midtransClient from 'midtrans-client';
 import admin, { authAdmin, dbAdmin, setDbAdmin, getFirestoreDb, initErrorMsg } from './src/lib/firebaseAdmin.js';
 import { fileURLToPath } from 'url';
 import { deductCredits } from './services/credits.js';
-import adminOnly from './middleware/adminOnly.js';
-import { getActiveCount, increment, decrement } from './rateLimiterStore.js';
+import adminOnly from './server/middleware/adminOnly.js';
+import { getActiveCount, increment, decrement } from './server/rateLimiterStore.js';
 
 import { GoogleAuth } from 'google-auth-library';
 import { checkAudioCache, uploadAudioToR2, getAudioPublicUrl } from './src/lib/r2Storage.js';
