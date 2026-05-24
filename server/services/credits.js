@@ -1,6 +1,6 @@
 // server/services/credits.js
-import admin from '../src/lib/firebaseAdmin.js';
-import { generateId } from '../server.js'; // assuming generateId is exported, else duplicate logic
+import admin from '../../src/lib/firebaseAdmin.js';
+// import { generateId } from '../../server.js'; // removed unused import
 import crypto from 'crypto';
 
 /**
