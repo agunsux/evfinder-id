@@ -35,7 +35,7 @@ const PricingSection = ({ refreshUser, setAuthMode, setIsAuthOpen }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[PLANS.FREE, PLANS.STARTER, PLANS.CREATOR, PLANS.PRO].map((plan) => (
+        {[PLANS.FREE, PLANS.STARTER, PLANS.KREATOR, PLANS.PRODUKTIF].map((plan) => (
           <div key={plan.id} className={`bg-surface border p-6 rounded-3xl flex flex-col relative ${plan.isPopular ? 'border-terracotta shadow-[0_0_30px_rgba(226,114,91,0.15)]' : 'border-surface2'}`}>
             {plan.isPopular && (
               <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest z-10">

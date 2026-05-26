@@ -21,9 +21,15 @@ const AudioPlayer = ({ generatedInfo, isTeaser, user }) => {
   const [duration, setDuration] = useState(0);
 
   useEffect(() => {
+    if (audioUrl) {
+      console.log("[AudioPlayer] audioUrl set, length:", audioUrl.length, "starts with:", audioUrl.slice(0, 30));
+    }
+  }, [audioUrl]);
+
+  useEffect(() => {
     if (audioRef.current && isPlaying) {
       audioRef.current.play().catch(e => {
-        console.warn("Autoplay prevented or interrupted:", e);
+        console.warn("[AudioPlayer] Autoplay prevented or interrupted:", e);
         setIsPlaying(false);
       });
     } else if (audioRef.current && !isPlaying) {
@@ -72,13 +78,13 @@ const AudioPlayer = ({ generatedInfo, isTeaser, user }) => {
           }}
           onTimeUpdate={updateProgress}
           onLoadedMetadata={updateProgress}
-          onError={(e) => {
-            const error = e.target.error;
-            console.error("[Audio] Playback error details:", {
-              code: error?.code,
-              message: error?.message,
-              src: audioUrl.slice(0, 50) + "..."
-            });
+            onError={(e) => {
+              const error = e.target.error;
+              console.error("[Audio] Playback error details:", {
+                code: error?.code,
+                message: error?.message,
+                src: audioUrl ? audioUrl.slice(0, 50) + "..." : "<null>"
+              });
             if (error?.code === 4) {
                toast.error("Format audio tidak didukung atau sumber data rusak.");
             }
