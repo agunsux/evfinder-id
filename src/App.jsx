@@ -375,6 +375,7 @@ const App = () => {
       }
     } catch (e) {
       console.warn("refreshUser failed:", e);
+      throw e;
     }
   };
 
@@ -911,7 +912,18 @@ const App = () => {
         toast.success(`Suara berhasil dibuat dalam ${generationTime} detik!`, { icon: '✨' });
         
         setTimeout(() => setStatus("idle"), 3000);
-        refreshUser();
+        
+        // Optimistic local update: reduce credits immediately
+        if (data.used_chars !== undefined) {
+          setUser(prev => prev ? { ...prev, used_chars: data.used_chars } : prev);
+        }
+        
+        // Refresh full profile from backend
+        try {
+          await refreshUser();
+        } catch (refreshErr) {
+          console.warn("[TTS] refreshUser failed:", refreshErr);
+        }
         
         if (user?.generation_count && user.generation_count % 3 === 0) {
             toast("Share kreasi Anda & tag @rungu.id untuk bonus karakter!", { icon: '🎁', duration: 6000 });

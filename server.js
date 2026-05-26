@@ -119,33 +119,39 @@ async function loadInitialConfig() {
   console.log(`[Firebase] Handshake with database: ${dbId}`);
   
   try {
-    // Attempt a light operation to verify database access
-    await dbAdmin.collection('_system_').doc('health').get(); 
+    await dbAdmin.collection('_system_').limit(1).get();
     console.log("[Firebase] Database connection verified.");
   } catch (err) {
-    const isNotFound = err.code === 5 || err.code === 'not-found' || 
-                      String(err.message).includes("NOT_FOUND") || 
-                      String(err.message).includes("not-found") ||
-                      String(err.message).includes("5");
+    const isDbMissing = err.message?.includes('does not exist for project');
+    const isNotFound = err.code === 5 || err.code === 'not-found' ||
+                      String(err.message).includes("NOT_FOUND") ||
+                      String(err.message).includes("not-found");
 
-    if (isNotFound) {
+    if (isDbMissing) {
       if (dbId !== "(default)") {
-        console.warn(`[Firebase] ERROR 5: Named database '${dbId}' not found. Falling back to (default)...`);
+        console.warn(`[Firebase] Named database '${dbId}' not found. Falling back to (default)...`);
         const fallbackDb = getFirestoreDb("(default)");
         if (fallbackDb) {
           setDbAdmin(fallbackDb);
           try {
-            await fallbackDb.collection('_system_').doc('health').get();
+            await fallbackDb.collection('_system_').limit(1).get();
             console.log("[Firebase] Fallback to (default) database successful.");
           } catch (fallbackErr) {
-            console.error("[Firebase] Fallback database also unreachable. App will run with limited profile features.");
-            setDbAdmin(null);
+            const isFallbackMissing = fallbackErr.message?.includes('does not exist for project');
+            if (isFallbackMissing) {
+              console.error("[Firebase] No database available. App will run with limited profile features.");
+              setDbAdmin(null);
+            } else {
+              console.log("[Firebase] Fallback database accessible (with minor warning).");
+            }
           }
         }
       } else {
-        console.error("[Firebase] ERROR 5: The (default) database is missing. App will run in limited mode.");
+        console.error("[Firebase] The (default) database is missing. App will run in limited mode.");
         setDbAdmin(null);
       }
+    } else if (isNotFound) {
+      console.log("[Firebase] Health check document not found (normal). Database is accessible.");
     } else {
       console.warn("[Firebase] Handshake warning (non-fatal):", err.message);
     }
@@ -177,11 +183,36 @@ async function getUser(uid) {
 }
 
 async function saveUser(uid, userData) {
-  if (!dbAdmin) return;
+  if (!dbAdmin) { console.error(`[Firestore] saveUser skipped for ${uid}: dbAdmin is null`); return false; }
   try {
     await dbAdmin.collection('users').doc(uid).set(userData, { merge: true });
+    return true;
   } catch (err) {
     console.error(`[Firestore] saveUser error for ${uid}:`, err.message);
+    return false;
+  }
+}
+
+async function incrementUserField(uid, field, amount) {
+  if (!dbAdmin) { console.error(`[Firestore] incrementUserField skipped for ${uid}: dbAdmin is null`); return false; }
+  try {
+    const { FieldValue } = await import('firebase-admin/firestore');
+    await dbAdmin.collection('users').doc(uid).update({ [field]: FieldValue.increment(amount) });
+    return true;
+  } catch (err) {
+    console.error(`[Firestore] incrementUserField error for ${uid}.${field}:`, err.message);
+    return false;
+  }
+}
+
+async function getUserField(uid, field) {
+  if (!dbAdmin) return null;
+  try {
+    const doc = await dbAdmin.collection('users').doc(uid).get();
+    return doc.exists ? doc.data()[field] : null;
+  } catch (err) {
+    console.error(`[Firestore] getUserField error for ${uid}.${field}:`, err.message);
+    return null;
   }
 }
 
@@ -250,25 +281,38 @@ async function createServer() {
       }
       const decodedToken = await authAdmin.verifyIdToken(idToken);
       const uid = decodedToken.uid;
-      const email = decodedToken.email;
+      let email = decodedToken.email;
+      
+      // Fallback: if email not in token, fetch from Firebase Auth
+      if (!email) {
+        try {
+          const firebaseUser = await authAdmin.getUser(uid);
+          email = firebaseUser.email;
+          console.log(`[Auth] Email fetched from Auth API for ${uid}: ${email}`);
+        } catch (fetchErr) {
+          console.error(`[Auth] Failed to fetch user ${uid} from Auth API:`, fetchErr.message);
+        }
+      }
       
       if (!email) {
-        return res.status(401).json({ error: 'Token does not contain email' });
+        console.warn(`[Auth] Token for ${uid} has no email, using uid-based placeholder`);
+        email = `user-${uid}@placeholder.shinerva.id`;
       }
 
       // Sync with Firestore
       let user = await getUser(uid);
       
-      const currentEmailVerified = !!decodedToken.email_verified;
+      const currentEmailVerified = !!decodedToken.email_verified || !!email;
       const lowerEmail = email.toLowerCase();
       
-      // Rungu's Anti-Clone Protection: Block disposable emails
-      const disposableDomains = ['10minutemail.com', 'temp-mail.org', 'guerrillamail.com', 'sharklasers.com', 'mailinator.com'];
-      const emailDomain = lowerEmail.split('@')[1];
-      
-      if (disposableDomains.includes(emailDomain)) {
-        console.warn(`[Security] Blocked signup attempt from disposable email: ${lowerEmail}`);
-        return res.status(403).json({ error: 'Harap gunakan alamat email asli (Gmail/Outlook/Yahoo dsb).' });
+      // Rungu's Anti-Clone Protection: Block disposable emails (skip for placeholder emails)
+      if (!email.endsWith('@placeholder.shinerva.id')) {
+        const disposableDomains = ['10minutemail.com', 'temp-mail.org', 'guerrillamail.com', 'sharklasers.com', 'mailinator.com'];
+        const emailDomain = lowerEmail.split('@')[1];
+        if (disposableDomains.includes(emailDomain)) {
+          console.warn(`[Security] Blocked signup attempt from disposable email: ${lowerEmail}`);
+          return res.status(403).json({ error: 'Harap gunakan alamat email asli (Gmail/Outlook/Yahoo dsb).' });
+        }
       }
 
       // Migration: If not found by UID, try finding by email
@@ -298,7 +342,7 @@ async function createServer() {
 
         user = {
           id: uid,
-          name: decodedToken.name || email.split('@')[0],
+          name: decodedToken.name || (email.includes('@') ? email.split('@')[0] : uid),
           email: email,
           emailVerified: currentEmailVerified,
           password: 'firebase-managed',
@@ -1005,11 +1049,33 @@ async function createServer() {
           credits_used: totalCharCost,
           audioUrl: finalAudioUrl
         });
-        // Save only history (used_chars etc already handled)
-        await saveUser(req.user.id, { history: user.history });
+
+        // Use atomic increment for used_chars to prevent race conditions
+        const incOk = await incrementUserField(req.user.id, 'used_chars', totalCharCost);
+        if (!incOk) {
+          // Fallback: direct save
+          await saveUser(req.user.id, {
+            used_chars: user.used_chars,
+            generation_count: user.generation_count,
+            last_generation_at: user.last_generation_at,
+            history: user.history 
+          });
+        } else {
+          await saveUser(req.user.id, {
+            generation_count: user.generation_count,
+            last_generation_at: user.last_generation_at,
+            history: user.history 
+          });
+        }
       }
 
-      res.json({ audioContent: finalAudioContent, audioUrl: finalAudioUrl, voice: actualVoice });
+      res.json({ 
+        audioContent: finalAudioContent, 
+        audioUrl: finalAudioUrl, 
+        voice: actualVoice,
+        used_chars: user.used_chars,
+        remaining_credits: Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0))
+      });
     } catch (error) {
       console.error('TTS error details:', {
         message: error.message,
@@ -1053,7 +1119,51 @@ async function createServer() {
     });
   });
 
+  app.get("/api/user/debug-credits", async (req, res) => {
+    const email = (req.query.email || '').toLowerCase().trim();
+    try {
+      if (email) {
+        const snapshot = await dbAdmin.collection('users').where('email', '==', email).limit(1).get();
+        if (snapshot.empty) {
+          const all = await dbAdmin.collection('users').limit(5).get();
+          const allUsers = all.docs.map(d => ({ id: d.id, email: d.data().email, used_chars: d.data().used_chars }));
+          return res.json({ error: 'User not found in Firestore', email, all_users: allUsers });
+        }
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+        return res.json({
+          uid: doc.id,
+          email: data.email,
+          firestore_used_chars: data.used_chars,
+          firestore_user: {
+            used_chars: data.used_chars,
+            monthly_chars: data.monthly_chars,
+            signup_bonus_chars: data.signup_bonus_chars,
+            earned_chars: data.earned_chars,
+            generation_count: data.generation_count,
+            tier: data.tier,
+            last_reset_check: data.last_reset_check
+          }
+        });
+      }
+      const all = await dbAdmin.collection('users').limit(5).get();
+      res.json({ all_users: all.docs.map(d => ({ id: d.id, email: d.data().email, used_chars: d.data().used_chars })) });
+    } catch (e) {
+      res.json({ error: e.message, dbAdmin_exists: !!dbAdmin });
+    }
+  });
 
+  app.get("/api/debug-env", (req, res) => {
+    res.json({
+      VITE_FIREBASE_PROJECT_ID: process.env.VITE_FIREBASE_PROJECT_ID,
+      FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+      hasApiKey: !!process.env.VITE_FIREBASE_API_KEY,
+      hasGoogleApiKey: !!process.env.GOOGLE_API_KEY,
+      hasGeminiApiKey: !!process.env.GEMINI_API_KEY,
+      apiKeyPrefix: process.env.VITE_FIREBASE_API_KEY ? process.env.VITE_FIREBASE_API_KEY.slice(0, 6) : "(none)",
+      nodeEnv: process.env.NODE_ENV
+    });
+  });
 
   app.post(['/api/tts', '/api/tts/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
   const sampleRateLimiter = rateLimit({
