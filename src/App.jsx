@@ -14,7 +14,9 @@ import {
   onAuthStateChanged,
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
-  signInWithEmailLink
+  signInWithEmailLink,
+  sendEmailVerification,
+  reload
 } from 'firebase/auth';
 import {
   Waves,
@@ -128,17 +130,20 @@ const App = () => {
       </div>
     </div>
   );
-  const [text, setText] = useState("");
-  const [voice, setVoice] = useState("FLOW_F");
-  const [speed, setSpeed] = useState(1);
-  const [pitch, setPitch] = useState(0);
-  const [volume, setVolume] = useState(0);
-  const [status, setStatus] = useState("idle"); // idle, loading, success
-  const [loadingMessage, setLoadingMessage] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState("");
-
-  const [isAudioVisible, setIsAudioVisible] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const {
+    text, setText,
+    audioUrl, setAudioUrl,
+    voice, setVoice,
+    speed, setSpeed,
+    pitch, setPitch,
+    volume, setVolume,
+    status, setStatus,
+    loadingMessage, setLoadingMessage,
+    turnstileToken, setTurnstileToken,
+    isAudioVisible, setIsAudioVisible,
+    isPlaying, setIsPlaying,
+    voiceConfig, setVoiceConfig
+  } = useStudio();
   const [notification, setNotification] = useState(null);
   const [initError, setInitError] = useState(clientInitError);
 
@@ -208,7 +213,6 @@ const App = () => {
   const [isVoiceMgmtOpen, setIsVoiceMgmtOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [voiceConfig, setVoiceConfig] = useState({ tiers: {}, limits: {} });
   const [voiceConfigLoading, setVoiceConfigLoading] = useState(false);
 
   const currentMaxRequestChars = user?.tier === 'FREE' 
@@ -376,6 +380,38 @@ const App = () => {
     } catch (e) {
       console.warn("refreshUser failed:", e);
       throw e;
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!auth?.currentUser) return;
+    setAuthLoading(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      toast.success("Email verifikasi telah dikirim. Cek folder Inbox/Spam.");
+    } catch (e) {
+      toast.error("Gagal mengirim email verifikasi: " + e.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleRefreshVerificationStatus = async () => {
+    if (!auth?.currentUser) return;
+    setAuthLoading(true);
+    try {
+      await reload(auth.currentUser);
+      if (auth.currentUser.emailVerified) {
+        setUser(prev => prev ? { ...prev, emailVerified: true } : prev);
+        toast.success("Email terverifikasi!");
+        setIsVerificationDismissed(true);
+      } else {
+        toast("Email belum terverifikasi. Cek folder Inbox/Spam.");
+      }
+    } catch (e) {
+      toast.error("Gagal memeriksa status: " + e.message);
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -596,7 +632,7 @@ const App = () => {
         let url;
         if (data.audioUrl) url = data.audioUrl;
         else {
-          const mimeType = 'audio/mpeg';
+          const mimeType = data.audioMimeType || 'audio/mpeg';
           const blob = base64ToBlob(data.audioContent, mimeType);
           if (blob) url = URL.createObjectURL(blob);
         }
@@ -621,7 +657,7 @@ const App = () => {
   const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
   const textAreaRef = useRef(null);
-  const [audioUrl, setAudioUrl] = useState("");
+
   const [generatedInfo, setGeneratedInfo] = useState(null);
   const [isTeaser, setIsTeaser] = useState(false);
   const [isStudioWarningOpen, setIsStudioWarningOpen] = useState(false);
@@ -698,17 +734,27 @@ const App = () => {
     return () => clearInterval(cooldownTimerRef.current);
   }, [cooldown]);
 
+  // Sync user state when auth.currentUser exists but onAuthStateChanged hasn't set it
+  // (fixes Edge tracking prevention blocking IndexedDB auth persistence)
   useEffect(() => {
-    if (audioUrl && audioRef.current) {
-      audioRef.current.load();
-      audioRef.current.play()
-        .then(() => setIsPlaying(true))
-        .catch(e => {
-            console.warn("Auto-play blocked or failed:", e);
-            setIsPlaying(false);
-        });
+    if (!user && auth?.currentUser) {
+      setUser({
+        email: auth.currentUser.email,
+        uid: auth.currentUser.uid,
+        emailVerified: auth.currentUser.emailVerified,
+        tier: 'FREE',
+        generation_count: 0,
+        used_chars: 0,
+        monthly_chars: 10000,
+        signup_bonus_chars: 10000,
+        earned_chars: 0,
+        valid_referrals: 0,
+        has_received_referral_bonus: false,
+        referral_code: "",
+        social_bonus_status: "none"
+      });
     }
-  }, [audioUrl]);
+  }, [auth?.currentUser, auth?.currentUser?.uid]);
 
   const handlePreviewVoice = async () => {
     if (!user) {
@@ -739,7 +785,7 @@ const App = () => {
         let url;
         if (data.audioUrl) url = data.audioUrl;
         else {
-          const mimeType = 'audio/mpeg';
+          const mimeType = data.audioMimeType || 'audio/mpeg';
           const blob = base64ToBlob(data.audioContent, mimeType);
           if (blob) url = URL.createObjectURL(blob);
         }
@@ -787,7 +833,7 @@ const App = () => {
       
       if (data.audioContent || data.audioUrl) {
         if (data.audioUrl) return data.audioUrl;
-        const mimeType = 'audio/mpeg';
+        const mimeType = data.audioMimeType || 'audio/mpeg';
         const blob = base64ToBlob(data.audioContent, mimeType);
         return blob ? URL.createObjectURL(blob) : null;
       }
@@ -876,7 +922,7 @@ const App = () => {
         if (data.audioUrl) {
           url = data.audioUrl;
         } else {
-          const mimeType = 'audio/mpeg';
+          const mimeType = data.audioMimeType || 'audio/mpeg';
           const blob = base64ToBlob(data.audioContent, mimeType);
           if (blob) {
             try {
@@ -939,19 +985,21 @@ const App = () => {
       if (err.status === 429 && err.data?.cooldownRemaining) {
         setCooldown(err.data.cooldownRemaining);
       }
-      
-      // Special handling for specific text errors
-      if (err.message?.includes("naskah terlalu panjang")) {
-         toast.error("Naskah melebihi batas karakter.");
-      } else if (err.message?.includes("kredit tidak mencukupi")) {
-         toast.error("Kredit karakter Anda habis.");
+
+      // Handle specific server errors - NEVER fallback to browser TTS for these
+      if (err.status === 403) {
+        toast.error(err.message || "Suara tidak tersedia untuk paket Anda.");
+      } else if (err.status === 402) {
+        toast.error(err.message || "Kredit tidak mencukupi.");
+      } else if (err.message?.includes("naskah terlalu panjang")) {
+        toast.error("Naskah melebihi batas karakter.");
+      } else if (err.message?.includes("kredit tidak mencukupi") || err.message?.includes("tidak mencukupi")) {
+        toast.error("Kredit karakter Anda habis.");
+      } else if (err.status === 503 || err.message?.includes("pemeliharaan") || err.message?.includes("infrastruktur")) {
+        toast.error(err.message || "Layanan sedang sibuk. Coba lagi nanti.");
       } else {
-         // Auto-fallback to Browser TTS!
-         toast.success("Voice engine sibuk. Menggunakan Browser TTS...", {
-           icon: '⚙️',
-           duration: 3000
-         });
-         fallbackTTS();
+        // Generic error - show it, don't auto-fallback
+        toast.error(err.message || "Gagal menghasilkan suara. Coba lagi.");
       }
     }
   };
@@ -959,6 +1007,22 @@ const App = () => {
   const fallbackTTS = () => {
     const synth = window.speechSynthesis;
     synth.cancel();
+    
+    // Clear previous audio state to prevent AudioPlayer from playing stale audio
+    if (audioUrl) {
+      if (audioUrl.startsWith('blob:')) {
+        try { URL.revokeObjectURL(audioUrl); } catch (_) { /* ignore */ }
+      }
+      setAudioUrl(null);
+    }
+    setIsPlaying(false);
+    
+    // Set generatedInfo with estimated duration so player shows > 0:00
+    setGeneratedInfo({
+      duration: Math.round(text.length / 15),
+      voice: voice,
+      time: "N/A"
+    });
     
     // Strip all potential bracketed tags and excessive punctuation
     let cleanedText = text
@@ -993,15 +1057,12 @@ const App = () => {
       utterance.lang = 'id-ID';
     }
 
-    utterance.onend = () => setIsPlaying(false);
-
     setStatus("success");
     setIsAudioVisible(true);
     setTimeout(() => setStatus("idle"), 3000);
 
-    // We can't generate a real audio tag from this easily, so we just auto play
+    // Speak directly via browser API — NO setIsPlaying(true) so AudioPlayer doesn't play stale audio
     synth.speak(utterance);
-    setIsPlaying(true);
   };
 
   const togglePlay = () => {
@@ -1575,7 +1636,7 @@ const App = () => {
 
 
                 <div className="flex-grow flex flex-col justify-end">
-                  <AudioPlayer user={user} isTeaser={isTeaser} generatedInfo={generatedInfo} />
+                  <AudioPlayer user={user || (auth?.currentUser ? { email: auth.currentUser.email } : null)} isTeaser={isTeaser} generatedInfo={generatedInfo} />
                 </div>
                 </div>
             </div>
@@ -1602,7 +1663,7 @@ const App = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Pakets */}
-            {[PLANS.FREE, PLANS.STARTER, PLANS.CREATOR, PLANS.PRO].map((plan) => (
+            {[PLANS.FREE, PLANS.STARTER, PLANS.KREATOR, PLANS.PRODUKTIF].map((plan) => (
               <div key={plan.id} className={`bg-surface border p-6 rounded-3xl flex flex-col relative ${plan.isPopular ? 'border-terracotta shadow-[0_0_30px_rgba(226,114,91,0.15)]' : 'border-surface2'}`}>
                 {plan.isPopular && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest z-10">
