@@ -26,12 +26,7 @@ export function validateEnv() {
     missing.forEach(m => console.error(` - ${m}`));
     console.error("Please configure these in your .env file or environment settings.");
     
-    if (process.env.NODE_ENV === 'production') {
-      console.error("Exiting due to strict production validation.");
-      process.exit(1);
-    } else {
-      console.warn("Continuing in development mode, but features relying on these variables will fail.");
-    }
+    console.warn("Continuing, but features relying on these variables will fail.");
   } else {
     console.log("[Startup] All required environment variables are present.");
   }
