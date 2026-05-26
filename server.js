@@ -22,6 +22,67 @@ import { verifyTurnstile } from './server/middleware/verifyTurnstile.js';
 validateEnv();
 
 let googleAuthClient = null;
+async function synthesizeWithGoogleTTS(text) {
+  let authMethod = 'none';
+  let url = 'https://texttospeech.googleapis.com/v1/text:synthesize';
+  const headers = { 'Content-Type': 'application/json' };
+
+  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+
+  if (apiKey) {
+    url += `?key=${apiKey}`;
+    authMethod = 'api_key';
+    console.log(`[Google Cloud TTS] Using API key auth (${apiKey.slice(0, 8)}...)`);
+  } else {
+    try {
+      const authClient = getGoogleAuthClient();
+      if (authClient) {
+        const client = await authClient.getClient();
+        const token = await client.getAccessToken();
+        if (token?.token) {
+          headers['Authorization'] = `Bearer ${token.token}`;
+          authMethod = 'oauth';
+          console.log(`[Google Cloud TTS] Using OAuth token via Firebase service account`);
+        }
+      }
+    } catch (e) {
+      console.warn('[Google Cloud TTS] OAuth token fetch failed:', e.message);
+    }
+  }
+
+  if (authMethod === 'none') {
+    throw new Error('No Google Cloud TTS credentials available: set GOOGLE_API_KEY or ensure Firebase service account has Cloud TTS IAM permissions');
+  }
+
+  const body = {
+    input: { text },
+    voice: { languageCode: 'id-ID', name: 'id-ID-Standard-A' },
+    audioConfig: { audioEncoding: 'MP3', speakingRate: 1.0 }
+  };
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Google Cloud TTS returned ${res.status} (auth:${authMethod}): ${errText.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    if (!data.audioContent) throw new Error('No audioContent in response');
+    const audioSize = data.audioContent.length;
+    console.log(`[Google Cloud TTS] Success: ${(audioSize * 0.75 / 1024).toFixed(1)}KB MP3 (auth:${authMethod})`);
+    if (audioSize < 100) {
+      throw new Error(`Google Cloud TTS returned too-small audio (${audioSize} chars)`);
+    }
+    return { audioContent: data.audioContent, mimeType: 'audio/mpeg' };
+  } catch (e) {
+    console.error('[Google Cloud TTS] Failed:', e.message);
+    throw e;
+  }
+}
+
 function getGoogleAuthClient() {
   if (!googleAuthClient && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
     let pk = process.env.FIREBASE_PRIVATE_KEY;
@@ -990,31 +1051,30 @@ async function createServer() {
       
       let finalAudioContent = null;
       let finalAudioUrl = null;
-      
+      let finalAudioMimeType = 'audio/mpeg';
+
       const isCached = await checkAudioCache(cacheFilename);
-      
+
       if (isCached) {
         finalAudioUrl = getAudioPublicUrl(cacheFilename);
+        finalAudioMimeType = 'audio/wav';
         console.log(`[Gemini TTS] Cache hit for ${cacheFilename}. Returning R2 URL.`);
       } else {
-        try {
-          console.log(`[Gemini TTS] Generating audio for preset ${actualVoice}...`);
-          finalAudioContent = await generateGeminiTts(promptText, actualVoice);
-          
-          if (finalAudioContent) {
-            console.log(`[Gemini TTS] Success. Uploading to R2...`);
-            try {
-              finalAudioUrl = await uploadAudioToR2(cacheFilename, finalAudioContent);
-              // Delete base64 payload to save bandwidth if upload successful
-              finalAudioContent = undefined;
-            } catch (r2Err) {
-              console.error(`[R2 Storage] Upload failed, falling back to base64:`, r2Err.message);
-              // fallback: keep finalAudioContent
-            }
+        console.log(`[Gemini TTS] Generating audio for preset ${actualVoice}...`);
+        finalAudioContent = await generateGeminiTts(promptText, actualVoice);
+        if (finalAudioContent) {
+          finalAudioMimeType = 'audio/wav';
+          console.log(`[Gemini TTS] Success.`);
+        }
+
+        if (finalAudioContent) {
+          console.log(`[TTS] Uploading to R2...`);
+          try {
+            finalAudioUrl = await uploadAudioToR2(cacheFilename, finalAudioContent);
+            finalAudioContent = undefined;
+          } catch (r2Err) {
+            console.error(`[R2 Storage] Upload failed, falling back to base64:`, r2Err.message);
           }
-        } catch (err) {
-          console.error(`[Gemini TTS] Failed: ${err.message}`);
-          throw new Error(`Voice generation failed: ${err.message}`);
         }
       }
 
@@ -1050,29 +1110,23 @@ async function createServer() {
           audioUrl: finalAudioUrl
         });
 
-        // Use atomic increment for used_chars to prevent race conditions
-        const incOk = await incrementUserField(req.user.id, 'used_chars', totalCharCost);
-        if (!incOk) {
-          // Fallback: direct save
-          await saveUser(req.user.id, {
-            used_chars: user.used_chars,
-            generation_count: user.generation_count,
-            last_generation_at: user.last_generation_at,
-            history: user.history 
-          });
-        } else {
-          await saveUser(req.user.id, {
-            generation_count: user.generation_count,
-            last_generation_at: user.last_generation_at,
-            history: user.history 
-          });
-        }
+        // Save history (credits already deducted by deductCredits above)
+        await saveUser(req.user.id, { history: user.history });
+      }
+
+      const audioSize = finalAudioContent ? finalAudioContent.length : 0;
+      const audioSizeKB = (audioSize * 0.75 / 1024).toFixed(1);
+      console.log(`[TTS] Response: method=${finalAudioMimeType === 'audio/wav' ? 'Gemini' : 'Google Cloud TTS'} mime=${finalAudioMimeType} size=${audioSize}chars(~${audioSizeKB}KB) hasUrl=${!!finalAudioUrl}`);
+      if (finalAudioContent && audioSize < 100) {
+        console.error(`[TTS] Audio content too small (${audioSize} chars), likely invalid!`);
       }
 
       res.json({ 
         audioContent: finalAudioContent, 
         audioUrl: finalAudioUrl, 
+        audioMimeType: finalAudioMimeType,
         voice: actualVoice,
+        duration: Math.round(text.length / 15),
         used_chars: user.used_chars,
         remaining_credits: Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0))
       });

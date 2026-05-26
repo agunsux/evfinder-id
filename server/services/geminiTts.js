@@ -2,7 +2,7 @@ import { GoogleGenAI, Modality } from "@google/genai";
 
 const PRESETS = {
   FLOW_F: {
-    voiceName: "Aoife",
+    voiceName: "charon",
     style: "Speak calmly, emotionally, naturally, with cinematic softness and gentle pacing."
   },
   FLOW_M: {
@@ -87,7 +87,7 @@ export async function generateGeminiTts(text, presetId) {
 
   try {
     const response = await ai.models.generateContent({
-      model: process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash',
+      model: process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts',
       contents: prompt,
       config: {
         responseModalities: ["AUDIO"],
@@ -120,8 +120,19 @@ export async function generateGeminiTts(text, presetId) {
 
     const rawPcmBase64 = audioPart.inlineData.data;
     
+    if (!rawPcmBase64 || rawPcmBase64.length < 50) {
+      console.error(`[Gemini TTS] Empty or too-small PCM data (${rawPcmBase64?.length || 0} chars)`);
+      throw new Error("Gemini returned empty audio data");
+    }
+
     // Gemini 2.5 Flash typically outputs 24kHz PCM by default for AUDIO modality
     const wavBase64 = pcmToWav(rawPcmBase64, 24000);
+    
+    const decodedSize = Buffer.from(wavBase64, 'base64').length;
+    console.log(`[Gemini TTS] WAV size: ${decodedSize} bytes (base64: ${wavBase64.length} chars)`);
+    if (decodedSize <= 44) {
+      throw new Error("Gemini produced empty WAV (header only, no audio data)");
+    }
     
     return wavBase64;
   } catch (error) {
