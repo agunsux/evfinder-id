@@ -3,43 +3,43 @@ export const LANGUAGES = [
 ];
 
 export const DEFAULT_VOICES = {
-  "ID": "FLOW_F",
+  "ID": "SAMBAS",
   "CMN": "cmn-CN-Standard-A"
 };
 
 export const VOICES = {
   "ID": {
-    "Flow": [
-      { 
-        id: "FLOW_F", 
-        name: "Flow", 
-        type: "GeminiFlash", 
-        premium: false, 
+    "Sambas": [
+      {
+        id: "SAMBAS",
+        name: "Sambas",
+        type: "GeminiFlash",
+        premium: false,
         tier: "FREE",
-        desc: "Calm, articulated narrator.",
-        useCase: "Audiobook, Presentations"
+        desc: "Cinematic, deep, storytelling voice.",
+        useCase: "Horror, Documentary, Narrative"
       }
     ],
-    "Pulse": [
-      { 
-        id: "PULSE_M", 
-        name: "Pulse", 
-        type: "GeminiFlash", 
-        premium: false, 
+    "Mega": [
+      {
+        id: "MEGA",
+        name: "Mega",
+        type: "GeminiFlash",
+        premium: false,
         tier: "FREE",
-        desc: "Modern, energetic creator voice.",
-        useCase: "TikTok, Ads, Shorts"
+        desc: "Professional, clear broadcasting tone.",
+        useCase: "Education, News, Corporate"
       }
     ],
-    "Aura": [
-      { 
-        id: "AURA_M", 
-        name: "Aura", 
-        type: "GeminiFlash", 
-        premium: true, 
-        tier: "CREATOR",
-        desc: "Cinematic, emotional storyteller.",
-        useCase: "Documentary, Storytelling"
+    "Susi": [
+      {
+        id: "SUSI",
+        name: "Susi",
+        type: "GeminiFlash",
+        premium: false,
+        tier: "FREE",
+        desc: "Energetic, modern, creator‑friendly voice.",
+        useCase: "Social, Shorts, Ads"
       }
     ]
   }

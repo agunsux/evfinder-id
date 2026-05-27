@@ -181,7 +181,7 @@ const App = () => {
     if (isPlayingHero) return;
     setIsPlayingHero(true);
     const sampleText = "Platform AI Voice pertama yang mengutamakan tekstur emosi, napas, dan intonasi manusiawi untuk kreator.";
-    const voiceId = "FLOW_F";
+    const voiceId = "SAMBAS";
     
     const url = await generateSample(sampleText, voiceId);
     if (url) {

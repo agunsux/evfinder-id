@@ -975,7 +975,7 @@ async function createServer() {
       }
       
       // Voice Authorization - STABLE VOICE ROUTING
-      let actualVoice = voice || 'FLOW_F';
+      let actualVoice = voice || 'SAMBAS';
       
       const isPremiumVoice = ['AURA_F', 'AURA_M', 'PULSE_F', 'PULSE_M'].includes(actualVoice);
       const isUltraVoice = ['AURA_F', 'AURA_M'].includes(actualVoice);

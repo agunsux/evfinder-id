@@ -1,34 +1,22 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
 const PRESETS = {
-  FLOW_F: {
-    voiceName: "charon",
-    style: "Speak calmly, emotionally, naturally, with cinematic softness and gentle pacing."
-  },
-  FLOW_M: {
-    voiceName: "Puck",
-    style: "Speak calmly, emotionally, naturally, with cinematic softness and gentle pacing."
-  },
-  AURA_F: {
-    voiceName: "Kore",
-    style: "Speak elegantly, luxuriously, with refined confidence and smooth clarity."
-  },
-  AURA_M: {
+  SAMBAS: {
     voiceName: "Enceladus",
-    style: "Speak elegantly, luxuriously, with refined confidence and smooth clarity."
+    style: "Cinematic, deep, storytelling with dramatic pacing."
   },
-  PULSE_F: {
+  MEGA: {
+    voiceName: "Kore",
+    style: "Professional, clear, broadcasting tone, articulate."
+  },
+  SUSI: {
     voiceName: "Zephyr",
-    style: "Speak energetically, modern, engaging, confident, and creator-friendly."
-  },
-  PULSE_M: {
-    voiceName: "Fenrir",
-    style: "Speak energetically, modern, engaging, confident, and creator-friendly."
+    style: "Energetic, modern, creator‑friendly, vibrant."
   }
 };
 
 // Default fallback
-const DEFAULT_PRESET = PRESETS.FLOW_F;
+const DEFAULT_PRESET = PRESETS.SAMBAS;
 
 /**
  * Converts raw PCM base64 data to WAV base64
@@ -71,7 +59,7 @@ export function pcmToWav(pcmBase64, sampleRate = 24000) {
 /**
  * Generates audio using Gemini TTS
  * @param {string} text - The text to synthesize
- * @param {string} presetId - The Shinerva voice preset ID (e.g., FLOW_F)
+ * @param {string} presetId - The Shinerva voice preset ID (e.g., SAMBAS)
  * @returns {Promise<string>} - Base64 encoded WAV data
  */
 export async function generateGeminiTts(text, presetId) {
