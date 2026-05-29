@@ -1174,21 +1174,25 @@ const App = () => {
   const handleMagicLinkSignIn = async (e) => {
     e.preventDefault();
     if (!authEmail) return toast.error("Masukkan email Anda");
-    
-    setIsMagicLoading(true);
-    const actionCodeSettings = {
-      url: window.location.href, // Returns to original page
-      handleCodeInApp: true,
-    };
 
+    setIsMagicLoading(true);
     try {
-      await sendSignInLinkToEmail(auth, authEmail, actionCodeSettings);
+      const res = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: authEmail,
+          continueUrl: window.location.href,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.detail || "Gagal mengirim link.");
       window.localStorage.setItem('emailForSignIn', authEmail);
       setMagicLinkSent(true);
-      toast.success("Link masuk dikirim! Cek inbox/spam email Anda.");
-    } catch (error) {
-      console.error("Magic link error:", error);
-      toast.error(error.message);
+      toast.success(data.message || "Link masuk dikirim! Cek inbox/spam email Anda.");
+    } catch (err) {
+      console.error("Magic link error:", err);
+      toast.error(err.message);
     } finally {
       setIsMagicLoading(false);
     }

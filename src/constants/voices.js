@@ -41,6 +41,17 @@ export const VOICES = {
         desc: "Energetic, modern, creator‑friendly voice.",
         useCase: "Social, Shorts, Ads"
       }
+    ],
+    "Ratna": [
+      {
+        id: "RATNA",
+        name: "Ratna",
+        type: "GeminiFlash",
+        premium: true,
+        tier: "STARTER",
+        desc: "Soft emotional narrator, gentle storytelling.",
+        useCase: "Romance, Audiobook, Poetry"
+      }
     ]
   }
 };

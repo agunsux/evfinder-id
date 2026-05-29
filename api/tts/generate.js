@@ -230,16 +230,49 @@ async function rollbackCredits(uid, generationId) {
 
 // ─── Gemini TTS ──────────────────────────────────────────────────────────────
 const VOICE_PRESETS = {
-  SAMBAS: { voiceName: 'Enceladus', style: 'Cinematic, deep, storytelling with dramatic pacing.' },
-  MEGA:   { voiceName: 'Kore',     style: 'Professional, clear, broadcasting tone, articulate.' },
-  SUSI:   { voiceName: 'Zephyr',   style: 'Energetic, modern, creator-friendly, vibrant.' },
+  SAMBAS: { 
+    voiceName: 'Enceladus', 
+    style: `[EMOTIONAL DIRECTIVE: Cinematic Indonesian Storyteller]
+- Pacing: Slower, deliberate, and deep.
+- Tone: Suspenseful, dramatic, reflective narration (documentary/horror feel).
+- Pause Behavior: Insert dramatic pauses intelligently. Use suspense pauses before key reveals.
+- Rhythm: Heavy and grounded.
+- Code-Switching: Pronounce English tech/slang naturally without breaking character.` 
+  },
+  MEGA: { 
+    voiceName: 'Kore', 
+    style: `[EMOTIONAL DIRECTIVE: Professional Broadcaster]
+- Pacing: Stable, confident, and articulate.
+- Tone: Newsroom cadence, corporate clarity, TV presenter or finance explainer.
+- Pause Behavior: Crisp, structured pauses between sentences and clauses.
+- Rhythm: Authoritative and even.
+- Code-Switching: Flawless, professional pronunciation of English terms seamlessly blended into Indonesian.` 
+  },
+  SUSI: { 
+    voiceName: 'Zephyr', 
+    style: `[EMOTIONAL DIRECTIVE: High-Energy Creator]
+- Pacing: Fast, dynamic, and upbeat.
+- Tone: Expressive energy, conversational excitement, TikTok/viral live commerce host.
+- Pause Behavior: Conversational bursts, short breathless micro-pauses for hype.
+- Rhythm: Bouncy and highly engaging.
+- Code-Switching: Natural Indonesian-English mix, leaning into creator slang fluently.` 
+  },
+  RATNA: { 
+    voiceName: 'Aoife', 
+    style: `[EMOTIONAL DIRECTIVE: Soft Emotional Narrator]
+- Pacing: Gentle, tender, and unhurried.
+- Tone: Emotional warmth, intimate, poetic softness, romantic storytelling or audiobook feel.
+- Pause Behavior: Intimate, emotional spacing. Let the silence carry weight.
+- Rhythm: Flowing and soothing.
+- Code-Switching: Smooth and soft, treating English words as naturally as Indonesian.` 
+  },
   FLOW_F: { voiceName: 'Aoife',    style: 'Warm, emotional, expressive, Indonesian female narration.' },
   PULSE_M:{ voiceName: 'Fenrir',   style: 'Strong, authoritative, deep male voice for documentaries.' },
 };
 
 const TIER_ORDER      = ['FREE','STARTER','KREATOR','PRODUKTIF','BISNIS','ENTERPRISE'];
-const PREMIUM_VOICES  = ['FLOW_F','FLOW_M','AURA_F','AURA_M','PULSE_F','PULSE_M'];
-const ULTRA_VOICES   = ['AURA_F','AURA_M'];
+const PREMIUM_VOICES  = ['RATNA','FLOW_F','FLOW_M','AURA_F','AURA_M','PULSE_F','PULSE_M'];
+const ULTRA_VOICES    = ['AURA_F','AURA_M'];
 const TIER_COST_MULT = { Standard: 1, Wavenet: 1, Studio: 10 };
 
 function pcmToWav(pcmBase64, sampleRate = 24000) {

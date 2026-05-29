@@ -71,6 +71,30 @@ export const PLAYGROUND_VOICES = {
           ]
         }
       ]
+    },
+    {
+      tier: "Ratna",
+      badge: "STARTER",
+      color: "yellow",
+      voices: [
+        { id: "RATNA", gender: "Wanita", name: "Ratna (Flow)" }
+      ],
+      categories: [
+        {
+          slug: "emotional",
+          name: "Soft & Emotional",
+          description: "Suara lembut, hangat, puitis untuk storytelling dan romance.",
+          samples: [
+            {
+              id: "ratna_f_sample",
+              title: "Emotional Story",
+              voiceId: "RATNA",
+              script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik.",
+              url: ""
+            }
+          ]
+        }
+      ]
     }
   ]
 };

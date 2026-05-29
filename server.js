@@ -512,6 +512,15 @@ async function createServer() {
     res.json({ success: true, user: req.user });
   });
 
+  // Server-side magic link email route with SMTP→Gmail fallback
+  // POST /api/auth/magic-link — generates Firebase Admin link + sends via nodemailer
+  // Falls through to: if request doesn't match, continues to legacy route handlers below
+  app.post('/api/auth/magic-link', async (req, res) => {
+    // Lazy-import to avoid circular dependency and keep module tree clean
+    const { default: magicLinkHandler } = await import('./api/auth/magic-link.js');
+    return magicLinkHandler(req, res);
+  });
+
   // Legacy manual auth routes are disabled in favor of Firebase Auth
   app.all('/api/auth/login', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
   app.all('/api/auth/signup', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Firebase Auth.' }));
@@ -1153,6 +1162,9 @@ async function createServer() {
       projectId: process.env.FIREBASE_PROJECT_ID || "(missing)",
       hasClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL,
       hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+      hasEmailHost: !!process.env.EMAIL_HOST,
+      hasEmailUser: !!process.env.EMAIL_USER,
+      hasFallbackEmail: !!process.env.FALLBACK_EMAIL,
       nodeVersion: process.version,
       env: process.env.NODE_ENV,
       timestamp: new Date().toISOString()
