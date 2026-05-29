@@ -12,11 +12,6 @@
     "start": "node dist/server.cjs",
     "lint": "eslint .",
     "test": "jest"
-
-    "dev": "node server.js",
-    "build": "vite build && esbuild server.js --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "node dist/server.cjs",
-    "lint": "eslint ."
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1053.0",
