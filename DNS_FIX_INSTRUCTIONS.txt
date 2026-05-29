@@ -1,0 +1,60 @@
+# DNS Correction Blueprint: Firebase Custom Domain Email Validation
+=====================================================================
+
+## The Issue
+Firebase Authentication generated email verification DKIM keys specifically targeting your `www.shinerva.id` subdomain. However, your current Cloudflare DNS records are mapped to the apex domain (`@` or `shinerva.id`). This mismatch prevents Firebase from verifying your domain ownership for email dispatch.
+
+## Codebase Confirmation
+I have scanned the project configuration. Your application logic, SEO metadata, and API routes (e.g., `https://shinerva.id/api/auth/sync`) generally expect the apex domain (`shinerva.id`). However, because Firebase was configured/verified using the `www` subdomain for email templates, the DNS records must reflect the `www` host to pass Firebase's specific validation checks.
+
+---
+
+## Step-by-Step Correction Instructions (Cloudflare)
+
+1. Log in to your Cloudflare Dashboard and select the `shinerva.id` domain.
+2. Navigate to the **DNS > Records** section on the left sidebar.
+3. Locate your current Firebase CNAME records (they are likely named `firebase1._domainkey` and `firebase2._domainkey`).
+4. Edit each record EXACTLY as follows:
+
+### Record 1 Modification
+* **Type:** CNAME
+* **Name:** Change from `firebase1._domainkey` to `firebase1._domainkey.www`
+* **Target:** (Keep your existing Firebase target value)
+* **Proxy status:** **DNS Only** (Grey Cloud) - **CRITICAL: DO NOT PROXY**
+
+### Record 2 Modification
+* **Type:** CNAME
+* **Name:** Change from `firebase2._domainkey` to `firebase2._domainkey.www`
+* **Target:** (Keep your existing Firebase target value)
+* **Proxy status:** **DNS Only** (Grey Cloud) - **CRITICAL: DO NOT PROXY**
+
+*Note: Depending on how Cloudflare displays the Name field, entering `firebase1._domainkey.www` will automatically resolve to `firebase1._domainkey.www.shinerva.id`.*
+
+---
+
+## Verification Steps (Post-Propagation)
+
+DNS changes can take anywhere from a few minutes to a few hours to propagate. Once you have saved the changes in Cloudflare, execute the following steps to verify:
+
+### 1. Manual DNS Verification (Terminal/Command Prompt)
+Run the following commands on your local machine to confirm Cloudflare is broadcasting the correct records:
+
+```bash
+# Check the first DKIM record
+nslookup -type=cname firebase1._domainkey.www.shinerva.id
+
+# Check the second DKIM record
+nslookup -type=cname firebase2._domainkey.www.shinerva.id
+```
+*(You should see your Firebase target URLs returned without any Cloudflare proxy IPs).*
+
+### 2. Firebase Console Verification
+1. Open the [Firebase Console](https://console.firebase.google.com/).
+2. Navigate to **Authentication > Templates > Custom domain** (or the specific email template settings where the domain is listed).
+3. Click the **Verify** button next to your `www.shinerva.id` domain.
+4. Once verified, ensure the status changes to green/verified.
+
+### 3. End-to-End Application Test
+1. Trigger a Magic Link or Email Verification from your application.
+2. Check your inbox (or the test email's inbox) to confirm the email is delivered.
+3. Inspect the email headers to verify the sender domain is correctly listed and DKIM passes.
