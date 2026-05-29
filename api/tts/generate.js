@@ -21,7 +21,8 @@ import crypto from 'crypto';
 import admin from 'firebase-admin';
 import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { PHONETIC_MAP, GLOBAL_PHONETICS, applyPhoneticPreprocessing } from '../../src/lib/phoneticsIndo.js';
-
+import * as Sentry from '@sentry/nextjs';
+import { withSentry } from '@sentry/nextjs';
 let firebaseApp = null;
 let db = null;
 let auth = null;
@@ -306,7 +307,7 @@ function calculateCost(textLength, voiceId) {
 }
 
 // ─── Express Route Handler ───────────────────────────────────────────────────
-export default async function handler(req, res) {
+async function handler(req, res) {
   // Only POST allowed
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -451,6 +452,7 @@ export default async function handler(req, res) {
       }
     } catch (ttsErr) {
       console.error('[TTS] Gemini TTS error:', ttsErr.message);
+      Sentry.captureException(ttsErr);
       return res.status(500).json({
         error: `Gagal menghasilkan suara: ${ttsErr.message}`,
         code: 'TTS_GENERATION_FAILED',
@@ -465,6 +467,7 @@ export default async function handler(req, res) {
       console.log(`[TTS] Deducted ${charCost} credits from ${uid}`);
     } catch (deductErr) {
       console.error('[TTS] Credit deduction failed — rolling back R2 upload:', deductErr.message);
+      Sentry.captureException(deductErr);
       // R2 file is uploaded but credits not deducted = user lucky, no rollback needed for R2
       // The deductCreditsAtomic will throw and we return error
       return res.status(400).json({
