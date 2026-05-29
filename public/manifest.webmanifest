@@ -1,0 +1,46 @@
+{
+  "name": "Shinerva - Platform AI Voice Emosional",
+  "short_name": "Shinerva",
+  "description": "Platform AI Voice emosional untuk kreator modern Indonesia. Ubah tulisan menjadi narasi manusiawi.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#e2725b",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "id",
+  "categories": ["productivity", "utilities", "music"],
+  "icons": [
+    {
+      "src": "/shinerva-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/shinerva-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Buat Suara AI",
+      "short_name": "Generate",
+      "description": "Mulai membuat suara AI sekarang",
+      "url": "/#studio",
+      "icons": [{ "src": "/shinerva-icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Cek Harga",
+      "short_name": "Harga",
+      "description": "Lihat paket kredit suara",
+      "url": "/#pricing-temporarily-renamed",
+      "icons": [{ "src": "/shinerva-icon.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

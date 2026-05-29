@@ -346,6 +346,32 @@ const App = () => {
     };
   }, []);
 
+  // ─── Service Worker Registration (deferred, non-blocking) ───────────────
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          console.log('[SW] Registered:', registration.scope, registration.active ? '(active)' : '(installing)');
+
+          // Watch for updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('[SW] New version available — refresh to update.');
+                // Optional: toast to user
+              }
+            });
+          });
+        } catch (err) {
+          console.warn('[SW] Registration failed:', err.message);
+        }
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
