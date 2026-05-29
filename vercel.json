@@ -4,6 +4,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/kanban", "destination": "/kanban.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
