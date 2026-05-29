@@ -910,20 +910,21 @@ const App = () => {
       };
 
       console.log(`[TTS] Requesting voice: ${voice} for user: ${auth.currentUser.uid}`);
-      const res = await fetch("/api/tts", options);
+      const res = await fetch("/api/tts/generate", options);
       const data = await checkResponse(res, 0, options);
 
-      if (data.audioContent || data.audioUrl) {
+      if (data.audioUrl || data.audioBase64) {
         setLoadingMessage("Mengunduh hasil...");
         const generationTime = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`[TTS] Synthesis successful in ${generationTime}s. Source: ${data.audioUrl ? 'R2 Cache' : 'API generated'}`);
         
         let url;
+        const base64 = data.audioBase64 || data.audioContent;
         if (data.audioUrl) {
           url = data.audioUrl;
-        } else {
-          const mimeType = data.audioMimeType || 'audio/mpeg';
-          const blob = base64ToBlob(data.audioContent, mimeType);
+        } else if (base64) {
+          const mimeType = data.audioMimeType || 'audio/wav';
+          const blob = base64ToBlob(base64, mimeType);
           if (blob) {
             try {
               url = URL.createObjectURL(blob);
@@ -933,11 +934,11 @@ const App = () => {
               }
             } catch (blobErr) {
               console.error("[TTS] Object URL creation failed:", blobErr);
-              url = `data:${mimeType};base64,${data.audioContent}`;
+              url = `data:${mimeType};base64,${base64}`;
             }
           } else {
             console.warn("[TTS] Blob creation failed, falling back to data URI");
-            url = `data:${mimeType};base64,${data.audioContent}`;
+            url = `data:${mimeType};base64,${base64}`;
           }
         }
 
