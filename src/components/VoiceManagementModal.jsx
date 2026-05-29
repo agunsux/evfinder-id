@@ -106,9 +106,9 @@ const VoiceManagementModal = ({
                     <label className="block text-[10px] text-text-muted font-bold uppercase mb-2">Free Cooldown (sec)</label>
                     <input
                        type="number"
-                       value={voiceConfig.limits?.free_cooldown || 30}
+                       value={voiceConfig.limits?.free_cooldown_sec || 30}
                        onChange={(e) => {
-                         setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, free_cooldown: parseInt(e.target.value) || 0 } });
+                         setVoiceConfig({ ...voiceConfig, limits: { ...voiceConfig.limits, free_cooldown_sec: parseInt(e.target.value) || 0 } });
                        }}
                        className="w-full bg-surface2 text-text border border-surface2 rounded px-3 py-2 font-bold text-sm"
                     />
