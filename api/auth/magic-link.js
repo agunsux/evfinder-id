@@ -184,6 +184,9 @@ async function sendEmailWithFallback({ to, subject, html }) {
 
 // ─── Route Handler ───────────────────────────────────────────────────────────
 export default async function handler(req, res) {
+  console.log('[Magic Link] Request received:', req.method, req.url);
+  console.log('[Magic Link] Headers:', req.headers);
+  console.log('[Magic Link] Body raw:', req.body);
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -193,6 +196,7 @@ export default async function handler(req, res) {
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
   } catch {
+    console.warn('[Magic Link] Invalid JSON body');
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
 
@@ -225,13 +229,14 @@ export default async function handler(req, res) {
       url: targetUrl,
       handleCodeInApp: true,
     };
-
+    console.log('[Magic Link] Generating link with settings:', actionCodeSettings);
     magicLink = await auth.generateSignInWithEmailLink(cleanEmail, actionCodeSettings);
     console.log(`[Magic Link] Generated for ${cleanEmail}`);
   } catch (genErr) {
-    console.error(`[Magic Link] Generate failed for ${cleanEmail}:`, genErr.message);
+    console.error(`[Magic Link] Generate failed for ${cleanEmail}:`, genErr);
     return res.status(500).json({
       error: 'Gagal membuat link masuk.',
+      code: genErr.code,
       detail: genErr.message,
     });
   }
@@ -240,7 +245,7 @@ export default async function handler(req, res) {
   try {
     const { subject, html } = buildMagicLinkEmail(magicLink, cleanEmail);
     const sendResult = await sendEmailWithFallback({ to: cleanEmail, subject, html });
-
+    console.log('[Magic Link] Email send result:', sendResult);
     return res.status(200).json({
       success: true,
       message: `Link masuk dikirim ke ${cleanEmail}. Cek inbox atau folder Spam.`,

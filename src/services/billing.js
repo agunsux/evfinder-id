@@ -108,13 +108,7 @@ export async function handlePurchase(planId, billingCycle = DEFAULT_BILLING_CYCL
     if (!res.ok) {
       const msg = data?.error || `Server error (${res.status})`;
       const hint = data?.suggestion || '';
-      toast.error(
-        <div>
-          <div className="font-bold">{msg}</div>
-          {hint && <div className="text-sm mt-1">{hint}</div>}
-        </div>,
-        { duration: 7000 }
-      );
+      toast.error(`${msg}${hint ? '\n' + hint : ''}`, { duration: 7000 });
       setPurchaseLoading(null);
       return true;
     }
