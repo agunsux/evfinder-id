@@ -527,6 +527,18 @@ async function createServer() {
   app.all('/api/auth/otp/*', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use Google Login.' }));
   app.all('/api/auth/google', (req, res) => res.status(410).json({ error: 'Endpoint deprecated. Use client-side Firebase Google Auth.' }));
 
+  // Isolated checkout route — ZERO dependency on AI/TTS/Gemini/R2
+  // POST /api/checkout/midtrans — generates Midtrans Snap token, no AI keys needed
+  app.post('/api/checkout/midtrans', async (req, res) => {
+    try {
+      const { default: checkoutHandler } = await import('./api/checkout/midtrans.js');
+      return checkoutHandler(req, res);
+    } catch (err) {
+      console.error('[Server] checkout/midtrans route import failed:', err.message);
+      return res.status(500).json({ error: 'Checkout route unavailable.' });
+    }
+  });
+
   app.get('/api/user/me', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     

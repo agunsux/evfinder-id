@@ -129,9 +129,9 @@ export const handleApiError = (error, defaultMessage = "Terjadi kesalahan.") => 
     
     console.error("handleApiError DEBUG:", { message, errorStatus, error });
 
-    if (errorStatus === 401 || errorStr.includes('unauthorized') || errorStr.includes('api key')) {
-        message = 'Masalah Autentikasi / API Key.';
-        suggestion = 'Pastikan Anda sudah login dan GOOGLE_API_KEY atau GEMINI_API_KEY sudah benar.';
+    if (errorStatus === 401 || errorStr.includes('unauthorized') || errorStr.includes('firebase') && errorStr.includes('auth')) {
+        message = 'Masalah Autentikasi.';
+        suggestion = 'Pastikan Anda sudah login dan sesi belum expired. Coba buka di tab baru.';
     } else if (errorStatus === 403 || errorStr.includes('forbidden')) {
         message = 'Anda tidak memiliki akses ke fitur ini.';
         suggestion = 'Silakan periksa langganan Anda atau hubungi support.';
