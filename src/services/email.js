@@ -120,7 +120,7 @@ export async function generateMagicLinkToken(email, continueUrl) {
   }
 
   const actionCodeSettings = {
-    url: continueUrl || process.env.EMAIL_CONTINUE_URL || 'https://langgam.vercel.app',
+    url: continueUrl || process.env.EMAIL_CONTINUE_URL || process.env.APP_URL || 'https://shinerva.id',
     handleCodeInApp: true,
   };
 
@@ -149,7 +149,7 @@ function buildMagicLinkEmail(link, email) {
 </head>
 <body style="margin:0;padding:0;background:#1a1a1a;font-family:Inter,Arial,sans-serif;color:#FDFBF7;">
   <div style="max-width:480px;margin:0 auto;padding:40px 20px;text-align:center;">
-    <img src="https://langgam.vercel.app/shinerva-icon.png" alt="Shinerva" style="width:64px;height:64px;margin-bottom:24px;" />
+    <img src="${process.env.APP_URL || 'https://shinerva.id'}/shinerva-icon.png" alt="Shinerva" style="width:64px;height:64px;margin-bottom:24px;" />
     <h1 style="color:#e2725b;font-size:24px;font-weight:900;margin:0 0 8px;">Masuk ke Shinerva</h1>
     <p style="color:#8a8a8a;font-size:14px;margin:0 0 32px;">Klik tombol di bawah untuk masuk ke akun Anda.</p>
     <a href="${link}"
@@ -183,7 +183,7 @@ function buildVerificationEmail(link, email) {
 </head>
 <body style="margin:0;padding:0;background:#1a1a1a;font-family:Inter,Arial,sans-serif;color:#FDFBF7;">
   <div style="max-width:480px;margin:0 auto;padding:40px 20px;text-align:center;">
-    <img src="https://langgam.vercel.app/shinerva-icon.png" alt="Shinerva" style="width:64px;height:64px;margin-bottom:24px;" />
+    <img src="${process.env.APP_URL || 'https://shinerva.id'}/shinerva-icon.png" alt="Shinerva" style="width:64px;height:64px;margin-bottom:24px;" />
     <h1 style="color:#e2725b;font-size:24px;font-weight:900;margin:0 0 8px;">Verifikasi Email</h1>
     <p style="color:#8a8a8a;font-size:14px;margin:0 0 32px;">
       Klik tombol di bawah untuk memverifikasi email <strong>${email}</strong>.
@@ -219,7 +219,7 @@ function buildPasswordResetEmail(link) {
 </head>
 <body style="margin:0;padding:0;background:#1a1a1a;font-family:Inter,Arial,sans-serif;color:#FDFBF7;">
   <div style="max-width:480px;margin:0 auto;padding:40px 20px;text-align:center;">
-    <img src="https://langgam.vercel.app/shinerva-icon.png" alt="Shinerva" style="width:64px;height:64px;margin-bottom:24px;" />
+    <img src="${process.env.APP_URL || 'https://shinerva.id'}/shinerva-icon.png" alt="Shinerva" style="width:64px;height:64px;margin-bottom:24px;" />
     <h1 style="color:#e2725b;font-size:24px;font-weight:900;margin:0 0 8px;">Reset Password</h1>
     <p style="color:#8a8a8a;font-size:14px;margin:0 0 32px;">Klik tombol di bawah untuk mereset password akun Anda.</p>
     <a href="${link}"
@@ -337,7 +337,7 @@ export async function sendVerificationEmail({ to, idToken: _idToken, continueUrl
   try {
     // Generate verification link server-side using the user's ID token
     const link = await firebaseAdminAuth.generateEmailVerificationLink(to, {
-      url: continueUrl || process.env.EMAIL_CONTINUE_URL || 'https://langgam.vercel.app',
+      url: continueUrl || process.env.EMAIL_CONTINUE_URL || process.env.APP_URL || 'https://shinerva.id',
     });
     const { subject, html } = buildVerificationEmail(link, to);
     return sendEmail({ to, subject, html });

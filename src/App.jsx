@@ -413,8 +413,18 @@ const App = () => {
     if (!auth?.currentUser) return;
     setAuthLoading(true);
     try {
-      await sendEmailVerification(auth.currentUser);
-      toast.success("Email verifikasi telah dikirim. Cek folder Inbox/Spam.");
+      const res = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: auth.currentUser.email,
+          action: "verifyEmail",
+          continueUrl: window.location.origin,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.detail || "Gagal mengirim email verifikasi.");
+      toast.success(data.message || "Email verifikasi telah dikirim via sistem kami. Cek folder Inbox/Spam.");
     } catch (e) {
       toast.error("Gagal mengirim email verifikasi: " + e.message);
     } finally {
@@ -1182,7 +1192,8 @@ const App = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: authEmail,
-          continueUrl: window.location.href,
+          action: "signIn",
+          continueUrl: window.location.origin,
         }),
       });
       const data = await res.json();
@@ -1201,22 +1212,28 @@ const App = () => {
   // Handle incoming magic link
   useEffect(() => {
     if (isSignInWithEmailLink(auth, window.location.href)) {
+      console.log("[Auth] Detected magic link in URL, attempting sign-in...");
       let email = window.localStorage.getItem('emailForSignIn');
       if (!email) {
+        console.log("[Auth] Email not found in localStorage, prompting user.");
         email = window.prompt('Harap masukkan email Anda kembali untuk verifikasi');
       }
       
       if (email) {
+        console.log(`[Auth] Resolving signInWithEmailLink for email: ${email}`);
         signInWithEmailLink(auth, email, window.location.href)
           .then((result) => {
+            console.log("[Auth] signInWithEmailLink SUCCESS", { uid: result.user.uid, isNewUser: result.additionalUserInfo?.isNewUser });
             window.localStorage.removeItem('emailForSignIn');
             toast.success("Berhasil masuk!");
             setIsAuthOpen(false);
           })
           .catch((error) => {
-            console.error("Link verification error:", error);
+            console.error("[Auth] signInWithEmailLink FAILED:", error.message || error, error.code);
             toast.error("Link tidak valid atau sudah kedaluwarsa.");
           });
+      } else {
+         console.warn("[Auth] Magic link sign-in aborted: no email provided.");
       }
     }
   }, []);

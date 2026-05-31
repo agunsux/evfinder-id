@@ -275,7 +275,7 @@ export default async function handler(req, res) {
       plan,
       user: userAuth,
       billingCycle,
-      host: req.get('host') || 'langgam.vercel.app',
+      host: req.get('host') || (process.env.APP_URL ? new URL(process.env.APP_URL).hostname : 'shinerva.id'),
     });
   } catch (err) {
     console.error('[Checkout] Payload build error:', err);

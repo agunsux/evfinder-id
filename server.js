@@ -18,6 +18,7 @@ import { checkAudioCache, uploadAudioToR2, getAudioPublicUrl } from './src/lib/r
 import { generateGeminiTts } from './server/services/geminiTts.js';
 import { validateEnv } from './server/lib/env.js';
 import { verifyTurnstile } from './server/middleware/verifyTurnstile.js';
+import { applyPhoneticMoat } from './server/lib/phonetics.js';
 
 validateEnv();
 
@@ -1029,7 +1030,7 @@ async function createServer() {
       }
 
       // Rungu Engine logic
-      const modifiedText = text
+      const modifiedText = applyPhoneticMoat(text)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")

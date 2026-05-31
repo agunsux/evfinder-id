@@ -85,7 +85,17 @@ export function useAuth() {
   // Resend email verification
   const sendVerification = useCallback(async () => {
     if (!user) throw new Error('No user logged in');
-    await sendEmailVerification(user);
+    const res = await fetch("/api/auth/magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        action: "verifyEmail",
+        continueUrl: window.location.origin,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || data.detail || "Gagal mengirim email verifikasi.");
   }, [user]);
 
   // Reload and check if email verified
