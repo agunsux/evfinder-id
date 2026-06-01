@@ -954,7 +954,7 @@ const App = () => {
       };
 
       console.log(`[TTS] Requesting voice: ${voice} for user: ${auth.currentUser.uid}`);
-      const res = await fetch("/api/tts/generate", options);
+      const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
 
       if (data.audioUrl || data.audioBase64) {
