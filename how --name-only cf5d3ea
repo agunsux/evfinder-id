@@ -1,0 +1,32 @@
+[33mcommit cf5d3ea23f77957e0a29925138a8aed0aece0ada[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Merge: 4b96af9 24ad92f
+Author: Baginda Agun <agunsux@users.noreply.github.com>
+Date:   Fri May 29 20:10:30 2026 +0700
+
+    feat: implement deferred PWA support and robust email fallback system
+
+ .env.example                            |   37 [32m+[m[31m-[m
+ .github/workflows/build-and-deploy.yml  |   11 [32m+[m[31m-[m
+ .gitignore                              |    4 [32m+[m
+ index.html                              |   58 [32m+[m
+ package-lock.json                       | 3436 [32m+++++++++++++++++++++++++++++[m[31m--[m
+ package.json                            |    6 [32m+[m[31m-[m
+ public/kanban.html                      |  541 [32m+++++[m
+ server.js                               |  256 [32m++[m[31m-[m
+ server/lib/env.js                       |    7 [32m+[m[31m-[m
+ server/services/geminiTts.js            |   30 [32m+[m[31m-[m
+ src/App.jsx                             |  593 [32m++[m[31m----[m
+ src/__tests__/plans.test.js             |   24 [32m+[m
+ src/components/PricingSection.jsx       |   36 [32m+[m
+ src/components/VoiceManagementModal.jsx |   16 [32m+[m[31m-[m
+ src/constants/voices.js                 |   52 [32m+[m[31m-[m
+ src/hooks/useAuth.js                    |  184 [32m++[m
+ src/hooks/usePayment.js                 |   52 [32m+[m
+ src/hooks/usePreferences.js             |   44 [32m+[m
+ src/lib/firebaseAdmin.js                |   23 [32m+[m[31m-[m
+ src/lib/voicePlaygroundData.js          |   62 [32m+[m[31m-[m
+ src/main.jsx                            |   22 [32m+[m[31m-[m
+ src/pages/StudioPage.jsx                |   37 [32m+[m
+ test.js                                 |   16 [31m-[m
+ vercel.json                             |    1 [32m+[m
+ 24 files changed, 4836 insertions(+), 712 deletions(-)
