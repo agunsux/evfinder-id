@@ -957,7 +957,11 @@ const App = () => {
       const res = await fetch("/api/tts", options);
       const data = await checkResponse(res, 0, options);
 
-      if (data.audioUrl || data.audioBase64) {
+      // DIAGNOSTIC: Log the full response
+      console.log(`[TTS] Response _debug:`, data._debug);
+      console.log(`[TTS] audioUrl: ${data.audioUrl ? 'SET' : 'NULL'}, audioContent: ${data.audioContent ? 'SET (' + data.audioContent.length + ' chars)' : 'NULL'}`);
+
+      if (data.audioUrl || data.audioContent) {
         setLoadingMessage("Mengunduh hasil...");
         const generationTime = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`[TTS] Synthesis successful in ${generationTime}s. Source: ${data.audioUrl ? 'R2 Cache' : 'API generated'}`);

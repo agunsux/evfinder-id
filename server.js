@@ -1145,9 +1145,25 @@ async function createServer() {
         console.error(`[TTS] Audio content too small (${audioSize} chars), likely invalid!`);
       }
 
-      res.json({ 
-        audioContent: finalAudioContent, 
-        audioUrl: finalAudioUrl, 
+      // DIAGNOSTIC: Log what we're about to return
+      console.log(`[TTS] Final response: audioUrl=${finalAudioUrl ? 'SET' : 'NULL'}, audioContent=${finalAudioContent ? 'SET' : 'NULL'}, mimeType=${finalAudioMimeType}`);
+
+      res.json({
+        // DIAGNOSTICS - helps debug what's actually being returned
+        _debug: {
+          r2Configured: !!(process.env.R2_ACCOUNT_ID && process.env.R2_SECRET_ACCESS_KEY),
+          r2Bucket: process.env.R2_BUCKET_NAME || null,
+          r2PublicDomain: process.env.R2_PUBLIC_DOMAIN || null,
+          geminiConfigured: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
+          geminiApiKeyPrefix: (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '').substring(0, 10) + '...',
+          audioUrl: finalAudioUrl,
+          audioContentSize: finalAudioContent ? finalAudioContent.length : 0,
+          audioMimeType: finalAudioMimeType,
+          isCached: !!finalAudioUrl && !finalAudioContent
+        },
+        // Standard response
+        audioContent: finalAudioContent,
+        audioUrl: finalAudioUrl,
         audioMimeType: finalAudioMimeType,
         voice: actualVoice,
         duration: Math.round(text.length / 15),
@@ -1161,10 +1177,15 @@ async function createServer() {
         isSample: req.body?.isSample,
         voice: req.body?.voice
       });
-      res.status(500).json({ 
-        error: error.message, 
+      res.status(500).json({
+        error: error.message,
         detail: isProd ? undefined : error.stack,
-        code: 'TTS_FAILED'
+        code: 'TTS_FAILED',
+        // DIAGNOSTICS on error
+        _debug: {
+          geminiConfigured: !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
+          r2Configured: !!(process.env.R2_ACCOUNT_ID && process.env.R2_SECRET_ACCESS_KEY)
+        }
       });
     }
   };
