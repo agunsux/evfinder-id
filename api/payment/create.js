@@ -1,5 +1,5 @@
 // api/payment/create.js
-import { createTransaction } from '../../src/services/paymentService.js';
+import { createTransaction } from '../../../src/services/paymentService.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
   try {
     const orderId = "TEST-" + Date.now();
-    const grossAmount = 10000; // Rp10.000 untuk test
+    const grossAmount = 10000;
 
     const result = await createTransaction(orderId, grossAmount, {
       name: "Test User",
@@ -18,6 +18,10 @@ export default async function handler(req, res) {
     return res.status(200).json(result);
   } catch (error) {
     console.error('Create Payment Error:', error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      stack: error.stack 
+    });
   }
 }
