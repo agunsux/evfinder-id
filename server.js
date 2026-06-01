@@ -500,6 +500,7 @@ async function createServer() {
       next();
     } catch (error) {
       console.error('Error verifying Firebase ID token:', error.message);
+      console.error("FIREBASE ERROR", error);
       const status = error.code === 'auth/id-token-expired' ? 401 : 403;
       res.status(status).json({ error: 'Token invalid or expired', code: error.code });
     }
@@ -717,6 +718,7 @@ async function createServer() {
       res.json({ token: transaction.token, redirect_url: transaction.redirect_url });
     } catch (error) {
       console.error('Midtrans Error:', error);
+      console.error("MIDTRANS ERROR", error);
       res.status(500).json({ error: error.message || 'Gagal membuat transaksi pembayaran' });
     }
   });

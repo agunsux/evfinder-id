@@ -1329,6 +1329,7 @@ const App = () => {
         try {
           await loadMidtransSnap();
         } catch (loadErr) {
+          console.error("PAYMENT FLOW ERROR", loadErr);
           console.warn("[Midtrans] Failed lazy loading snap.js, falling back to redirectUrl:", loadErr);
           if (data.redirect_url) {
             toast(
@@ -1338,7 +1339,7 @@ const App = () => {
               { icon: '🔗' }
             );
             setTimeout(() => {
-              window.open(data.redirect_url, '_blank');
+              window.location.href = data.redirect_url;
             }, 1000);
             return;
           }
@@ -1371,18 +1372,23 @@ const App = () => {
           );
         },
         onError: (result) => {
-          console.log('error', result);
+          console.error("PAYMENT FLOW ERROR", result);
           toast.error(
             language === 'ID'
               ? "Pembayaran gagal. Silakan coba lagi."
               : "Payment failed. Please try again."
           );
+          if (data.redirect_url) {
+            console.log("[Midtrans] Fallback redirecting on error to:", data.redirect_url);
+            window.location.href = data.redirect_url;
+          }
         },
         onClose: () => {
           console.log('customer closed the popup without finishing the payment');
         }
       });
     } catch (err) {
+      console.error("PAYMENT FLOW ERROR", err);
       handleApiError(err, "Gagal memulai proses pembayaran.");
     } finally {
       setPurchaseLoading(null);

@@ -243,6 +243,7 @@ export default async function handler(req, res) {
     userAuth = await verifyFirebaseToken(idToken);
   } catch (err) {
     console.error('[Checkout] Auth error:', err.message);
+    console.error("FIREBASE ERROR", err);
     return res.status(err.status || 401).json({
       error: err.message,
       code: err.code || 'AUTH_ERROR',
@@ -299,6 +300,7 @@ export default async function handler(req, res) {
     console.log(`[Checkout] Token generated: ${orderId}`);
   } catch (err) {
     console.error('[Checkout] Midtrans error:', err.message);
+    console.error("MIDTRANS ERROR", err);
 
     // Specific Midtrans error codes
     const midtransMsg = err.message || '';
