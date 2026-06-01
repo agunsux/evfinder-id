@@ -36,9 +36,15 @@ function loadSnapScript() {
     return _snapPromise;
   }
 
+  const isProd = import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true' || 
+                 (clientKey && !clientKey.startsWith('SB-'));
+  const scriptUrl = isProd 
+    ? 'https://app.midtrans.com/snap/snap.js'
+    : 'https://app.sandbox.midtrans.com/snap/snap.js';
+
   _snapPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.src = scriptUrl;
     script.setAttribute('data-client-key', clientKey);
     script.onload = () => {
       console.log('[Checkout] Snap.js loaded');

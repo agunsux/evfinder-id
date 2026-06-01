@@ -21,6 +21,7 @@
 
 import crypto from 'crypto';
 import admin from 'firebase-admin';
+import midtransClient from 'midtrans-client';
 import { PLANS } from '../../src/lib/plans.js';
 
 // ─── Firebase Admin Init ────────────────────────────────────────────────────
@@ -56,7 +57,14 @@ function initFirebase() {
     };
 
     const app = admin.initializeApp({
-      credential: admin.credential.cert({ projectId, clientEmail, privateKey: fmt(rawKey) }),
+      credential: admin.credential.cert({
+        projectId: projectId,
+        project_id: projectId,
+        clientEmail: clientEmail,
+        client_email: clientEmail,
+        privateKey: fmt(rawKey),
+        private_key: fmt(rawKey)
+      }),
       projectId,
     });
     auth = admin.auth(app);
@@ -86,17 +94,6 @@ function getSnapClient() {
   }
 
   const isProduction = process.env.MIDTRANS_IS_PRODUCTION === 'true';
-
-  // Lazy-import midtrans-client only when needed
-  let midtransClient;
-  try {
-    midtransClient = require('midtrans-client');
-  } catch {
-    throw Object.assign(new Error('Midtrans SDK tidak tersedia di environment ini.'), {
-      code: 'MIDTRANS_SDK_MISSING',
-      status: 503,
-    });
-  }
 
   snapClient = new midtransClient.Snap({
     isProduction,

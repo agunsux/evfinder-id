@@ -67,6 +67,7 @@ import StudioSection from "./components/StudioSection";
 import AudioPlayer from "./components/AudioPlayer";
 import PricingSection from "./components/PricingSection";
 import { useStudio } from "./context/StudioContext";
+import { loadMidtransSnap } from "./main";
 
 // Lazy load heavy modals
 const ProfileModal = React.lazy(() => import("./components/ProfileModal"));
@@ -370,6 +371,13 @@ const App = () => {
         }
       });
     }
+  }, []);
+
+  useEffect(() => {
+    // Pre-load Midtrans Snap script on mount
+    loadMidtransSnap().catch((err) => {
+      console.warn("[Midtrans] Pre-loading Snap.js script failed:", err.message);
+    });
   }, []);
 
   useEffect(() => {
@@ -1312,27 +1320,68 @@ const App = () => {
 
       const data = await checkResponse(res, 0, options);
       
-      if (data.token) {
-        // @ts-ignore
-        window.snap.pay(data.token, {
-          onSuccess: (result) => {
-            console.log('success', result);
-            toast.success("Pembayaran berhasil! Kredit Anda akan segera diperbarui.");
-            refreshUser();
-          },
-          onPending: (result) => {
-            console.log('pending', result);
-            toast("Pembayaran pending. Silakan selesaikan pembayaran Anda.", { icon: '⏳' });
-          },
-          onError: (result) => {
-            console.log('error', result);
-            toast.error("Pembayaran gagal. Silakan coba lagi.");
-          },
-          onClose: () => {
-            console.log('customer closed the popup without finishing the payment');
-          }
-        });
+      if (!data.token) {
+        throw new Error(language === 'ID' ? "Token pembayaran tidak valid." : "Invalid payment token.");
       }
+
+      // Check if Snap is loaded, attempt lazy load if not loaded
+      if (!window.snap) {
+        try {
+          await loadMidtransSnap();
+        } catch (loadErr) {
+          console.warn("[Midtrans] Failed lazy loading snap.js, falling back to redirectUrl:", loadErr);
+          if (data.redirect_url) {
+            toast(
+              language === 'ID'
+                ? "Membuka halaman pembayaran..."
+                : "Opening payment page...",
+              { icon: '🔗' }
+            );
+            setTimeout(() => {
+              window.open(data.redirect_url, '_blank');
+            }, 1000);
+            return;
+          }
+          throw new Error(
+            language === 'ID'
+              ? "Midtrans Snap tidak dapat dimuat. Periksa koneksi internet Anda atau matikan Adblocker."
+              : "Midtrans Snap could not be loaded. Please check your internet connection or disable Adblocker."
+          );
+        }
+      }
+
+      // @ts-ignore
+      window.snap.pay(data.token, {
+        onSuccess: (result) => {
+          console.log('success', result);
+          toast.success(
+            language === 'ID'
+              ? "Pembayaran berhasil! Kredit Anda akan segera diperbarui."
+              : "Payment successful! Your credits will be updated shortly."
+          );
+          refreshUser();
+        },
+        onPending: (result) => {
+          console.log('pending', result);
+          toast(
+            language === 'ID'
+              ? "Pembayaran pending. Silakan selesaikan pembayaran Anda."
+              : "Payment pending. Please complete your payment.",
+            { icon: '⏳' }
+          );
+        },
+        onError: (result) => {
+          console.log('error', result);
+          toast.error(
+            language === 'ID'
+              ? "Pembayaran gagal. Silakan coba lagi."
+              : "Payment failed. Please try again."
+          );
+        },
+        onClose: () => {
+          console.log('customer closed the popup without finishing the payment');
+        }
+      });
     } catch (err) {
       handleApiError(err, "Gagal memulai proses pembayaran.");
     } finally {

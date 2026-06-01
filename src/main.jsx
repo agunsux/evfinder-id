@@ -24,9 +24,15 @@ export function loadMidtransSnap() {
     return Promise.reject(new Error('Midtrans client key not configured'));
   }
 
+  const isProd = import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true' || 
+                 (clientKey && !clientKey.startsWith('SB-'));
+  const scriptUrl = isProd 
+    ? 'https://app.midtrans.com/snap/snap.js'
+    : 'https://app.sandbox.midtrans.com/snap/snap.js';
+
   snapLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.src = scriptUrl;
     script.setAttribute('data-client-key', clientKey);
     script.onload = () => {
       console.log('[Snap] Midtrans Snap.js loaded');

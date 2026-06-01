@@ -116,9 +116,12 @@ try {
     } else if (projectId && clientEmail && privateKey) {
       app = admin.initializeApp({
         credential: admin.credential.cert({
-          projectId,
-          clientEmail,
-          privateKey,
+          projectId: projectId,
+          project_id: projectId,
+          clientEmail: clientEmail,
+          client_email: clientEmail,
+          privateKey: privateKey,
+          private_key: privateKey
         }),
         projectId
       });
