@@ -7,15 +7,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { orderId, grossAmount, customer } = req.body;
+    const orderId = "TEST-" + Date.now();
+    const grossAmount = 10000; // Rp10.000 untuk test
 
-    const result = await createTransaction(orderId, grossAmount, customer);
+    const result = await createTransaction(orderId, grossAmount, {
+      name: "Test User",
+      email: "test@langgam.id"
+    });
 
-    if (result.success) {
-      return res.status(200).json(result);
-    } else {
-      return res.status(400).json(result);
-    }
+    return res.status(200).json(result);
   } catch (error) {
     console.error('Create Payment Error:', error);
     return res.status(500).json({ success: false, error: error.message });
