@@ -57,6 +57,7 @@ import {
 
 import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
+import LiveAudioDemo from "./components/landing/LiveAudioDemo";
 
 import PaymentMethods from "./components/PaymentMethods";
 import TurnstileWidget from "./components/TurnstileWidget";
@@ -1631,7 +1632,10 @@ const App = () => {
                 </div>
               </section>
 
-
+              {/* Live Audio Demo */}
+              <section id="demo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+                <LiveAudioDemo />
+              </section>
 
               {/* User Dashboard Section */}
               <section
