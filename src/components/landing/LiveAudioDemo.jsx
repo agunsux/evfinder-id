@@ -5,51 +5,51 @@ import { motion } from "motion/react";
 const voices = [
   {
     id: "sambas",
+    voiceId: "SAMBAS",
     name: "Sambas",
     description: "Informative · Calm · News",
     voice: "Male",
-    script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali ke atmosfer.",
-    audioUrl: "/samples/sambas.mp3"
+    script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali ke atmosfer."
   },
   {
     id: "mega",
+    voiceId: "MEGA",
     name: "Mega",
     description: "Professional · Clear · Education",
     voice: "Female",
-    script: "Selamat datang di berita harian Shinerva, sumber terpercaya Anda.",
-    audioUrl: "/samples/mega.mp3"
+    script: "Selamat datang di berita harian Shinerva, sumber terpercaya Anda."
   },
   {
     id: "susi",
+    voiceId: "SUSI",
     name: "Susi",
     description: "Energetic · Modern · Social",
     voice: "Female",
-    script: "Hey guys! Jangan lupa like dan subscribe untuk konten terbaru!",
-    audioUrl: "/samples/susi.mp3"
+    script: "Hey guys! Jangan lupa like dan subscribe untuk konten terbaru!"
   },
   {
     id: "ratna",
+    voiceId: "RATNA",
     name: "Ratna",
     description: "Soft · Emotional · Story",
     voice: "Female",
-    script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik.",
-    audioUrl: "/samples/ratna.mp3"
+    script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik."
   },
   {
     id: "satria",
+    voiceId: "SATRIA",
     name: "Satria",
     description: "Deep · Authoritative · Cinematic",
     voice: "Male",
-    script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya.",
-    audioUrl: "/samples/satria.mp3"
+    script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya."
   },
   {
     id: "kania",
+    voiceId: "KANIA",
     name: "Kania",
     description: "Friendly · Casual · Podcast",
     voice: "Female",
-    script: "Halo semuanya, selamat datang di podcast santai kita hari ini.",
-    audioUrl: "/samples/kania.mp3"
+    script: "Halo semuanya, selamat datang di podcast santai kita hari ini."
   }
 ];
 
@@ -73,25 +73,55 @@ const Waveform = ({ isPlaying }) => {
   );
 };
 
-const LiveAudioDemo = () => {
+const LiveAudioDemo = ({ generateSample }) => {
   const [playingId, setPlayingId] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [loadedUrls, setLoadedUrls] = useState({});
+  const [loadingIds, setLoadingIds] = useState({});
   
   const audioRefs = useRef({});
 
-  const togglePlay = (id) => {
-    const audio = audioRefs.current[id];
-    if (!audio) return;
+  const togglePlay = async (id) => {
+    const voice = voices.find(v => v.id === id);
+    if (!voice) return;
+
     if (playingId === id) {
-      audio.pause();
-      setPlayingId(null);
-    } else {
-      if (playingId) {
-        audioRefs.current[playingId]?.pause();
+      const audio = audioRefs.current[id];
+      if (audio) {
+        audio.pause();
+        setPlayingId(null);
       }
-      audio.play().catch(e => console.warn(`Error playing ${id}:`, e));
-      setPlayingId(id);
+      return;
     }
+
+    let audioUrl = loadedUrls[id];
+
+    if (!audioUrl && generateSample) {
+      setLoadingIds(prev => ({ ...prev, [id]: true }));
+      try {
+        const newUrl = await generateSample(voice.script, voice.voiceId);
+        if (newUrl) {
+          audioUrl = newUrl;
+          setLoadedUrls(prev => ({ ...prev, [id]: newUrl }));
+        }
+      } catch (err) {
+        console.error("Failed to load sample", err);
+      } finally {
+        setLoadingIds(prev => ({ ...prev, [id]: false }));
+      }
+    }
+
+    if (!audioUrl) return;
+
+    setTimeout(() => {
+        const audio = audioRefs.current[id];
+        if (!audio) return;
+        if (playingId && playingId !== id) {
+          audioRefs.current[playingId]?.pause();
+        }
+        audio.play().catch(e => console.warn(`Error playing ${id}:`, e));
+        setPlayingId(id);
+    }, 50);
   };
 
   useEffect(() => {
@@ -121,22 +151,31 @@ const LiveAudioDemo = () => {
             
             <audio
               ref={(el) => (audioRefs.current[voice.id] = el)}
-              src={voice.audioUrl}
+              src={loadedUrls[voice.id]}
               onEnded={() => setPlayingId(null)}
               onError={(e) => {
-                console.warn(`Audio ${voice.id} source not found or inaccessible. Skipping.`);
-                setPlayingId(null);
+                if (loadedUrls[voice.id]) {
+                  console.warn(`Audio ${voice.id} source not found or inaccessible. Skipping.`);
+                  setPlayingId(null);
+                }
               }}
             />
             
             <div className="flex items-center gap-4 mb-4">
               <button
-                onClick={() => {
-                  togglePlay(voice.id);
-                }}
-                className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center text-black hover:bg-amber-400 transition"
+                onClick={() => togglePlay(voice.id)}
+                disabled={loadingIds[voice.id]}
+                className={`w-12 h-12 rounded-full flex items-center justify-center text-black transition ${
+                  loadingIds[voice.id] ? 'bg-amber-500/50 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-400'
+                }`}
               >
-                {playingId === voice.id ? <Pause size={20} fill="black" /> : <Play size={20} fill="black" />}
+                {loadingIds[voice.id] ? (
+                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                ) : playingId === voice.id ? (
+                  <Pause size={20} fill="black" />
+                ) : (
+                  <Play size={20} fill="black" />
+                )}
               </button>
               
               <Waveform isPlaying={playingId === voice.id} />
@@ -144,7 +183,7 @@ const LiveAudioDemo = () => {
 
             <div className="w-full bg-zinc-700 h-1.5 rounded-full overflow-hidden">
                 <motion.div 
-                    className="bg-amber-500 h-full"
+                    className="bg-amber-500 h-full transition-all duration-100 ease-linear"
                     style={{ width: playingId === voice.id ? `${progress}%` : '0%' }}
                 />
             </div>

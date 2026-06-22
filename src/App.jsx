@@ -1634,7 +1634,7 @@ const App = () => {
 
               {/* Live Audio Demo */}
               <section id="demo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-                <LiveAudioDemo />
+                <LiveAudioDemo generateSample={generateSample} />
               </section>
 
               {/* User Dashboard Section */}
