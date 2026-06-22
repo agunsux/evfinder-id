@@ -35,6 +35,10 @@ export async function deductCredits({ uid, charCost, generationId, ip, model, pr
       last_generation_at: admin.firestore.FieldValue.serverTimestamp()
     };
     t.update(userRef, updates);
+
+    // Logging for credit system audit
+    const remainingBalance = available - charCost;
+    console.log(`[Credit Deduction] user_id: ${uid}, plan: ${userData.tier || 'FREE'}, chars_used: ${charCost}, remaining_balance: ${remainingBalance}`);
     // Log generation event for audit
     const ipHash = ip ? crypto.createHash('sha256').update(ip).digest('hex') : null;
     const eventData = {

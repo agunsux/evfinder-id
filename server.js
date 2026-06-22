@@ -132,7 +132,20 @@ if (!authAdmin) {
 }
 import { rateLimit } from 'express-rate-limit';
 import { GoogleGenAI, Modality } from "@google/genai";
-import { PLANS } from './src/lib/plans.js';
+import { PLANS as FRONTEND_PLANS } from './src/lib/plans.js';
+
+// Server-side source of truth plan configuration
+const PLANS = {
+  CREATOR: {
+    price: 99000,
+    chars: 200000
+  },
+  PRO: {
+    price: 199000,
+    chars: 600000
+  }
+};
+
 
 const clean = (val) => {
   if (val === null || val === undefined) return "";
@@ -480,6 +493,9 @@ async function createServer() {
            'KREATOR': 150000,
            'PRODUKTIF': 400000,
            'BISNIS': 1500000,
+           'CREATOR': 200000,
+           'PRO': 600000,
+           'BUSINESS': 1500000,
            'ENTERPRISE': 5000000
          };
          user.monthly_chars = tierLimits[user.tier] || 10000;
@@ -670,16 +686,21 @@ async function createServer() {
 
   // --- PAYMENT ROUTES ---
   app.post('/api/payment/create', authenticate, async (req, res) => {
-    const { planId, billingCycle } = req.body;
+    const { planId } = req.body;
     const user = req.user;
 
-    const plan = Object.values(PLANS).find(p => p.id === planId);
+    if (!planId) {
+      return res.status(400).json({ error: 'Plan ID required' });
+    }
+
+    const key = planId.toUpperCase();
+    const plan = PLANS[key];
     if (!plan) {
       return res.status(400).json({ error: 'Paket tidak valid' });
     }
 
-    const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.price;
-    const orderId = `ORDER-${user.id}-${planId}-${Date.now()}`;
+    const price = plan.price;
+    const orderId = `ORDER-${user.id}-${key}-${Date.now()}`;
 
     const parameter = {
       transaction_details: {
@@ -692,15 +713,15 @@ async function createServer() {
         phone: user.whatsapp
       },
       item_details: [{
-        id: plan.id,
+        id: planId.toLowerCase(),
         price: price,
         quantity: 1,
-        name: `Shinerva ${plan.name} (${billingCycle || 'One-time'})`
+        name: `Shinerva ${key} Subscription`
       }],
       metadata: {
         uid: user.id,
-        plan_id: planId,
-        billing_cycle: billingCycle
+        plan_id: planId.toLowerCase(),
+        billing_cycle: 'monthly'
       },
       enabled_payments: [
         "gopay", "shopeepay", "ovo", "dana", "linkaja", "qris", 
@@ -714,11 +735,21 @@ async function createServer() {
     try {
       const snap = getSnap();
       const transaction = await snap.createTransaction(parameter);
-      // Save pending transaction if needed, but for simplicity we rely on webhook
+      
+      // Store payment record in pending/created status
+      await dbAdmin.collection('payments').doc(orderId).set({
+        transaction_id: null,
+        user_id: user.id,
+        plan: key,
+        amount: price,
+        status: 'pending',
+        processed_at: null
+      });
+
+      console.log(`[Payment Created] Order: ${orderId} for User: ${user.id}, Plan: ${key}, Amount: ${price}`);
       res.json({ token: transaction.token, redirect_url: transaction.redirect_url });
     } catch (error) {
       console.error('Midtrans Error:', error);
-      console.error("MIDTRANS ERROR", error);
       res.status(500).json({ error: error.message || 'Gagal membuat transaksi pembayaran' });
     }
   });
@@ -732,14 +763,6 @@ async function createServer() {
         console.error('[Midtrans Webhook] Missing MIDTRANS_SERVER_KEY');
         return res.status(500).json({ error: 'Server configuration error' });
     }
-    const signatureKey = crypto.createHash('sha512')
-      .update(notification.order_id + notification.status_code + notification.gross_amount + serverKey)
-      .digest('hex');
-
-    if (signatureKey !== notification.signature_key) {
-      console.error(`[Security Warning] Invalid signature key for Order ID: ${notification.order_id}`);
-      return res.status(403).json({ error: 'Invalid signature key' });
-    }
 
     try {
       const snap = getSnap();
@@ -747,71 +770,99 @@ async function createServer() {
       const orderId = statusResponse.order_id;
       const transactionStatus = statusResponse.transaction_status;
       const fraudStatus = statusResponse.fraud_status;
+      const grossAmount = statusResponse.gross_amount;
+      const signatureKey = statusResponse.signature_key;
+      const transactionId = statusResponse.transaction_id;
 
-      console.log(`[Midtrans] Verified Notification received. Order ID: ${orderId}. Status: ${transactionStatus}`);
+      console.log(`[Midtrans Webhook] Verified Notification received. Order ID: ${orderId}. Status: ${transactionStatus}, ID: ${transactionId}`);
 
-      if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
-        if (fraudStatus === 'challenge') {
-          console.warn(`[Midtrans] Transaction challenge: ${orderId}`);
-        } else {
-          // SUCCESS - TRANSACTION ATOMIC UPDATE logic (simplified via helper)
-          const parts = orderId.split('-');
-          const uid = parts[1];
-          const planIdFromOrderId = parts[2];
-          
-          if (!uid) {
-            console.error("[Midtrans] Missing UID in Order ID:", orderId);
-            return res.status(400).send('Missing UID');
-          }
+      // 1. Validate signature key
+      const calculatedSignature = crypto.createHash('sha512')
+        .update(orderId + statusResponse.status_code + grossAmount + serverKey)
+        .digest('hex');
 
-          let user = await getUser(uid);
-
-          if (user) {
-            const amount = parseInt(statusResponse.gross_amount);
-            const matchedPlan = Object.values(PLANS).find(p => 
-              p.id === planIdFromOrderId.toLowerCase() || 
-              p.price === amount || 
-              p.yearlyPrice === amount
-            );
-            
-            if (matchedPlan) {
-              const updates = {};
-              const now = Date.now();
-              
-              if (matchedPlan.type === 'topup') {
-                updates.earned_chars = admin.firestore.FieldValue.increment(matchedPlan.credits);
-                
-                if (matchedPlan.id === 'starter') {
-                  updates.tier = 'STARTER';
-                  updates.monthly_chars = matchedPlan.credits;
-                  const currentExpiry = user.subscription_expires_at || now;
-                  const startPoint = currentExpiry > now ? currentExpiry : now;
-                  updates.subscription_expires_at = startPoint + (30 * 24 * 60 * 60 * 1000);
-                }
-              } else {
-                updates.tier = matchedPlan.tier;
-                updates.monthly_chars = matchedPlan.credits;
-                const isYearly = amount === matchedPlan.yearlyPrice;
-                const durationDays = isYearly ? 365 : 30;
-                const currentExpiry = user.subscription_expires_at || now;
-                const startPoint = currentExpiry > now ? currentExpiry : now;
-                updates.subscription_expires_at = startPoint + (durationDays * 24 * 60 * 60 * 1000);
-              }
-              
-              updates.last_payment_at = now;
-              updates.last_order_id = orderId;
-              
-              // We use dbAdmin directly for atomic merge if possible
-              await dbAdmin.collection('users').doc(uid).set(updates, { merge: true });
-              console.log(`[Payment SUCCESS] Credits added for ${user.email} from Order ${orderId}`);
-            }
-          }
-        }
+      if (calculatedSignature !== signatureKey) {
+        console.error(`[Security Warning] Invalid signature key for Order ID: ${orderId}`);
+        return res.status(403).json({ error: 'Invalid signature key' });
       }
-      res.status(200).send('OK');
+
+      // 2. Validate transaction status
+      const validStatuses = ['settlement', 'capture', 'pending', 'expire', 'cancel', 'deny'];
+      if (!validStatuses.includes(transactionStatus)) {
+        console.warn(`[Midtrans Webhook] Received unknown transaction status: ${transactionStatus}`);
+      }
+
+      // 3. Lookup stored transaction data
+      const paymentRef = dbAdmin.collection('payments').doc(orderId);
+      const paymentDoc = await paymentRef.get();
+      if (!paymentDoc.exists) {
+        console.error(`[Security Warning] No pending payment record found for Order ID: ${orderId}`);
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      const paymentData = paymentDoc.data();
+
+      // 4. Validate gross amount
+      if (Math.round(parseFloat(grossAmount)) !== paymentData.amount) {
+        console.error(`[Security Warning] Gross amount mismatch for Order ID: ${orderId}. Expected: ${paymentData.amount}, Received: ${grossAmount}`);
+        return res.status(400).json({ error: 'Gross amount mismatch' });
+      }
+
+      // 5. Add idempotency check
+      // Check if transaction_id is already completed
+      if (paymentData.status === 'settlement' || paymentData.status === 'capture' || paymentData.transaction_id === transactionId) {
+        console.log(`[Midtrans Webhook] Order ${orderId} (Tx: ${transactionId}) already processed/completed. Returning success (idempotent).`);
+        return res.status(200).json({ success: true, message: 'Already processed' });
+      }
+
+      // 6. Handle transaction status
+      if (transactionStatus === 'settlement' || (transactionStatus === 'capture' && fraudStatus !== 'challenge')) {
+        const uid = paymentData.user_id;
+        const plan = paymentData.plan;
+        const planDetails = PLANS[plan];
+
+        if (!planDetails) {
+          console.error(`[Midtrans Webhook] Plan configuration not found for: ${plan}`);
+          return res.status(500).json({ error: 'Plan configuration error' });
+        }
+
+        console.log(`[Midtrans Webhook] Successful payment for Order ID: ${orderId}. Granting credits to User ID: ${uid}. Plan: ${plan}`);
+
+        // Perform user & payment record atomic update via Firestore batch
+        const batch = dbAdmin.batch();
+        
+        const userRef = dbAdmin.collection('users').doc(uid);
+        batch.set(userRef, {
+          tier: plan,
+          monthly_chars: planDetails.chars,
+          used_chars: 0,
+          subscription_expires_at: Date.now() + (30 * 24 * 60 * 60 * 1000),
+          last_payment_at: Date.now(),
+          last_order_id: orderId
+        }, { merge: true });
+
+        batch.update(paymentRef, {
+          transaction_id: transactionId,
+          status: transactionStatus,
+          processed_at: Date.now()
+        });
+
+        await batch.commit();
+        console.log(`[Payment SUCCESS] Credits/Tier updated for user ${uid} from Order ${orderId}`);
+      } else {
+        // Just update status of payment record
+        await paymentRef.update({
+          transaction_id: transactionId || null,
+          status: transactionStatus,
+          processed_at: Date.now()
+        });
+        console.log(`[Midtrans Webhook] Order ${orderId} status updated to: ${transactionStatus}`);
+      }
+
+      return res.status(200).send('OK');
     } catch (error) {
       console.error('[Midtrans Webhook] Error:', error);
-      res.status(500).send('Internal Server Error');
+      return res.status(500).send('Internal Server Error');
     }
   });
 
@@ -842,6 +893,9 @@ async function createServer() {
     'KREATOR': { requests: 10, simultaneous: 2 },
     'PRODUKTIF': { requests: 30, simultaneous: 5 },
     'BISNIS': { requests: 30, simultaneous: 5 },
+    'CREATOR': { requests: 10, simultaneous: 2 },
+    'PRO': { requests: 30, simultaneous: 5 },
+    'BUSINESS': { requests: 30, simultaneous: 5 },
     'ENTERPRISE': { requests: 30, simultaneous: 5 },
   };
 

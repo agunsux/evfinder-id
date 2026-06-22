@@ -44,7 +44,7 @@ service cloud.firestore {
     function isValidUser(data) {
       return data.id is string 
         && data.email is string
-        && (data.tier in ['FREE', 'STARTER', 'KREATOR', 'PRODUKTIF', 'BISNIS', 'ENTERPRISE'])
+        && (data.tier in ['FREE', 'STARTER', 'KREATOR', 'PRODUKTIF', 'BISNIS', 'ENTERPRISE', 'CREATOR', 'PRO', 'BUSINESS'])
         && (data.get('monthly_chars', 0) is number)
         && (data.get('used_chars', 0) is number);
     }
