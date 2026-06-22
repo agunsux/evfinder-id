@@ -1055,25 +1055,8 @@ async function createServer() {
       // Voice Authorization - STABLE VOICE ROUTING
       let actualVoice = voice || 'SAMBAS';
       
-      const isPremiumVoice = ['AURA_F', 'AURA_M', 'PULSE_F', 'PULSE_M'].includes(actualVoice);
-      const isUltraVoice = ['AURA_F', 'AURA_M'].includes(actualVoice);
-
-      const tierOrder = ["FREE", "STARTER", "KREATOR", "PRODUKTIF", "BISNIS", "ENTERPRISE"];
-      const userTierIndex = tierOrder.indexOf(tier);
-
-      if (!isSample) {
-        if (isUltraVoice && userTierIndex < tierOrder.indexOf('BISNIS')) {
-          return res.status(403).json({ error: 'Suara Premium ini hanya tersedia untuk paket BISNIS ke atas. Silakan upgrade paket Anda.' });
-        }
-        if (isPremiumVoice && userTierIndex < tierOrder.indexOf('STARTER')) {
-          return res.status(403).json({ error: 'Suara ini hanya tersedia untuk paket STARTER ke atas. Silakan upgrade paket Anda.' });
-        }
-      }
-
       // Multiplier logic
       let voiceTierName = 'Standard';
-      if (isPremiumVoice) voiceTierName = 'Wavenet';
-      if (isUltraVoice) voiceTierName = 'Studio';
 
       const multiplier = voiceConfig.tiers[voiceTierName] || 1;
       const totalCharCost = isSample ? 0 : text.length * multiplier;

@@ -57,7 +57,7 @@ import {
 
 import { PLANS } from "./lib/plans";
 import { globalPhonetics } from "./lib/phonetics";
-import LiveAudioDemo from "./components/landing/LiveAudioDemo";
+
 import PaymentMethods from "./components/PaymentMethods";
 import TurnstileWidget from "./components/TurnstileWidget";
 
@@ -706,7 +706,7 @@ const App = () => {
 
   const [generatedInfo, setGeneratedInfo] = useState(null);
   const [isTeaser, setIsTeaser] = useState(false);
-  const [isStudioWarningOpen, setIsStudioWarningOpen] = useState(false);
+
   const [isVerificationDismissed, setIsVerificationDismissed] = useState(false);
 
   const updateProgress = () => {
@@ -916,12 +916,6 @@ const App = () => {
 
     if (cooldown > 0) {
       toast.error(`Harap tunggu ${cooldown} detik lagi sebelum generasi berikutnya.`);
-      return;
-    }
-
-    const isStudio = voice.includes('Studio') || voice.includes('Chirp');
-    if (isStudio) {
-      setIsStudioWarningOpen(true);
       return;
     }
 
@@ -1637,14 +1631,11 @@ const App = () => {
                 </div>
               </section>
 
-              {/* Live Audio Demo */}
-              <section id="demo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-                <LiveAudioDemo />
-              </section>
 
-              {/* Aura Section */}
+
+              {/* User Dashboard Section */}
               <section
-                id="aura"
+                id="dashboard"
                 className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
               >
                 {user && (
@@ -2067,35 +2058,6 @@ const App = () => {
             setIsReferralOpen={setIsReferralOpen}
           />
         </Suspense>
-      )}
-
-      {/* Studio Voice Warning Modal */}
-      {isStudioWarningOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-dark/90 backdrop-blur-md"
-            onClick={() => setIsStudioWarningOpen(false)}
-          ></div>
-          <div className="bg-dark border border-surface2 rounded-[2rem] w-full max-w-md relative z-10 shadow-2xl overflow-hidden">
-            <div className="p-8 text-center">
-              <div className="w-20 h-20 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <AlertCircle className="w-10 h-10 text-terracotta" />
-              </div>
-              <h3 className="text-2xl font-black text-text mb-4">Aktivasi Aura Narration (Segera Hadir)</h3>
-              <p className="text-text-muted mb-8 leading-relaxed">
-                Fitur <span className="text-text font-bold">Suara Aura Flagship</span> saat ini sedang dalam pemeliharaan dan akan segera kembali. Fitur ini membutuhkan <span className="text-terracotta font-black text-lg">40x Kredit</span>. Harap pilih teknologi lain sementara waktu.
-              </p>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => setIsStudioWarningOpen(false)}
-                  className="w-full bg-terracotta hover:bg-trdark text-text font-black py-4 rounded-xl transition-all shadow-lg shadow-terracotta/20 border-none cursor-pointer"
-                >
-                  Paham, Kembali
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Referral Dashboard Modal - Removed for MVP */}
