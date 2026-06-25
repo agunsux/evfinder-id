@@ -11,7 +11,7 @@ const voices = [
     icon: "🎓",
     description: "Suara formal, jelas, dan ramah untuk video edukasi, tutorial, dan training.",
     script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali to atmosfer.",
-    sampleUrl: "/sample/aryo.mp3"
+    sampleUrl: "/samples/aryo.mp3"
   },
   {
     id: "sekar",
@@ -21,7 +21,7 @@ const voices = [
     icon: "🤳",
     description: "Suara hangat dan santai untuk konten lifestyle, review, dan personal branding.",
     script: "A Day in My Life as a Content Creator! Hari ini produktif banget, mulai dari shooting konten bareng tim, sampai mampir ke cafe baru yang lagi viral. Keren banget tempatnya!",
-    sampleUrl: "/sample/sekar.mp3"
+    sampleUrl: "/samples/sekar.mp3"
   },
   {
     id: "kartika",
@@ -31,7 +31,7 @@ const voices = [
     icon: "📢",
     description: "Suara tegas dan profesional untuk berita, informasi, dan pengumuman.",
     script: "Selamat datang di berita harian Shinerva, sumber terpercaya Anda.",
-    sampleUrl: "/sample/kartika.mp3"
+    sampleUrl: "/samples/kartika.mp3"
   },
   {
     id: "ratih",
@@ -41,7 +41,7 @@ const voices = [
     icon: "📖",
     description: "Suara tenang dan dramatis untuk cerita, audiobook, dan narasi panjang.",
     script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik.",
-    sampleUrl: "/sample/ratih.mp3"
+    sampleUrl: "/samples/ratih.mp3"
   },
   {
     id: "rendra",
@@ -51,7 +51,7 @@ const voices = [
     icon: "🎙️",
     description: "Suara natural dan mengalir untuk podcast, wawancara, dan diskusi.",
     script: "Halo semuanya, selamat datang di podcast santai kita hari ini.",
-    sampleUrl: "/sample/rendra.mp3"
+    sampleUrl: "/samples/rendra.mp3"
   },
   {
     id: "bambang",
@@ -61,7 +61,7 @@ const voices = [
     icon: "🎬",
     description: "Suara dalam dan epik untuk dokumenter, trailer, dan konten sinematik.",
     script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya.",
-    sampleUrl: "/sample/bambang.mp3"
+    sampleUrl: "/samples/bambang.mp3"
   }
 ];
 
