@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { Play, Pause, Check } from "lucide-react";
 import { useStudio } from "../../context/StudioContext";
 
@@ -10,7 +10,8 @@ const voices = [
     category: "Edukasi & Tutorial",
     icon: "🎓",
     description: "Suara formal, jelas, dan ramah untuk video edukasi, tutorial, dan training.",
-    script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali to atmosfer."
+    script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali to atmosfer.",
+    sampleUrl: "/sample/aryo.mp3"
   },
   {
     id: "sekar",
@@ -19,7 +20,8 @@ const voices = [
     category: "Lifestyle & Vlog",
     icon: "🤳",
     description: "Suara hangat dan santai untuk konten lifestyle, review, dan personal branding.",
-    script: "A Day in My Life as a Content Creator! Hari ini produktif banget, mulai dari shooting konten bareng tim, sampai mampir ke cafe baru yang lagi viral. Keren banget tempatnya!"
+    script: "A Day in My Life as a Content Creator! Hari ini produktif banget, mulai dari shooting konten bareng tim, sampai mampir ke cafe baru yang lagi viral. Keren banget tempatnya!",
+    sampleUrl: "/sample/sekar.mp3"
   },
   {
     id: "kartika",
@@ -28,7 +30,8 @@ const voices = [
     category: "Berita & Pengumuman",
     icon: "📢",
     description: "Suara tegas dan profesional untuk berita, informasi, dan pengumuman.",
-    script: "Selamat datang di berita harian Shinerva, sumber terpercaya Anda."
+    script: "Selamat datang di berita harian Shinerva, sumber terpercaya Anda.",
+    sampleUrl: "/sample/kartika.mp3"
   },
   {
     id: "ratih",
@@ -37,7 +40,8 @@ const voices = [
     category: "Storytelling & Novel",
     icon: "📖",
     description: "Suara tenang dan dramatis untuk cerita, audiobook, dan narasi panjang.",
-    script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik."
+    script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik.",
+    sampleUrl: "/sample/ratih.mp3"
   },
   {
     id: "rendra",
@@ -46,7 +50,8 @@ const voices = [
     category: "Podcast & Diskusi",
     icon: "🎙️",
     description: "Suara natural dan mengalir untuk podcast, wawancara, dan diskusi.",
-    script: "Halo semuanya, selamat datang di podcast santai kita hari ini."
+    script: "Halo semuanya, selamat datang di podcast santai kita hari ini.",
+    sampleUrl: "/sample/rendra.mp3"
   },
   {
     id: "bambang",
@@ -55,22 +60,18 @@ const voices = [
     category: "Cinematic & Narasi",
     icon: "🎬",
     description: "Suara dalam dan epik untuk dokumenter, trailer, dan konten sinematik.",
-    script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya."
+    script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya.",
+    sampleUrl: "/sample/bambang.mp3"
   }
 ];
 
-const LiveAudioDemo = ({ previewAudio }) => {
+const LiveAudioDemo = () => {
   const { voice: activeVoice, setVoice } = useStudio();
   const [playingId, setPlayingId] = useState(null);
-  const [loadedUrls, setLoadedUrls] = useState({});
-  const [loadingIds, setLoadingIds] = useState({});
   
   const audioRefs = useRef({});
 
-  const togglePlay = async (id) => {
-    const voice = voices.find(v => v.id === id);
-    if (!voice) return;
-
+  const togglePlay = (id) => {
     if (playingId === id) {
       const audio = audioRefs.current[id];
       if (audio) {
@@ -80,36 +81,17 @@ const LiveAudioDemo = ({ previewAudio }) => {
       return;
     }
 
-    let audioUrl = loadedUrls[id];
-
-    if (!audioUrl && previewAudio) {
-      setLoadingIds(prev => ({ ...prev, [id]: true }));
-      try {
-        const newUrl = await previewAudio(voice.script, voice.voiceId);
-        if (newUrl) {
-          audioUrl = newUrl;
-          setLoadedUrls(prev => ({ ...prev, [id]: newUrl }));
-        }
-      } catch (err) {
-        console.error("Failed to load sample", err);
-      } finally {
-        setLoadingIds(prev => ({ ...prev, [id]: false }));
-      }
-    }
-
-    if (!audioUrl) return;
-
     // Stop currently playing
-    if (playingId && playingId !== id) {
-      audioRefs.current[playingId]?.pause();
+    if (playingId && audioRefs.current[playingId]) {
+      audioRefs.current[playingId].pause();
+      audioRefs.current[playingId].currentTime = 0;
     }
 
-    setTimeout(() => {
-      const audio = audioRefs.current[id];
-      if (!audio) return;
+    const audio = audioRefs.current[id];
+    if (audio) {
       audio.play().catch(e => console.warn(`Error playing ${id}:`, e));
       setPlayingId(id);
-    }, 50);
+    }
   };
 
   return (
@@ -154,13 +136,8 @@ const LiveAudioDemo = ({ previewAudio }) => {
 
               <audio
                 ref={(el) => (audioRefs.current[voice.id] = el)}
-                src={loadedUrls[voice.id]}
+                src={voice.sampleUrl}
                 onEnded={() => setPlayingId(null)}
-                onError={() => {
-                  if (loadedUrls[voice.id]) {
-                    setPlayingId(null);
-                  }
-                }}
               />
 
               <div className="space-y-3 mt-4">
@@ -168,12 +145,9 @@ const LiveAudioDemo = ({ previewAudio }) => {
                   <button 
                     type="button" 
                     onClick={() => togglePlay(voice.id)}
-                    disabled={loadingIds[voice.id]}
                     className="flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer border select-none bg-dark/50 border-surface2 text-text-muted hover:text-text hover:border-surface2/90"
                   >
-                    {loadingIds[voice.id] ? (
-                      <div className="w-3.5 h-3.5 border-2 border-text-muted border-t-transparent rounded-full animate-spin shrink-0" />
-                    ) : isPlaying ? (
+                    {isPlaying ? (
                       <Pause className="w-3.5 h-3.5 fill-current shrink-0" />
                     ) : (
                       <Play className="w-3.5 h-3.5 fill-current shrink-0" />
