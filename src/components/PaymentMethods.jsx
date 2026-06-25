@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 
 const PaymentMethods = () => {
   return (
-    <div className="flex flex-col items-center mt-16 px-6 py-12 bg-surface2/30 rounded-[3rem] border border-surface2">
+    <div className="flex flex-col items-center mt-12 md:mt-16 px-4 md:px-6 py-8 md:py-12 bg-surface2/30 rounded-2xl md:rounded-[3rem] border border-surface2">
       <div className="text-xs font-black text-text-muted uppercase tracking-[0.2em] mb-8">
         Metode Pembayaran
       </div>
@@ -26,6 +26,14 @@ const PaymentMethods = () => {
         <motion.img whileHover={{ scale: 1.1 }} src="/payment/mastercard.png" alt="MasterCard" className="h-6 cursor-pointer" />
         <motion.img whileHover={{ scale: 1.1 }} src="/payment/visa.png" alt="Visa" className="h-6 cursor-pointer" />
         <motion.img whileHover={{ scale: 1.1 }} src="/payment/paypal.png" alt="PayPal" className="h-6 cursor-pointer" />
+      </div>
+      <div className="mt-8 pt-6 border-t border-surface2/30 w-full text-center space-y-2">
+        <p className="text-[10px] text-text-muted leading-relaxed">
+          * Available payment methods depend on Midtrans configuration and merchant activation.
+        </p>
+        <p className="text-[10px] text-text-muted leading-relaxed">
+          * After successful payment confirmation from Midtrans, Shinerva AI automatically activates credits/subscription.
+        </p>
       </div>
     </div>
   );

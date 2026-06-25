@@ -16,10 +16,7 @@ export const FAQS = {
       question: "Apakah suara Shinerva bisa dipakai untuk YouTube, TikTok, dan monetisasi?",
       answer: "Bisa.\n\nHasil audio Shinerva dirancang untuk kebutuhan konten modern:\nYouTube, TikTok, Reels, Shorts, podcast, audiobook, dan kebutuhan komersial lainnya."
     },
-    {
-      question: "Apa perbedaan Flow, Pulse, dan Aura?",
-      answer: "• Flow\nTenang, jelas, dan nyaman didengar untuk durasi panjang. Cocok untuk e-learning, audiobook, berita, dan presentasi.\n\n• Pulse\nLebih energik dan dinamis. Cocok untuk promo, TikTok, YouTube Shorts, dan konten marketing.\n\n• Aura\nNarasi emosional dengan nuansa sinematik dan storytelling yang lebih dalam. Cocok untuk dokumenter, misteri, filosofi, dan cinematic narration."
-    },
+
     {
       question: "Apakah kredit saya bisa hangus?",
       answer: "Tidak seperti kebanyakan platform AI lain, Shinerva tidak memaksa Anda berlangganan bulanan hanya untuk tetap bisa memakai layanan.\n\nMayoritas paket Shinerva menggunakan sistem:\nsekali beli → pakai sesuai ritme Anda sendiri.\n\n• Paket FREE memiliki masa aktif tertentu.\n• Paket berbayar menggunakan sistem rollover credits dengan masa aktif yang jauh lebih panjang.\n• Kredit top-up tidak langsung hangus setiap bulan seperti subscription tradisional.\n\nKami percaya creator seharusnya bisa berkarya dengan fleksibel — tanpa tekanan tagihan bulanan yang terus berjalan saat sedang tidak aktif membuat konten."
@@ -66,11 +63,7 @@ export const FAQS = {
       answer:
         "Voice Cloning is advanced technology that allows you to create a digital version of your own voice just by uploading a 30-second recording sample. The cloned voice can then be used to generate any narration with up to 99% accuracy.",
     },
-    {
-      question: "What is the difference between Basic and Aura technology?",
-      answer:
-        "Basic is standard technology for functional narration. Pulse (Coming Soon) adds emotional expression, while Aura (Coming Soon) is our flagship multimodal technology that produces voice textures, breaths, and intonations almost indistinguishable from human recordings.",
-    },
+
     {
       question: "How do I contact support?",
       answer:
