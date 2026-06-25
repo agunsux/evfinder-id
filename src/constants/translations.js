@@ -32,7 +32,7 @@ export const TRANSLATIONS = {
       cta: "Siap!"
     },
     studio: {
-      title: "Shinerva Engine Studio",
+      title: "Rungu Engine Studio",
       label: "Editor Naskah",
       placeholder: "Ketik atau tempel naskah Anda di sini...",
       generate: "Hasilkan Suara",
@@ -55,7 +55,7 @@ export const TRANSLATIONS = {
       preview: "Tes Suara",
       download: "Unduh",
       share: "Bagikan",
-
+      unlock_aura: "Aura Flagship & Voice Cloning (Segera Hadir) — Tekstur emosi paling manusiawi & kloning suara Anda sendiri.",
       view_packs: "Lihat Paket"
     },
     pricing: {
@@ -74,7 +74,8 @@ export const TRANSLATIONS = {
       upgrade: "Upgrade Sekarang",
       tech: "Pilih Teknologi",
       variants: "Varian Suara",
-
+      quality_title: "Kualitas Flagship yang Tak Terkalahkan",
+      quality_desc: "Aura (Segera Hadir) menggunakan algoritma canggih untuk memberikan 'jiwa' di setiap suku kata.",
       join: "Bergabung dengan",
       creators: "Kreator",
       upgraded: "yang sudah upgrade."
@@ -113,7 +114,7 @@ export const TRANSLATIONS = {
       cta: "Ready!"
     },
     studio: {
-      title: "Shinerva Engine Studio",
+      title: "Rungu Engine Studio",
       label: "Script Editor",
       placeholder: "Type or paste your script here...",
       generate: "Generate Voice",
@@ -136,7 +137,7 @@ export const TRANSLATIONS = {
       preview: "Test Voice",
       download: "Download",
       share: "Share",
-
+      unlock_aura: "Aura Flagship (Coming Soon) — The most human emotional texture for your content.",
       view_packs: "View Packs"
     },
     pricing: {
@@ -155,7 +156,8 @@ export const TRANSLATIONS = {
       upgrade: "Upgrade Now",
       tech: "Select Technology",
       variants: "Voice Variants",
-
+      quality_title: "Unbeatable Flagship Quality",
+      quality_desc: "Aura (Coming Soon) is our next-gen engine that mimics human vocal fry, breaths, and deep emotion.",
       join: "Join over",
       creators: "Creators",
       upgraded: "who have upgraded."

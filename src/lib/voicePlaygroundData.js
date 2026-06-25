@@ -5,7 +5,7 @@ export const PLAYGROUND_VOICES = {
       badge: "FREE",
       color: "gray",
       voices: [
-        { id: "SAMBAS", gender: "Wanita", name: "Sambas" }
+        { id: "SAMBAS", gender: "Wanita", name: "Sambas (Flow)" }
       ],
       categories: [
         {
@@ -29,7 +29,7 @@ export const PLAYGROUND_VOICES = {
       badge: "FREE",
       color: "gray",
       voices: [
-        { id: "MEGA", gender: "Wanita", name: "Mega" }
+        { id: "MEGA", gender: "Wanita", name: "Mega (Flow)" }
       ],
       categories: [
         {
@@ -53,7 +53,7 @@ export const PLAYGROUND_VOICES = {
       badge: "FREE",
       color: "gray",
       voices: [
-        { id: "SUSI", gender: "Wanita", name: "Susi" }
+        { id: "SUSI", gender: "Wanita", name: "Susi (Flow)" }
       ],
       categories: [
         {
@@ -77,7 +77,7 @@ export const PLAYGROUND_VOICES = {
       badge: "STARTER",
       color: "yellow",
       voices: [
-        { id: "RATNA", gender: "Wanita", name: "Ratna" }
+        { id: "RATNA", gender: "Wanita", name: "Ratna (Flow)" }
       ],
       categories: [
         {
