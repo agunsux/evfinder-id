@@ -73,34 +73,72 @@ function initFirebase() {
 initFirebase();
 
 // ─── 3. Transporter Setup ───────────────────────────────────────────────────
+// ─── 3. Transporter Setup ───────────────────────────────────────────────────
 let primaryTransport = null;
 let fallbackTransport = null;
+let gmailTransport = null;
+
+let primaryFrom = '';
+let fallbackFrom = '';
+let gmailFrom = '';
 
 function initTransports() {
-  if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  // Normalize variable names internally
+  const primaryHost = process.env.EMAIL_HOST || process.env.SMTP_HOST;
+  const primaryPort = Number(process.env.EMAIL_PORT) || Number(process.env.SMTP_PORT) || 587;
+  const primarySecure = process.env.EMAIL_SECURE === 'true' || process.env.SMTP_SECURE === 'true';
+  const primaryUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+  const primaryPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+  const primaryEmailFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || primaryUser;
+
+  const fallbackHost = process.env.FALLBACK_SMTP_HOST || process.env.FALLBACK_HOST;
+  const fallbackPort = Number(process.env.FALLBACK_SMTP_PORT) || Number(process.env.FALLBACK_PORT) || 587;
+  const fallbackSecure = process.env.FALLBACK_SMTP_SECURE === 'true' || process.env.FALLBACK_SECURE === 'true';
+  const fallbackUser = process.env.FALLBACK_SMTP_USER || process.env.FALLBACK_USER;
+  const fallbackPass = process.env.FALLBACK_SMTP_PASS || process.env.FALLBACK_PASS;
+  const fallbackEmailFrom = process.env.FALLBACK_SMTP_FROM || process.env.FALLBACK_FROM || fallbackUser;
+
+  const gmailUser = process.env.FALLBACK_EMAIL || process.env.GMAIL_USER;
+  const gmailPass = process.env.FALLBACK_EMAIL_PASSWORD || process.env.GMAIL_PASS;
+
+  // Primary SMTP Transporter
+  if (primaryHost && primaryUser && primaryPass) {
     primaryTransport = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT) || 587,
-      secure: process.env.EMAIL_SECURE === 'true',
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      host: primaryHost,
+      port: primaryPort,
+      secure: primarySecure,
+      auth: { user: primaryUser, pass: primaryPass },
       pool: true, maxConnections: 5,
       connectionTimeout: 15000, socketTimeout: 30000,
     });
-    logEvent('SMTP_INIT_PRIMARY', { status: 'READY' });
-  } else {
-    logError('SMTP_INIT_MISSING_PRIMARY', 'Missing primary SMTP env vars');
+    primaryFrom = primaryEmailFrom;
+    logEvent('SMTP_INIT_PRIMARY', { status: 'READY', host: primaryHost, user: primaryUser });
   }
 
-  if (process.env.FALLBACK_EMAIL && process.env.FALLBACK_EMAIL_PASSWORD) {
+  // Secondary/Fallback SMTP Transporter
+  if (fallbackHost && fallbackUser && fallbackPass) {
     fallbackTransport = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.FALLBACK_EMAIL, pass: process.env.FALLBACK_EMAIL_PASSWORD },
+      host: fallbackHost,
+      port: fallbackPort,
+      secure: fallbackSecure,
+      auth: { user: fallbackUser, pass: fallbackPass },
       pool: true, maxConnections: 3,
       connectionTimeout: 15000, socketTimeout: 30000,
     });
-    logEvent('SMTP_INIT_FALLBACK', { status: 'READY' });
-  } else {
-    logError('SMTP_INIT_MISSING_FALLBACK', 'Missing fallback Gmail env vars');
+    fallbackFrom = fallbackEmailFrom;
+    logEvent('SMTP_INIT_FALLBACK', { status: 'READY', host: fallbackHost, user: fallbackUser });
+  }
+
+  // Backup Gmail Transporter
+  if (gmailUser && gmailPass) {
+    gmailTransport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: gmailUser, pass: gmailPass },
+      pool: true, maxConnections: 3,
+      connectionTimeout: 15000, socketTimeout: 30000,
+    });
+    gmailFrom = gmailUser;
+    logEvent('SMTP_INIT_GMAIL', { status: 'READY', user: gmailUser });
   }
 }
 
@@ -147,52 +185,52 @@ function buildMagicLinkEmail(link, toEmail, isVerification = false, baseUrl = 'h
   };
 }
 
-// ─── 5. Option A SMTP Cascade Delivery ──────────────────────────────────────
+// ─── 5. SMTP Cascade Delivery ──────────────────────────────────────────────
 async function sendEmailCascade({ to, subject, html }) {
   const mailOptions = { to, subject, html };
   let lastError = null;
 
-  // Priority 1: admin@shinerva.id
-  if (primaryTransport) {
-    try {
-      await primaryTransport.sendMail({ ...mailOptions, from: 'admin@shinerva.id' });
-      logEvent('SMTP_DELIVERY', { recipient: to, sender: 'admin@shinerva.id', status: 'SUCCESS' });
-      return { success: true, transport: 'admin@shinerva.id' };
-    } catch (err) {
-      lastError = err;
-      logError('SMTP_DELIVERY', err, { recipient: to, sender: 'admin@shinerva.id', status: 'FAILED' });
-    }
+  // Cascade list
+  const cascadeList = [
+    { transport: primaryTransport, name: 'primary', from: primaryFrom },
+    { transport: fallbackTransport, name: 'fallback', from: fallbackFrom },
+    { transport: gmailTransport, name: 'gmail', from: gmailFrom }
+  ];
 
-    // Priority 2: support@shinerva.id
-    try {
-      await primaryTransport.sendMail({ ...mailOptions, from: 'support@shinerva.id' });
-      logEvent('SMTP_DELIVERY', { recipient: to, sender: 'support@shinerva.id', status: 'SUCCESS' });
-      return { success: true, transport: 'support@shinerva.id' };
-    } catch (err) {
-      lastError = err;
-      logError('SMTP_DELIVERY', err, { recipient: to, sender: 'support@shinerva.id', status: 'FAILED' });
-    }
-  }
-
-  // Priority 3: Fallback Gmail
-  if (fallbackTransport) {
-    const fallbackFrom = process.env.FALLBACK_EMAIL || 'hello.shinerva@gmail.com';
-    try {
-      await fallbackTransport.sendMail({ ...mailOptions, from: fallbackFrom });
-      logEvent('SMTP_DELIVERY', { recipient: to, sender: fallbackFrom, status: 'SUCCESS', fallback_used: true });
-      return { success: true, transport: fallbackFrom };
-    } catch (err) {
-      lastError = err;
-      logError('SMTP_DELIVERY', err, { recipient: to, sender: fallbackFrom, status: 'FAILED' });
+  for (const item of cascadeList) {
+    if (item.transport) {
+      try {
+        logEvent('SMTP_VERIFY_START', { transport: item.name });
+        await item.transport.verify();
+        logEvent('SMTP_VERIFY_SUCCESS', { transport: item.name });
+        
+        await item.transport.sendMail({ ...mailOptions, from: item.from });
+        logEvent('SMTP_DELIVERY_SUCCESS', { recipient: to, sender: item.from, transport: item.name });
+        return { success: true, transport: item.from };
+      } catch (err) {
+        lastError = err;
+        logError('SMTP_DELIVERY_FAILED', err, { recipient: to, transport: item.name });
+      }
     }
   }
 
-  throw new Error(`All SMTP cascades failed. Last Error: ${lastError?.message || 'No transports configured'}`);
+  const isAnyConfigured = !!(primaryTransport || fallbackTransport || gmailTransport);
+  if (!isAnyConfigured) {
+    throw new Error('Email service is not configured');
+  }
+
+  throw new Error(lastError?.message || 'SMTP delivery failed on all configurations');
 }
 
 // ─── 6. Route Handler ───────────────────────────────────────────────────────
 export default async function handler(req, res) {
   logEvent('API_REQUEST', { method: req.method, url: req.url, action: req.body?.action || 'signIn' });
+
+  const isAnyConfigured = !!(primaryTransport || fallbackTransport || gmailTransport);
+  if (!isAnyConfigured) {
+    logError('SMTP_NOT_CONFIGURED', 'No active mail transporter initialized');
+    return res.status(503).json({ error: "Email service is not configured" });
+  }
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -230,7 +268,7 @@ export default async function handler(req, res) {
     // Attempt to use continueUrl from client or request origin
     const baseOrigin = req.headers.origin || req.headers.host 
       ? (req.headers.origin || `https://${req.headers.host}`)
-      : process.env.APP_URL || process.env.VERCEL_URL;
+      : process.env.APP_URL || process.env.VERCEL_URL || 'https://shinerva.id';
       
     if (continueUrl && continueUrl.startsWith('http')) {
       targetUrl = continueUrl;
@@ -239,7 +277,14 @@ export default async function handler(req, res) {
     }
     
     // Simple safety check against malicious redirects
-    const allowedDomains = process.env.ALLOWED_DOMAINS ? process.env.ALLOWED_DOMAINS.split(',') : ['shinerva.id', 'localhost'];
+    let allowedDomains = ['shinerva.id'];
+    if (process.env.ALLOWED_DOMAINS) {
+      allowedDomains = process.env.ALLOWED_DOMAINS.split(',').map(d => d.trim());
+    } else if (process.env.NODE_ENV !== 'production') {
+      allowedDomains.push('localhost');
+      allowedDomains.push('127.0.0.1');
+    }
+    
     const targetDomain = new URL(targetUrl).hostname;
     const isAllowed = allowedDomains.some(d => targetDomain === d || targetDomain.endsWith(`.${d}`));
     if (!isAllowed) {
@@ -248,6 +293,7 @@ export default async function handler(req, res) {
     }
   } catch (urlErr) {
     logError('URL_PARSE_ERROR', urlErr);
+    targetUrl = 'https://shinerva.id';
   }
 
   const actionCodeSettings = {

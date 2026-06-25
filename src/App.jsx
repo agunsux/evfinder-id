@@ -194,6 +194,7 @@ const App = () => {
     email: "",
   });
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
+  const [authStatusMessage, setAuthStatusMessage] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [purchaseLoading, setPurchaseLoading] = useState(null);
@@ -1266,6 +1267,7 @@ const App = () => {
       }
 
       if (email) {
+        setAuthStatusMessage("Memverifikasi link masuk...");
         console.log(`[Auth] Resolving signInWithEmailLink for email: ${email}`);
         signInWithEmailLink(auth, email, window.location.href)
           .then((result) => {
@@ -1273,10 +1275,15 @@ const App = () => {
             window.localStorage.removeItem('emailForSignIn');
             toast.success("Berhasil masuk!");
             setIsAuthOpen(false);
+            setAuthStatusMessage(null);
+            
+            // Clean up URL query parameters securely
+            window.history.replaceState({}, document.title, "/");
           })
           .catch((error) => {
             console.error("[Auth] signInWithEmailLink FAILED:", error.message || error, error.code);
             toast.error("Link tidak valid atau sudah kedaluwarsa.");
+            setAuthStatusMessage("Gagal masuk dengan link email. Hubungi support jika masalah berlanjut.");
           });
       } else {
         console.warn("[Auth] Magic link sign-in aborted: no email provided.");
@@ -1286,6 +1293,7 @@ const App = () => {
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
+    setAuthStatusMessage("Signing you in...");
     try {
       console.log("[Auth] Starting Google sign-in...");
       const userCredential = await loginWithGoogle();
@@ -1293,6 +1301,7 @@ const App = () => {
 
       // Explicit sync with backend to ensure user is created/updated
       try {
+        setAuthStatusMessage("Sinkronisasi profil akun...");
         const idToken = await userCredential.user.getIdToken(true);
         console.log("[Auth] Syncing Google user with backend...");
         const options = {
@@ -1313,10 +1322,12 @@ const App = () => {
       }
 
       setIsAuthOpen(false);
+      setAuthStatusMessage(null);
       toast.success("Login Google berhasil!");
     } catch (err) {
       console.error("[Auth] Google sign-in error:", err?.message || err);
       toast.error(err.message || "Gagal masuk dengan Google.");
+      setAuthStatusMessage("Google login failed: " + (err.message || "Unknown error"));
     } finally {
       setGoogleLoading(false);
     }
@@ -1483,6 +1494,37 @@ const App = () => {
       <div className="min-h-screen bg-dark flex flex-col items-center justify-center">
         <Loader2 className="w-10 h-10 text-terracotta animate-spin mb-4" />
         <p className="text-text-muted font-medium">Menghubungkan ke layanan...</p>
+      </div>
+    );
+  }
+
+  if (authStatusMessage) {
+    const isError = authStatusMessage.toLowerCase().includes("failed") || authStatusMessage.toLowerCase().includes("gagal");
+    return (
+      <div className="min-h-screen bg-dark flex flex-col items-center justify-center p-4 text-center">
+        <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-md relative z-10 shadow-2xl mx-4">
+          {!isError ? (
+            <Loader2 className="w-10 h-10 text-terracotta animate-spin mb-4 mx-auto" />
+          ) : (
+            <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+            </div>
+          )}
+          <h2 className="text-xl font-black text-text mb-4">
+            {!isError ? "Autentikasi Akun" : "Autentikasi Gagal"}
+          </h2>
+          <p className="text-text-muted text-sm leading-relaxed mb-6">
+            {authStatusMessage}
+          </p>
+          {isError && (
+            <button
+              onClick={() => setAuthStatusMessage(null)}
+              className="w-full bg-terracotta hover:bg-trdark text-text py-3 rounded-xl font-bold border-none cursor-pointer"
+            >
+              Kembali
+            </button>
+          )}
+        </div>
       </div>
     );
   }
