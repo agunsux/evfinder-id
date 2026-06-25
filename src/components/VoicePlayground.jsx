@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { PLAYGROUND_VOICES } from "../lib/voicePlaygroundData";
 
+// Voice Playground with restored Aryo, Sekar, Kartika, Ratih, Rendra, Bambang presets
 const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLanguage }) => {
   const [activeTierIdx, setActiveTierIdx] = useState(0); 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);

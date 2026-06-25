@@ -72,6 +72,68 @@ import PricingSection from "./components/PricingSection";
 import { useStudio } from "./context/StudioContext";
 import { loadMidtransSnap } from "./main";
 
+// Reconstruct voice presets directly on the shared VOICES object to preserve module constraints
+DEFAULT_VOICES["ID"] = "ARYO";
+VOICES["ID"] = {
+  "Rungu Presets": [
+    {
+      id: "ARYO",
+      name: "Aryo",
+      type: "GeminiFlash",
+      premium: false,
+      tier: "FREE",
+      desc: "Suara formal, jelas, dan ramah untuk video edukasi, tutorial, dan training.",
+      useCase: "Edukasi, Tutorial, Kursus"
+    },
+    {
+      id: "SEKAR",
+      name: "Sekar",
+      type: "GeminiFlash",
+      premium: false,
+      tier: "FREE",
+      desc: "Suara hangat dan santai untuk konten lifestyle, review, dan personal branding.",
+      useCase: "Lifestyle, Vlog, Review"
+    },
+    {
+      id: "KARTIKA",
+      name: "Kartika",
+      type: "GeminiFlash",
+      premium: false,
+      tier: "FREE",
+      desc: "Suara tegas dan profesional untuk berita, informasi, dan pengumuman.",
+      useCase: "Berita, Informasi, Update"
+    },
+    {
+      id: "RATIH",
+      name: "Ratih",
+      type: "GeminiFlash",
+      premium: true,
+      tier: "STARTER",
+      desc: "Suara tenang dan dramatis untuk cerita, audiobook, dan narasi panjang.",
+      useCase: "Storytelling, Audiobook, Sejarah"
+    },
+    {
+      id: "RENDRA",
+      name: "Rendra",
+      type: "GeminiFlash",
+      premium: true,
+      tier: "STARTER",
+      desc: "Suara natural dan mengalir untuk podcast, wawancara, dan diskusi.",
+      useCase: "Podcast, Diskusi, Talkshow"
+    },
+    {
+      id: "BAMBANG",
+      name: "Bambang",
+      type: "GeminiFlash",
+      premium: true,
+      tier: "PRO",
+      desc: "Suara dalam dan epik untuk dokumenter, trailer, dan konten sinematik.",
+      useCase: "Cinematic, Dokumenter, Trailer"
+    }
+  ]
+};
+
+
 // Lazy load heavy modals
 const ProfileModal = React.lazy(() => import("./components/ProfileModal"));
 const HistoryModal = React.lazy(() => import("./components/HistoryModal"));
@@ -222,7 +284,7 @@ const App = () => {
     if (isPlayingHero) return;
     setIsPlayingHero(true);
     const sampleText = "Platform AI Voice pertama yang mengutamakan tekstur emosi, napas, dan intonasi manusiawi untuk kreator.";
-    const voiceId = "SAMBAS";
+    const voiceId = "ARYO";
     
     const url = await generateSample(sampleText, voiceId);
     if (url) {
@@ -1663,7 +1725,7 @@ const App = () => {
 
         {/* Live Audio Demo */}
         <section id="demo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          <LiveAudioDemo />
+          <LiveAudioDemo generateSample={generateSample} />
         </section>
 
         {/* Aura Section */}

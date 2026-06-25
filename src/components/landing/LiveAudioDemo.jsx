@@ -1,81 +1,67 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Play, Pause } from "lucide-react";
-import { motion } from "motion/react";
+import { Play, Pause, Check } from "lucide-react";
+import { useStudio } from "../../context/StudioContext";
 
 const voices = [
   {
-    id: "sambas",
-    voiceId: "SAMBAS",
-    name: "Sambas",
-    description: "Informative · Calm · News",
-    voice: "Male",
-    script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali ke atmosfer."
+    id: "aryo",
+    voiceId: "ARYO",
+    name: "Aryo",
+    category: "Edukasi & Tutorial",
+    icon: "🎓",
+    description: "Suara formal, jelas, dan ramah untuk video edukasi, tutorial, dan training.",
+    script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali to atmosfer."
   },
   {
-    id: "mega",
-    voiceId: "MEGA",
-    name: "Mega",
-    description: "Professional · Clear · Education",
-    voice: "Female",
+    id: "sekar",
+    voiceId: "SEKAR",
+    name: "Sekar",
+    category: "Lifestyle & Vlog",
+    icon: "🤳",
+    description: "Suara hangat dan santai untuk konten lifestyle, review, dan personal branding.",
+    script: "A Day in My Life as a Content Creator! Hari ini produktif banget, mulai dari shooting konten bareng tim, sampai mampir ke cafe baru yang lagi viral. Keren banget tempatnya!"
+  },
+  {
+    id: "kartika",
+    voiceId: "KARTIKA",
+    name: "Kartika",
+    category: "Berita & Pengumuman",
+    icon: "📢",
+    description: "Suara tegas dan profesional untuk berita, informasi, dan pengumuman.",
     script: "Selamat datang di berita harian Shinerva, sumber terpercaya Anda."
   },
   {
-    id: "susi",
-    voiceId: "SUSI",
-    name: "Susi",
-    description: "Energetic · Modern · Social",
-    voice: "Female",
-    script: "Hey guys! Jangan lupa like dan subscribe untuk konten terbaru!"
-  },
-  {
-    id: "ratna",
-    voiceId: "RATNA",
-    name: "Ratna",
-    description: "Soft · Emotional · Story",
-    voice: "Female",
+    id: "ratih",
+    voiceId: "RATIH",
+    name: "Ratih",
+    category: "Storytelling & Novel",
+    icon: "📖",
+    description: "Suara tenang dan dramatis untuk cerita, audiobook, dan narasi panjang.",
     script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik."
   },
   {
-    id: "satria",
-    voiceId: "SATRIA",
-    name: "Satria",
-    description: "Deep · Authoritative · Cinematic",
-    voice: "Male",
-    script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya."
+    id: "rendra",
+    voiceId: "RENDRA",
+    name: "Rendra",
+    category: "Podcast & Diskusi",
+    icon: "🎙️",
+    description: "Suara natural dan mengalir untuk podcast, wawancara, dan diskusi.",
+    script: "Halo semuanya, selamat datang di podcast santai kita hari ini."
   },
   {
-    id: "kania",
-    voiceId: "KANIA",
-    name: "Kania",
-    description: "Friendly · Casual · Podcast",
-    voice: "Female",
-    script: "Halo semuanya, selamat datang di podcast santai kita hari ini."
+    id: "bambang",
+    voiceId: "BAMBANG",
+    name: "Bambang",
+    category: "Cinematic & Narasi",
+    icon: "🎬",
+    description: "Suara dalam dan epik untuk dokumenter, trailer, dan konten sinematik.",
+    script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya."
   }
 ];
 
-const Waveform = ({ isPlaying }) => {
-  return (
-    <div className="flex items-center gap-1 h-8">
-      {[...Array(20)].map((_, i) => (
-        <motion.div
-          key={i}
-          animate={{ height: isPlaying ? [10, 30, 10] : 10 }}
-          transition={{
-            duration: 0.8,
-            repeat: Infinity,
-            delay: i * 0.05,
-            ease: "easeInOut"
-          }}
-          className="w-1 bg-amber-400 rounded-full"
-        />
-      ))}
-    </div>
-  );
-};
-
 const LiveAudioDemo = ({ generateSample }) => {
+  const { voice: activeVoice, setVoice } = useStudio();
   const [playingId, setPlayingId] = useState(null);
-  const [progress, setProgress] = useState(0);
   const [loadedUrls, setLoadedUrls] = useState({});
   const [loadingIds, setLoadingIds] = useState({});
   
@@ -113,83 +99,110 @@ const LiveAudioDemo = ({ generateSample }) => {
 
     if (!audioUrl) return;
 
+    // Stop currently playing
+    if (playingId && playingId !== id) {
+      audioRefs.current[playingId]?.pause();
+    }
+
     setTimeout(() => {
-        const audio = audioRefs.current[id];
-        if (!audio) return;
-        if (playingId && playingId !== id) {
-          audioRefs.current[playingId]?.pause();
-        }
-        audio.play().catch(e => console.warn(`Error playing ${id}:`, e));
-        setPlayingId(id);
+      const audio = audioRefs.current[id];
+      if (!audio) return;
+      audio.play().catch(e => console.warn(`Error playing ${id}:`, e));
+      setPlayingId(id);
     }, 50);
   };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (playingId) {
-        const audio = audioRefs.current[playingId];
-        if (audio && !audio.paused) {
-            setProgress((audio.currentTime / audio.duration) * 100);
-            if (audio.ended) {
-                setPlayingId(null);
-                setProgress(0);
-            }
-        }
-      }
-    }, 100);
-    return () => clearInterval(interval);
-  }, [playingId]);
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {voices.map((voice) => (
-          <div key={voice.id} className={`p-6 rounded-3xl border transition-all ${playingId === voice.id ? 'bg-zinc-800 border-amber-500' : 'bg-zinc-900 border-zinc-700'}`}>
-            <h3 className="text-xl font-black text-white mb-1">{voice.name}</h3>
-            <p className="text-zinc-400 text-sm mb-4">{voice.description}</p>
-            <div className="inline-block px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold mb-4">DEMO GRATIS</div>
-            
-            <audio
-              ref={(el) => (audioRefs.current[voice.id] = el)}
-              src={loadedUrls[voice.id]}
-              onEnded={() => setPlayingId(null)}
-              onError={(e) => {
-                if (loadedUrls[voice.id]) {
-                  console.warn(`Audio ${voice.id} source not found or inaccessible. Skipping.`);
-                  setPlayingId(null);
-                }
-              }}
-            />
-            
-            <div className="flex items-center gap-4 mb-4">
-              <button
-                onClick={() => togglePlay(voice.id)}
-                disabled={loadingIds[voice.id]}
-                className={`w-12 h-12 rounded-full flex items-center justify-center text-black transition ${
-                  loadingIds[voice.id] ? 'bg-amber-500/50 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-400'
-                }`}
-              >
-                {loadingIds[voice.id] ? (
-                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                ) : playingId === voice.id ? (
-                  <Pause size={20} fill="black" />
-                ) : (
-                  <Play size={20} fill="black" />
-                )}
-              </button>
-              
-              <Waveform isPlaying={playingId === voice.id} />
-            </div>
+        {voices.map((voice) => {
+          const isActive = voice.voiceId === activeVoice;
+          const isPlaying = playingId === voice.id;
 
-            <div className="w-full bg-zinc-700 h-1.5 rounded-full overflow-hidden">
-                <motion.div 
-                    className="bg-amber-500 h-full transition-all duration-100 ease-linear"
-                    style={{ width: playingId === voice.id ? `${progress}%` : '0%' }}
-                />
+          return (
+            <div 
+              key={voice.id} 
+              className={`relative bg-surface/50 border rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 group hover:border-terracotta/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-surface2/60 bg-surface/30`}
+            >
+              {isActive && (
+                <div className="absolute -top-2.5 -right-2.5 bg-terracotta text-text text-[10px] font-black px-2.5 py-1 rounded-xl shadow-lg border border-terracotta/20 flex items-center gap-1.5 transition-all">
+                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  Aktif
+                </div>
+              )}
+
+              <div>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-surface2 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform duration-300">
+                      {voice.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-black text-text truncate group-hover:text-terracotta transition-colors duration-300">
+                        {voice.name}
+                      </h3>
+                      <span className="text-[10px] font-bold text-text-muted/80 tracking-wider uppercase block">
+                        {voice.category}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-text-muted text-xs font-medium leading-relaxed my-3 min-h-[36px]">
+                  {voice.description}
+                </p>
+              </div>
+
+              <audio
+                ref={(el) => (audioRefs.current[voice.id] = el)}
+                src={loadedUrls[voice.id]}
+                onEnded={() => setPlayingId(null)}
+                onError={() => {
+                  if (loadedUrls[voice.id]) {
+                    setPlayingId(null);
+                  }
+                }}
+              />
+
+              <div className="space-y-3 mt-4">
+                <div className="flex gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => togglePlay(voice.id)}
+                    disabled={loadingIds[voice.id]}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer border select-none bg-dark/50 border-surface2 text-text-muted hover:text-text hover:border-surface2/90"
+                  >
+                    {loadingIds[voice.id] ? (
+                      <div className="w-3.5 h-3.5 border-2 border-text-muted border-t-transparent rounded-full animate-spin shrink-0" />
+                    ) : isPlaying ? (
+                      <Pause className="w-3.5 h-3.5 fill-current shrink-0" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 fill-current shrink-0" />
+                    )}
+                    <span>{isPlaying ? "Pause" : "Dengarkan"}</span>
+                  </button>
+
+                  {isActive ? (
+                    <button 
+                      type="button" 
+                      className="flex-1 py-2 rounded-xl text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer border bg-terracotta text-text border-terracotta shadow-lg shadow-terracotta/15"
+                    >
+                      <Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" />
+                      <span>Aktif</span>
+                    </button>
+                  ) : (
+                    <button 
+                      type="button" 
+                      onClick={() => setVoice(voice.voiceId)}
+                      className="flex-1 py-2 rounded-xl text-xs font-black transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer border bg-surface2 hover:bg-surface3 border-surface2 text-text hover:border-terracotta/40"
+                    >
+                      <span>Gunakan Preset Ini</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-            
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

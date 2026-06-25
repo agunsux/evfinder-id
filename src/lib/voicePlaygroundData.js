@@ -1,22 +1,22 @@
 export const PLAYGROUND_VOICES = {
   "ID": [
     {
-      tier: "Sambas",
+      tier: "Aryo",
       badge: "FREE",
       color: "gray",
       voices: [
-        { id: "SAMBAS", gender: "Wanita", name: "Sambas" }
+        { id: "ARYO", gender: "Pria", name: "Aryo" }
       ],
       categories: [
         {
-          slug: "informative",
-          name: "Informative & Calm",
-          description: "Suara bersih, tenang, dan profesional dengan pacing lembut.",
+          slug: "education",
+          name: "Edukasi & Tutorial",
+          description: "Suara formal, jelas, dan ramah untuk video edukasi, tutorial, dan training.",
           samples: [
             {
-              id: "sambas_f_sample",
-              title: "Narasi Edukasi",
-              voiceId: "SAMBAS",
+              id: "aryo_sample",
+              title: "Video Tutorial",
+              voiceId: "ARYO",
               script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali ke atmosfer.",
               url: ""
             }
@@ -25,22 +25,46 @@ export const PLAYGROUND_VOICES = {
       ]
     },
     {
-      tier: "Mega",
+      tier: "Sekar",
       badge: "FREE",
       color: "gray",
       voices: [
-        { id: "MEGA", gender: "Wanita", name: "Mega" }
+        { id: "SEKAR", gender: "Wanita", name: "Sekar" }
       ],
       categories: [
         {
-          slug: "professional",
-          name: "Professional & Clear",
-          description: "Suara profesional, jelas, cocok untuk edukasi dan berita.",
+          slug: "lifestyle",
+          name: "Lifestyle & Vlog",
+          description: "Suara hangat dan santai untuk konten lifestyle, review, dan personal branding.",
           samples: [
             {
-              id: "mega_f_sample",
-              title: "Edu News",
-              voiceId: "MEGA",
+              id: "sekar_sample",
+              title: "A Day in My Life",
+              voiceId: "SEKAR",
+              script: "A Day in My Life as a Content Creator! Hari ini produktif banget, mulai dari shooting konten bareng tim, sampai mampir ke cafe baru yang lagi viral. Keren banget tempatnya!",
+              url: ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      tier: "Kartika",
+      badge: "FREE",
+      color: "gray",
+      voices: [
+        { id: "KARTIKA", gender: "Wanita", name: "Kartika" }
+      ],
+      categories: [
+        {
+          slug: "news",
+          name: "Berita & Pengumuman",
+          description: "Suara tegas dan profesional untuk berita, informasi, dan pengumuman.",
+          samples: [
+            {
+              id: "kartika_sample",
+              title: "Berita Harian",
+              voiceId: "KARTIKA",
               script: "Selamat datang di berita harian Shinerva, sumber terpercaya Anda.",
               url: ""
             }
@@ -49,23 +73,23 @@ export const PLAYGROUND_VOICES = {
       ]
     },
     {
-      tier: "Susi",
-      badge: "FREE",
-      color: "gray",
+      tier: "Ratih",
+      badge: "STARTER",
+      color: "yellow",
       voices: [
-        { id: "SUSI", gender: "Wanita", name: "Susi" }
+        { id: "RATIH", gender: "Wanita", name: "Ratih" }
       ],
       categories: [
         {
-          slug: "energetic",
-          name: "Energetic & Modern",
-          description: "Suara energik, modern, cocok untuk konten sosial media.",
+          slug: "storytelling",
+          name: "Storytelling & Novel",
+          description: "Suara tenang dan dramatis untuk cerita, audiobook, dan narasi panjang.",
           samples: [
             {
-              id: "susi_f_sample",
-              title: "Social Clip",
-              voiceId: "SUSI",
-              script: "Hey guys! Jangan lupa like dan subscribe untuk konten terbaru!",
+              id: "ratih_sample",
+              title: "Pembacaan Novel",
+              voiceId: "RATIH",
+              script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik.",
               url: ""
             }
           ]
@@ -73,26 +97,64 @@ export const PLAYGROUND_VOICES = {
       ]
     },
     {
-      tier: "Ratna",
+      tier: "Rendra",
       badge: "STARTER",
       color: "yellow",
       voices: [
-        { id: "RATNA", gender: "Wanita", name: "Ratna" }
+        { id: "RENDRA", gender: "Pria", name: "Rendra" }
       ],
       categories: [
         {
-          slug: "emotional",
-          name: "Soft & Emotional",
-          description: "Suara lembut, hangat, puitis untuk storytelling dan romance.",
+          slug: "podcast",
+          name: "Podcast & Diskusi",
+          description: "Suara natural dan mengalir untuk podcast, wawancara, dan diskusi.",
           samples: [
             {
-              id: "ratna_f_sample",
-              title: "Emotional Story",
-              voiceId: "RATNA",
-              script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik.",
+              id: "rendra_sample",
+              title: "Obrolan Santai",
+              voiceId: "RENDRA",
+              script: "Halo semuanya, selamat datang di podcast santai kita hari ini.",
               url: ""
             }
           ]
+        }
+      ]
+    },
+    {
+      tier: "Bambang",
+      badge: "PRO",
+      color: "red",
+      voices: [
+        { id: "BAMBANG", gender: "Pria", name: "Bambang" }
+      ],
+      categories: [
+        {
+          slug: "cinematic",
+          name: "Cinematic & Narasi",
+          description: "Suara dalam dan epik untuk dokumenter, trailer, dan konten sinematik.",
+          samples: [
+            {
+              id: "bambang_sample",
+              title: "Narasi Dokumenter",
+              voiceId: "BAMBANG",
+              script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya.",
+              url: ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      tier: "Cloning",
+      badge: "ULTRA",
+      color: "purple",
+      voices: [],
+      categories: [
+        {
+          slug: "cloning",
+          name: "Voice Cloning",
+          description: "Kloning suara Anda sendiri.",
+          samples: []
         }
       ]
     }
