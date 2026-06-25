@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate, Routes, Route } from 'react-router-dom';
 import PolicyPage from './pages/PolicyPage';
 import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
 import { Toaster, toast } from 'react-hot-toast';
 import { MAX_CHARS } from "./constants";
 import ShinervaLogo from "./components/ShinervaLogo";
@@ -84,6 +85,24 @@ const formatDuration = (seconds) => {
   if (mins === 0) return `${secs}s`;
   return `${mins}m ${secs}s`;
 };
+
+const SettingsRedirect = ({ setIsProfileModalOpen }) => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    setIsProfileModalOpen(true);
+    navigate('/', { replace: true });
+  }, [navigate, setIsProfileModalOpen]);
+  return null;
+};
+
+const NavigateToHome = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate('/', { replace: true });
+  }, [navigate]);
+  return null;
+};
+
 
 
 const App = () => {
@@ -925,7 +944,7 @@ const App = () => {
 
   const proceedWithGenerate = async () => {
     setStatus("loading");
-    setLoadingMessage("Menghubungkan ke Rungu Engine...");
+    setLoadingMessage("Menghubungkan ke Shinerva Engine...");
 
     const startTime = Date.now();
 
@@ -1001,14 +1020,14 @@ const App = () => {
 
         // Analytics
         if (window.dataLayer) {
-          const hasFiredGTM = localStorage.getItem('rungu_first_voice_gtm_fired');
+          const hasFiredGTM = localStorage.getItem('shinerva_first_voice_gtm_fired');
           if (!hasFiredGTM) {
             window.dataLayer.push({
               event: 'first_voice_generated',
               voice_id: voice,
               user_tier: user?.tier || 'FREE'
             });
-            localStorage.setItem('rungu_first_voice_gtm_fired', 'true');
+            localStorage.setItem('shinerva_first_voice_gtm_fired', 'true');
           }
         }
         setIsTeaser(data.isTeaser || false);
@@ -1036,7 +1055,7 @@ const App = () => {
         }
 
         if (user?.generation_count && user.generation_count % 3 === 0) {
-          toast("Share kreasi Anda & tag @rungu.id untuk bonus karakter!", { icon: '🎁', duration: 6000 });
+          toast("Share kreasi Anda & tag @shinerva.id untuk bonus karakter!", { icon: '🎁', duration: 6000 });
         }
       } else {
         throw new Error("Gagal menerima data suara dari server.");
@@ -1481,51 +1500,49 @@ const App = () => {
       <Toaster position="top-right" />
       <nav className="sticky top-4 w-full z-50 bg-surface/80 backdrop-blur-md border-b border-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-20 items-center">
-            <div className="flex-1"></div>
-
-            <div className="flex items-center justify-center gap-4 flex-1">
-              <img src="/shinerva-icon.svg" alt="Shinerva Logo" className="w-12 h-12" />
-              <span className="font-black text-3xl tracking-tight text-terracotta cursor-pointer">
+          <div className="flex justify-between h-16 md:h-20 items-center">
+            <div className="flex items-center gap-2 md:gap-4 cursor-pointer" onClick={() => navigate('/')}>
+              <img src="/shinerva-icon.svg" alt="Shinerva Logo" className="w-8 h-8 md:w-10 md:h-10" />
+              <span className="font-black text-xl md:text-2xl tracking-tight text-terracotta">
                 SHINERVA
               </span>
             </div>
 
-            <div className="flex items-center justify-end flex-1 gap-2">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 md:gap-3">
+              <button
+                onClick={() => handleLanguageChange(language === 'ID' ? 'EN' : 'ID')}
+                className="px-2 md:px-3 py-1.5 md:py-2 rounded-full bg-surface2 text-text text-[10px] md:text-xs font-bold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
+                title={language === 'ID' ? "Switch to English" : "Ganti ke Bahasa Indonesia"}
+              >
+                {language === 'ID' ? 'EN' : 'ID'}
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 md:p-2.5 rounded-full bg-[#FDFBF7] text-terracotta shadow-sm border border-terracotta/10 hover:bg-[#F5EFE6] transition-all cursor-pointer flex items-center justify-center"
+                title={theme === 'dark' ? "Buka Mode Terang" : "Buka Mode Gelap"}
+              >
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5 md:w-5 md:h-5" /> : <Moon className="w-3.5 h-3.5 md:w-5 md:h-5" />}
+              </button>
+              {user ? (
                 <button
-                  onClick={() => handleLanguageChange(language === 'ID' ? 'EN' : 'ID')}
-                  className="px-3 md:px-4 py-2 md:py-2.5 rounded-full bg-surface2 text-text text-xs md:text-sm font-bold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
-                  title={language === 'ID' ? "Switch to English" : "Ganti ke Bahasa Indonesia"}
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="text-text px-3 py-1.5 md:px-5 md:py-2 rounded-full text-xs font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer flex items-center gap-1"
                 >
-                  {language === 'ID' ? 'EN' : 'ID'}
+                  <User className="w-3.5 h-3.5 md:hidden" />
+                  <span className="hidden md:inline">{language === 'ID' ? 'Akun Saya' : 'My Account'}</span>
+                  <span className="md:hidden">{language === 'ID' ? 'Akun' : 'Account'}</span>
                 </button>
+              ) : (
                 <button
-                  onClick={toggleTheme}
-                  className="p-2 md:p-2.5 rounded-full bg-[#FDFBF7] text-terracotta shadow-sm border border-terracotta/10 hover:bg-[#F5EFE6] transition-all cursor-pointer flex items-center justify-center"
-                  title={theme === 'dark' ? "Buka Mode Terang" : "Buka Mode Gelap"}
+                  onClick={() => {
+                    setAuthMode("login");
+                    setIsAuthOpen(true);
+                  }}
+                  className="text-text px-3 py-1.5 md:px-5 md:py-2 rounded-full text-xs font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
                 >
-                  {theme === 'dark' ? <Sun className="w-4 h-4 md:w-5 md:h-5" /> : <Moon className="w-4 h-4 md:w-5 md:h-5" />}
+                  {language === 'ID' ? 'Masuk' : 'Sign In'}
                 </button>
-                {user ? (
-                  <button
-                    onClick={() => setIsProfileModalOpen(true)}
-                    className="text-text px-4 py-2 md:px-6 md:py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
-                  >
-                    {language === 'ID' ? 'Akun Saya' : 'My Account'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setAuthMode("login");
-                      setIsAuthOpen(true);
-                    }}
-                    className="text-text px-4 py-2 md:px-6 md:py-2.5 rounded-full text-sm font-semibold border border-surface2 hover:border-terracotta hover:bg-terracotta/5 transition-all cursor-pointer"
-                  >
-                    {language === 'ID' ? 'Masuk' : 'Sign In'}
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -1610,7 +1627,7 @@ const App = () => {
                     Premium Indonesian AI Voices
                   </span>
                 </div>
-                <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-tight text-text">
+                <h1 className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-tight text-text">
                   Create natural Indonesian <br className="hidden md:block" />
                   <span className="gradient-text">AI voices in seconds</span>
                 </h1>
@@ -1643,7 +1660,7 @@ const App = () => {
                 className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-32"
               >
                 {user && (
-                  <div className="bg-surface2 rounded-3xl p-6 mb-8 flex flex-col md:flex-row justify-between items-center border border-surface2 shadow-xl gap-4">
+                  <div className="bg-surface2 rounded-3xl p-4 sm:p-6 mb-8 flex flex-col md:flex-row justify-between items-center border border-surface2 shadow-xl gap-6">
                     <div className="flex-1 w-full">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="text-sm font-bold text-text-muted">
@@ -1656,7 +1673,7 @@ const App = () => {
                         )}
                       </div>
                       <div className="flex items-end gap-2 mb-2">
-                        <span className="text-3xl font-black text-text">
+                        <span className="text-2xl sm:text-3xl font-black text-text">
                           {Math.max(
                             0,
                             (user.monthly_chars || 0) +
@@ -1665,7 +1682,7 @@ const App = () => {
                             (user.used_chars || 0),
                           ).toLocaleString("id-ID")}
                         </span>
-                        <span className="text-sm text-text-muted mb-1">karakter</span>
+                        <span className="text-xs sm:text-sm text-text-muted mb-1">karakter</span>
                       </div>
                       <div className="w-full bg-dark h-2 rounded-full overflow-hidden mb-3">
                         <div
@@ -1675,29 +1692,29 @@ const App = () => {
                           }}
                         ></div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-4">
-                        <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                          <div className="text-text-muted text-xs mb-1">Bulanan</div>
-                          <div className="font-bold text-text">{(user.monthly_chars || 0).toLocaleString("id-ID")}</div>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-sm mt-4">
+                        <div className="bg-dark/50 rounded-lg p-2.5 sm:p-3 border border-surface2">
+                          <div className="text-text-muted text-[10px] sm:text-xs mb-1">Bulanan</div>
+                          <div className="font-bold text-text text-xs sm:text-sm">{(user.monthly_chars || 0).toLocaleString("id-ID")}</div>
                         </div>
-                        <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                          <div className="text-text-muted text-xs mb-1">Bonus Signup</div>
-                          <div className="font-bold text-text">{(user.signup_bonus_chars || 0).toLocaleString("id-ID")}</div>
+                        <div className="bg-dark/50 rounded-lg p-2.5 sm:p-3 border border-surface2">
+                          <div className="text-text-muted text-[10px] sm:text-xs mb-1">Bonus Signup</div>
+                          <div className="font-bold text-text text-xs sm:text-sm">{(user.signup_bonus_chars || 0).toLocaleString("id-ID")}</div>
                         </div>
-                        <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                          <div className="text-text-muted text-xs mb-1">Estimasi Video</div>
-                          <div className="font-bold text-green-500">~{Math.floor(Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0)) / 1500)} Video</div>
+                        <div className="bg-dark/50 rounded-lg p-2.5 sm:p-3 border border-surface2">
+                          <div className="text-text-muted text-[10px] sm:text-xs mb-1">Estimasi Video</div>
+                          <div className="font-bold text-green-500 text-xs sm:text-sm">~{Math.floor(Math.max(0, (user.monthly_chars || 0) + (user.signup_bonus_chars || 0) + (user.earned_chars || 0) - (user.used_chars || 0)) / 1500)} Video</div>
                         </div>
-                        <div className="bg-dark/50 rounded-lg p-3 border border-surface2">
-                          <div className="text-text-muted text-xs mb-1">Digunakan</div>
-                          <div className="font-bold text-terracotta">{(user.used_chars || 0).toLocaleString("id-ID")}</div>
+                        <div className="bg-dark/50 rounded-lg p-2.5 sm:p-3 border border-surface2">
+                          <div className="text-text-muted text-[10px] sm:text-xs mb-1">Digunakan</div>
+                          <div className="font-bold text-terracotta text-xs sm:text-sm">{(user.used_chars || 0).toLocaleString("id-ID")}</div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2 min-w-[250px]">
+                    <div className="flex flex-col gap-2 w-full md:w-64 md:shrink-0">
                       <button
                         onClick={() => setIsHistoryOpen(true)}
-                        className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left"
+                        className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left w-full"
                       >
                         <div className="flex items-center gap-2">
                           <History className="w-4 h-4 text-terracotta" />{" "}
@@ -1710,7 +1727,7 @@ const App = () => {
                       {user.tier === "ENTERPRISE" && (
                         <button
                           onClick={() => setIsVoiceMgmtOpen(true)}
-                          className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left"
+                          className="bg-dark p-3 rounded-xl border border-surface2 flex justify-between items-center hover:bg-surface2 transition-colors cursor-pointer text-left w-full"
                         >
                           <div className="flex items-center gap-2">
                             <Settings2 className="w-4 h-4 text-terracotta" />{" "}
@@ -1735,7 +1752,7 @@ const App = () => {
                           {user.referral_code}
                         </span>
                       </button>
-                      <div className="p-3 rounded-xl bg-surface/50 border border-surface2/50 flex justify-between items-center opacity-70">
+                      <div className="p-3 rounded-xl bg-surface/50 border border-surface2/50 flex justify-between items-center opacity-70 w-full">
                         <div className="flex items-center gap-2">
                           <Share2 className="w-4 h-4 text-text-muted" />
                           <span className="text-sm font-bold text-text-muted">Social Bonus (Soon)</span>
@@ -1744,10 +1761,10 @@ const App = () => {
                     </div>
                   </div>
                 )}
-                <div className="bg-surface rounded-3xl p-6 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
+                <div className="bg-surface rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-10 border border-surface2 shadow-2xl relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-terracotta/20 via-terracotta to-terracotta/20"></div>
 
-                  <div className="flex flex-col md:flex-row gap-8">
+                  <div className="flex flex-col md:flex-row gap-6 md:gap-8">
                     {/* Left Column */}
                     <div className="flex-1 space-y-6">
                       <StudioSection
@@ -1947,7 +1964,13 @@ const App = () => {
             } 
           />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/terms" element={<PolicyPage />} />
+          <Route path="/privacy" element={<PolicyPage />} />
+          <Route path="/refund" element={<PolicyPage />} />
           <Route path="/policy/:type" element={<PolicyPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/settings" element={<SettingsRedirect setIsProfileModalOpen={setIsProfileModalOpen} />} />
+          <Route path="*" element={<NavigateToHome />} />
         </Routes>
 
         {/* Footer */}
@@ -2038,13 +2061,14 @@ const App = () => {
               <p>© 2026 Shinerva AI Voice. All rights reserved.</p>
               <div className="flex gap-6">
                 <a href="/about" className="hover:text-text transition-colors">About Us</a>
-                <a href="/policy/privacy" className="hover:text-text transition-colors">
+                <a href="/contact" className="hover:text-text transition-colors">Contact</a>
+                <a href="/privacy" className="hover:text-text transition-colors">
                   Privacy Policy
                 </a>
-                <a href="/policy/terms" className="hover:text-text transition-colors">
+                <a href="/terms" className="hover:text-text transition-colors">
                   Terms of Service
                 </a>
-                <a href="/policy/refund" className="hover:text-text transition-colors">Refund Policy</a>
+                <a href="/refund" className="hover:text-text transition-colors">Refund Policy</a>
               </div>
             </div>
           </div>

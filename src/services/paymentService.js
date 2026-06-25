@@ -13,10 +13,10 @@ export async function createTransaction(orderId, grossAmount, customer) {
         email: customer?.email || "",
       },
       item_details: [{
-        id: "langgam-premium",
+        id: "shinerva-premium",
         price: grossAmount,
         quantity: 1,
-        name: "Langgam AI Voice - Premium Package",
+        name: "Shinerva AI Voice - Premium Package",
       }]
     };
 

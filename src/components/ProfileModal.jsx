@@ -17,13 +17,13 @@ const ProfileModal = ({
         className="absolute inset-0 bg-dark/95 backdrop-blur-md"
         onClick={() => setIsProfileModalOpen(false)}
       ></div>
-      <div className="bg-dark border border-surface2 rounded-[2.5rem] w-full max-w-lg relative z-10 shadow-3xl overflow-hidden border-gradient animate-in zoom-in duration-300">
-         <div className="p-8 md:p-12">
+      <div className="bg-dark border border-surface2 rounded-3xl md:rounded-[2.5rem] w-full max-w-lg relative z-10 shadow-3xl overflow-y-auto max-h-[90vh] custom-scrollbar border-gradient animate-in zoom-in duration-300">
+         <div className="p-6 sm:p-8 md:p-10">
             <button
               onClick={() => setIsProfileModalOpen(false)}
-              className="absolute top-8 right-8 text-text-muted hover:text-text cursor-pointer bg-surface2/50 hover:bg-surface2 p-2 rounded-full transition-all border-none"
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 md:top-8 md:right-8 text-text-muted hover:text-text cursor-pointer bg-surface2/50 hover:bg-surface2 p-2 rounded-full transition-all border-none"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 md:w-6 md:h-6" />
             </button>
 
             <div className="text-center mb-10">

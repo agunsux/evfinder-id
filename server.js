@@ -380,7 +380,7 @@ async function createServer() {
       const currentEmailVerified = !!decodedToken.email_verified || !!email;
       const lowerEmail = email.toLowerCase();
       
-      // Rungu's Anti-Clone Protection: Block disposable emails (skip for placeholder emails)
+      // Shinerva's Anti-Clone Protection: Block disposable emails (skip for placeholder emails)
       if (!email.endsWith('@placeholder.shinerva.id')) {
         const disposableDomains = ['10minutemail.com', 'temp-mail.org', 'guerrillamail.com', 'sharklasers.com', 'mailinator.com'];
         const emailDomain = lowerEmail.split('@')[1];
@@ -560,7 +560,7 @@ async function createServer() {
   app.get('/api/user/me', authenticate, (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
     
-    // Rungu's Helper: Calculate total current balance
+    // Shinerva's Helper: Calculate total current balance
     const totalAvailable = (req.user.monthly_chars || 0) + (req.user.signup_bonus_chars || 0) + (req.user.earned_chars || 0);
     const currentCredits = Math.max(0, totalAvailable - (req.user.used_chars || 0));
     
@@ -757,7 +757,7 @@ async function createServer() {
   app.post('/api/payment/webhook', async (req, res) => {
     const notification = req.body;
     
-    // Rungu's Security Measure: Verify Signature Key
+    // Shinerva's Security Measure: Verify Signature Key
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     if (!serverKey) {
         console.error('[Midtrans Webhook] Missing MIDTRANS_SERVER_KEY');
@@ -1068,7 +1068,7 @@ async function createServer() {
         return res.status(402).json({ error: 'Kredit karakter tidak mencukupi (Membutuhkan ' + totalCharCost + ' kredit).' });
       }
 
-      // Rungu Engine logic
+      // Shinerva Engine logic
       const modifiedText = applyPhoneticMoat(text)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -1090,7 +1090,7 @@ async function createServer() {
         .replace(/\[\/teriak\]/gi, '');
 
       // Pronunciation Global Dictionary
-      const globalPhonetics = { "AI": "ey ay", "IT": "ay ti", "Shinerva": "shi ner va", "RUNGU": "ru ngu" };
+      const globalPhonetics = { "AI": "ey ay", "IT": "ay ti", "Shinerva": "shi ner va" };
       const allPronunciations = { ...globalPhonetics, ...(user.pronunciations || {}) };
       
       let processedText = expressiveText;
@@ -1101,7 +1101,7 @@ async function createServer() {
       });
 
       const finalProcessedText = (processedText || "").trim() || "Halo.";
-      const watermark = tier === 'FREE' ? ' [short pause] Suara ini dibuat oleh Rungu Engine by Shinerva dot ey ay.' : '';
+      const watermark = tier === 'FREE' ? ' [short pause] Suara ini dibuat oleh Shinerva Engine by Shinerva dot ey ay.' : '';
       const promptText = finalProcessedText + watermark;
       
       console.log(`[Gemini TTS] Requesting preset: ${actualVoice}. Text Length: ${promptText.length}`);

@@ -14,7 +14,7 @@ const VoiceManagementModal = ({
         className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
         onClick={() => setIsVoiceMgmtOpen(false)}
       ></div>
-      <div className="bg-surface border border-surface2 p-8 rounded-3xl w-full max-w-xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
+      <div className="bg-surface border border-surface2 p-4 sm:p-6 md:p-8 rounded-3xl w-full max-w-xl relative z-10 shadow-2xl mx-4 max-h-[90vh] flex flex-col">
         <button
           onClick={() => setIsVoiceMgmtOpen(false)}
           className="absolute top-4 right-4 text-text-muted hover:text-text cursor-pointer bg-transparent border-none"

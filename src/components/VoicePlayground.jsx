@@ -36,8 +36,8 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
         tech: "Pilih Teknologi",
         variants: "Varian Suara",
 
-        quality_title_cloning: "Instant Voice Cloning (Eksperimental)",
-        quality_desc_cloning: "Cukup rekam 30 detik suara Anda, dan biarkan AI kami mengkloningnya dengan akurasi yang luar biasa. Sangat cocok untuk konsistensi brand.",
+        quality_title_cloning: "AI Voice Cloning (Eksperimental)",
+        quality_desc_cloning: "Cukup rekam 30 detik suara Anda, dan biarkan AI kami mengkloningnya dengan hasil suara natural. Sangat cocok untuk konsistensi brand.",
         quality_cta: "Segera hadir untuk semua kreator.",
         join: "Bergabung dengan",
         creators: "2.5k+ Kreator",
@@ -54,8 +54,8 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
         tech: "Select Technology",
         variants: "Voice Variants",
 
-        quality_title_cloning: "Instant Voice Cloning (Experimental)",
-        quality_desc_cloning: "Just record 30 seconds of your voice, and let our AI clone it with incredible accuracy. Perfect for brand consistency.",
+        quality_title_cloning: "AI Voice Cloning (Experimental)",
+        quality_desc_cloning: "Just record 30 seconds of your voice, and let our AI clone it with natural results. Perfect for brand consistency.",
         quality_cta: "Coming soon for all creators.",
         join: "Join over",
         creators: "2.5k+ Creators",

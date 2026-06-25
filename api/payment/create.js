@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
     const result = await createTransaction(orderId, grossAmount, {
       name: "Test User",
-      email: "test@langgam.id"
+      email: "test@shinerva.id"
     });
 
     return res.status(200).json(result);

@@ -32,7 +32,7 @@ export const TRANSLATIONS = {
       cta: "Siap!"
     },
     studio: {
-      title: "Rungu Engine Studio",
+      title: "Shinerva Engine Studio",
       label: "Editor Naskah",
       placeholder: "Ketik atau tempel naskah Anda di sini...",
       generate: "Hasilkan Suara",
@@ -113,7 +113,7 @@ export const TRANSLATIONS = {
       cta: "Ready!"
     },
     studio: {
-      title: "Rungu Engine Studio",
+      title: "Shinerva Engine Studio",
       label: "Script Editor",
       placeholder: "Type or paste your script here...",
       generate: "Generate Voice",

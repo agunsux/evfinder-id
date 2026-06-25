@@ -66,23 +66,23 @@ const StudioSection = ({
         />
 
         {user && (
-          <div className="mt-2 flex justify-between items-center text-[10px] font-bold">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 text-text-muted">
+          <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-[10px] font-bold">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-text-muted">
+              <div className="flex items-center gap-1.5">
                 <span>{t('studio.length')}:</span>
                 <span className={`${isCappedByRequest ? "text-terracotta" : "text-text"} font-mono`}>
                   {text.length.toLocaleString("id-ID")} / {currentMaxRequestChars.toLocaleString("id-ID")}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 text-text-muted border-l border-surface2/30 pl-4">
+              <div className="flex items-center gap-1.5 border-l border-surface2/30 pl-4 sm:border-l sm:pl-4">
                 <span>{t('studio.remaining')}:</span>
                 <span className={remainingCredits < 1000 ? "text-terracotta" : "text-text"}>
-                  {remainingCredits.toLocaleString("id-ID")} karakter (~{Math.ceil(remainingCredits / 1000)} menit durasi)
+                  {remainingCredits.toLocaleString("id-ID")} karakter <span className="hidden xs:inline">(~{Math.ceil(remainingCredits / 1000)} menit durasi)</span>
                 </span>
               </div>
             </div>
             {user.tier === 'FREE' && (
-              <div className="text-terracotta bg-terracotta/5 px-2 py-0.5 rounded border border-terracotta/10">
+              <div className="text-terracotta bg-terracotta/5 px-2 py-0.5 rounded border border-terracotta/10 w-fit self-end sm:self-auto">
                 {t('studio.quota')}: {Math.max(0, 20 - (user.generation_count || 0))} / 20
               </div>
             )}
