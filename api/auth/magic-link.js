@@ -38,9 +38,17 @@ function initFirebase() {
       auth = admin.auth();
       logEvent('FIREBASE_INIT_SUCCESS', { source: 'existing_app' });
     } else {
-      const projectId = process.env.FIREBASE_PROJECT_ID;
-      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-      const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+      const cleanEnvVar = (val) => {
+        if (!val) return val;
+        let s = val.trim();
+        if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1, -1);
+        if (s.startsWith("'") && s.endsWith("'")) s = s.slice(1, -1);
+        return s.trim();
+      };
+
+      const projectId = cleanEnvVar(process.env.FIREBASE_PROJECT_ID);
+      const clientEmail = cleanEnvVar(process.env.FIREBASE_CLIENT_EMAIL);
+      const rawPrivateKey = cleanEnvVar(process.env.FIREBASE_PRIVATE_KEY);
 
       if (projectId && clientEmail && rawPrivateKey) {
         const formatKey = (k) => {
@@ -53,9 +61,12 @@ function initFirebase() {
         };
         const app = admin.initializeApp({
           credential: admin.credential.cert({
-            projectId,
-            clientEmail,
+            projectId: projectId,
+            project_id: projectId,
+            clientEmail: clientEmail,
+            client_email: clientEmail,
             privateKey: formatKey(rawPrivateKey),
+            private_key: formatKey(rawPrivateKey),
           }),
           projectId,
         });
