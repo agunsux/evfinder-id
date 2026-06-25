@@ -1314,6 +1314,43 @@ async function createServer() {
     legacyHeaders: false,
   });
 
+  const PREVIEW_SCRIPTS = {
+    ARYO: [
+      "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali to atmosfer.",
+      "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali ke atmosfer."
+    ],
+    SEKAR: [
+      "A Day in My Life as a Content Creator! Hari ini produktif banget, mulai dari shooting konten bareng tim, sampai mampir ke cafe baru yang lagi viral. Keren banget tempatnya!"
+    ],
+    KARTIKA: [
+      "Selamat datang di berita harian Shinerva, sumber terpercaya Anda."
+    ],
+    RATIH: [
+      "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik."
+    ],
+    RENDRA: [
+      "Halo semuanya, selamat datang di podcast santai kita hari ini."
+    ],
+    BAMBANG: [
+      "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya."
+    ]
+  };
+
+  app.post('/api/tts/preview', sampleRateLimiter, (req, res, next) => {
+    const { voice, text } = req.body;
+    const voiceUpper = voice?.toUpperCase();
+    if (!voiceUpper || !PREVIEW_SCRIPTS[voiceUpper]) {
+      return res.status(400).json({ error: "Voice preview tidak didukung untuk karakter ini." });
+    }
+    const cleanText = text?.trim();
+    const matched = PREVIEW_SCRIPTS[voiceUpper].some(script => script === cleanText);
+    if (!matched) {
+      return res.status(400).json({ error: "Text preview tidak sesuai dengan naskah demo resmi." });
+    }
+    req.body.isSample = true;
+    next();
+  }, ttsRateLimiterMiddleware, handleTtsRequest);
+
   app.post('/api/tts/sample', verifyTurnstile, sampleRateLimiter, (req, res, next) => { req.body.isSample = true; next(); }, ttsRateLimiterMiddleware, handleTtsRequest);
   app.post(['/api/generate-voice', '/api/generate-voice/'], authenticate, hourlyFreeLimiter, dailyFreeLimiter, cooldownLimiter, dailyLimitLimiter, ttsRateLimiterMiddleware, concurrencyLimiter, handleTtsRequest);
 

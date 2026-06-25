@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { PLAYGROUND_VOICES } from "../lib/voicePlaygroundData";
 
 // Voice Playground with restored Aryo, Sekar, Kartika, Ratih, Rendra, Bambang presets
-const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLanguage }) => {
+const VoicePlayground = ({ onUpgrade, previewAudio, language = "ID", setLanguage }) => {
   const [activeTierIdx, setActiveTierIdx] = useState(0); 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null); // id of playing sample
@@ -101,10 +101,10 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
     if (!audio) return;
 
     // Proactively generate if URL is missing or suspected dead
-    if ((!audio.src || audio.src.includes('storage.googleapis.com')) && generateSample && !loadedUrls[sample.id]) {
+    if ((!audio.src || audio.src.includes('storage.googleapis.com')) && previewAudio && !loadedUrls[sample.id]) {
       setLoadingIds(prev => ({ ...prev, [sample.id]: true }));
       try {
-        const newUrl = await generateSample(sample.script, sample.voiceId);
+        const newUrl = await previewAudio(sample.script, sample.voiceId);
         if (newUrl) {
           setLoadedUrls(prev => ({ ...prev, [sample.id]: newUrl }));
           audio.src = newUrl;
@@ -123,9 +123,9 @@ const VoicePlayground = ({ onUpgrade, generateSample, language = "ID", setLangua
     } catch (e) {
       console.error("Audio playback failed", e);
       // If playback failed, try generating one last time if we haven't already
-      if (generateSample && !loadedUrls[sample.id]) {
+      if (previewAudio && !loadedUrls[sample.id]) {
         setLoadingIds(prev => ({ ...prev, [sample.id]: true }));
-        const newUrl = await generateSample(sample.script, sample.voiceId);
+        const newUrl = await previewAudio(sample.script, sample.voiceId);
         setLoadingIds(prev => ({ ...prev, [sample.id]: false }));
         if (newUrl) {
           setLoadedUrls(prev => ({ ...prev, [sample.id]: newUrl }));

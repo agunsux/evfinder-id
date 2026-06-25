@@ -991,6 +991,42 @@ const App = () => {
     }
   };
 
+  const previewAudio = async (sampleText, voiceId) => {
+    try {
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          text: sampleText, 
+          voice: voiceId, 
+          isSample: true
+        }),
+      };
+
+      const res = await fetch("/api/tts/preview", options);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Gagal mengambil sampel suara (${res.status})`);
+      }
+      const data = await res.json();
+      
+      if (data.audioContent || data.audioUrl) {
+        if (data.audioUrl) return data.audioUrl;
+        const mimeType = data.audioMimeType || 'audio/mpeg';
+        const blob = base64ToBlob(data.audioContent, mimeType);
+        return blob ? URL.createObjectURL(blob) : null;
+      }
+      return null;
+    } catch (err) {
+      console.error("[Playground] Preview failed for voice:", voiceId, "Error:", err?.message || err);
+      toast.error(`Gagal memuat pratinjau suara: ${err?.message || 'Kesalahan jaringan'}`);
+      return null;
+    }
+  };
+
+
   const handleGenerate = async () => {
     if (!auth?.currentUser) {
       toast.error("Silakan masuk/daftar terlebih dahulu untuk melakukan generasi suara.");
@@ -1725,7 +1761,7 @@ const App = () => {
 
         {/* Live Audio Demo */}
         <section id="demo" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          <LiveAudioDemo generateSample={generateSample} />
+          <LiveAudioDemo previewAudio={previewAudio} />
         </section>
 
         {/* Aura Section */}

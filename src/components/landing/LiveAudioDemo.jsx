@@ -59,7 +59,7 @@ const voices = [
   }
 ];
 
-const LiveAudioDemo = ({ generateSample }) => {
+const LiveAudioDemo = ({ previewAudio }) => {
   const { voice: activeVoice, setVoice } = useStudio();
   const [playingId, setPlayingId] = useState(null);
   const [loadedUrls, setLoadedUrls] = useState({});
@@ -82,10 +82,10 @@ const LiveAudioDemo = ({ generateSample }) => {
 
     let audioUrl = loadedUrls[id];
 
-    if (!audioUrl && generateSample) {
+    if (!audioUrl && previewAudio) {
       setLoadingIds(prev => ({ ...prev, [id]: true }));
       try {
-        const newUrl = await generateSample(voice.script, voice.voiceId);
+        const newUrl = await previewAudio(voice.script, voice.voiceId);
         if (newUrl) {
           audioUrl = newUrl;
           setLoadedUrls(prev => ({ ...prev, [id]: newUrl }));
