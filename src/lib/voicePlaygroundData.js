@@ -18,7 +18,7 @@ export const PLAYGROUND_VOICES = {
               title: "Video Tutorial",
               voiceId: "ARYO",
               script: "Siklus air, atau siklus hidrologi, adalah sirkulasi air yang tidak pernah berhenti dari atmosfer ke bumi dan kembali ke atmosfer.",
-              url: ""
+              url: "/samples/aryo.mp3"
             }
           ]
         }
@@ -42,7 +42,7 @@ export const PLAYGROUND_VOICES = {
               title: "A Day in My Life",
               voiceId: "SEKAR",
               script: "A Day in My Life as a Content Creator! Hari ini produktif banget, mulai dari shooting konten bareng tim, sampai mampir ke cafe baru yang lagi viral. Keren banget tempatnya!",
-              url: ""
+              url: "/samples/sekar.mp3"
             }
           ]
         }
@@ -66,7 +66,7 @@ export const PLAYGROUND_VOICES = {
               title: "Berita Harian",
               voiceId: "KARTIKA",
               script: "Selamat datang di berita harian Shinerva, sumber terpercaya Anda.",
-              url: ""
+              url: "/samples/kartika.mp3"
             }
           ]
         }
@@ -90,7 +90,7 @@ export const PLAYGROUND_VOICES = {
               title: "Pembacaan Novel",
               voiceId: "RATIH",
               script: "Di bawah langit senja itu, kita terdiam... dan hanya angin yang berbisik.",
-              url: ""
+              url: "/samples/ratih.mp3"
             }
           ]
         }
@@ -114,7 +114,7 @@ export const PLAYGROUND_VOICES = {
               title: "Obrolan Santai",
               voiceId: "RENDRA",
               script: "Halo semuanya, selamat datang di podcast santai kita hari ini.",
-              url: ""
+              url: "/samples/rendra.mp3"
             }
           ]
         }
@@ -138,7 +138,7 @@ export const PLAYGROUND_VOICES = {
               title: "Narasi Dokumenter",
               voiceId: "BAMBANG",
               script: "Sejarah menceritakan bahwa Nusantara adalah negeri yang kaya akan rempah dan budaya.",
-              url: ""
+              url: "/samples/bambang.mp3"
             }
           ]
         }

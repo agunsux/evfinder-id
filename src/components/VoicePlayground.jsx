@@ -21,10 +21,8 @@ import { PLAYGROUND_VOICES } from "../lib/voicePlaygroundData";
 const VoicePlayground = ({ onUpgrade, previewAudio, language = "ID", setLanguage }) => {
   const [activeTierIdx, setActiveTierIdx] = useState(0); 
   const [activeCategoryIdx, setActiveCategoryIdx] = useState(0);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState(null); // id of playing sample
-  const [progress, setProgress] = useState({}); // { id: progress_percent }
-  const [loadedUrls, setLoadedUrls] = useState({});
-  const [loadingIds, setLoadingIds] = useState({});
+  const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [progress, setProgress] = useState({});
   
   const audioRefs = useRef({});
 
@@ -84,7 +82,7 @@ const VoicePlayground = ({ onUpgrade, previewAudio, language = "ID", setLanguage
     }
   }, [language]);
 
-  const togglePlay = async (sample) => {
+  const togglePlay = (sample) => {
     if (currentlyPlaying === sample.id) {
       audioRefs.current[sample.id]?.pause();
       setCurrentlyPlaying(null);
@@ -97,44 +95,13 @@ const VoicePlayground = ({ onUpgrade, previewAudio, language = "ID", setLanguage
       audioRefs.current[currentlyPlaying].currentTime = 0;
     }
 
-    let audio = audioRefs.current[sample.id];
+    const audio = audioRefs.current[sample.id];
     if (!audio) return;
 
-    // Proactively generate if URL is missing or suspected dead
-    if ((!audio.src || audio.src.includes('storage.googleapis.com')) && previewAudio && !loadedUrls[sample.id]) {
-      setLoadingIds(prev => ({ ...prev, [sample.id]: true }));
-      try {
-        const newUrl = await previewAudio(sample.script, sample.voiceId);
-        if (newUrl) {
-          setLoadedUrls(prev => ({ ...prev, [sample.id]: newUrl }));
-          audio.src = newUrl;
-          audio.load();
-        }
-      } catch (err) {
-        console.error("Failed to generate sample voice", err);
-      } finally {
-        setLoadingIds(prev => ({ ...prev, [sample.id]: false }));
-      }
-    }
-
-    try {
-      await audio.play();
-      setCurrentlyPlaying(sample.id);
-    } catch (e) {
-      console.error("Audio playback failed", e);
-      // If playback failed, try generating one last time if we haven't already
-      if (previewAudio && !loadedUrls[sample.id]) {
-        setLoadingIds(prev => ({ ...prev, [sample.id]: true }));
-        const newUrl = await previewAudio(sample.script, sample.voiceId);
-        setLoadingIds(prev => ({ ...prev, [sample.id]: false }));
-        if (newUrl) {
-          setLoadedUrls(prev => ({ ...prev, [sample.id]: newUrl }));
-          audio.src = newUrl;
-          audio.load();
-          audio.play().then(() => setCurrentlyPlaying(sample.id)).catch(err => console.error("Final play attempt failed", err));
-        }
-      }
-    }
+    // Play the static sample URL directly — no API call, no auth needed
+    audio.play()
+      .then(() => setCurrentlyPlaying(sample.id))
+      .catch(e => console.warn(`Audio playback failed for ${sample.id}:`, e));
   };
 
   const handleTimeUpdate = (id) => {
@@ -358,18 +325,13 @@ const VoicePlayground = ({ onUpgrade, previewAudio, language = "ID", setLanguage
                     </div>
                     <button 
                       onClick={() => togglePlay(sample)}
-                      disabled={loadingIds[sample.id]}
                       className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
                         currentlyPlaying === sample.id 
                         ? 'bg-terracotta text-white scale-110' 
-                        : loadingIds[sample.id]
-                        ? 'bg-surface2 text-text-muted animate-pulse'
                         : 'bg-white text-black hover:scale-105 active:scale-95'
                       }`}
                     >
-                      {loadingIds[sample.id] ? (
-                        <div className="w-5 h-5 border-2 border-terracotta border-t-transparent rounded-full animate-spin" />
-                      ) : currentlyPlaying === sample.id ? (
+                      {currentlyPlaying === sample.id ? (
                         <Pause className="fill-current w-5 h-5" />
                       ) : (
                         <Play className="fill-current w-5 h-5" />
