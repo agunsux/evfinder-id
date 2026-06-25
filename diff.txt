@@ -1,0 +1,182 @@
+﻿diff --git a/src/App.jsx.old b/src/App.jsx
+index f0e14f8..582d5cf 100644
+--- a/src/App.jsx.old
++++ b/src/App.jsx
+@@ -1,6 +1,9 @@
+-∩╗┐import React, { useState, useRef, useEffect, Suspense } from "react";
++import React, { useState, useRef, useEffect, Suspense } from "react";
+ import { motion, AnimatePresence } from "motion/react";
+-import { useNavigate } from 'react-router-dom';
++import { useNavigate, Routes, Route } from 'react-router-dom';
++import PolicyPage from './pages/PolicyPage';
++import AboutPage from './pages/AboutPage';
++import ContactPage from './pages/ContactPage';
+ import { Toaster, toast } from 'react-hot-toast';
+ import { MAX_CHARS } from "./constants";
+ import ShinervaLogo from "./components/ShinervaLogo";
+@@ -83,6 +86,42 @@ const formatDuration = (seconds) => {
+ };
+ 
+ 
++
++const SettingsRedirect = ({ setIsProfileModalOpen }) => {
++  const navigate = useNavigate();
++  useEffect(() => {
++    setIsProfileModalOpen(true);
++    navigate('/', { replace: true });
++  }, [navigate, setIsProfileModalOpen]);
++  return null;
++};
++
++const NavigateToHome = () => {
++  const navigate = useNavigate();
++  useEffect(() => {
++    navigate('/', { replace: true });
++  }, [navigate]);
++  return null;
++};
++
++const LoginRedirect = ({ setIsAuthOpen, setAuthMode }) => {
++  const navigate = useNavigate();
++  useEffect(() => {
++    setAuthMode("login");
++    setIsAuthOpen(true);
++    navigate('/', { replace: true });
++  }, [navigate, setIsAuthOpen, setAuthMode]);
++  return null;
++};
++
++const DashboardRedirect = () => {
++  const navigate = useNavigate();
++  useEffect(() => {
++    navigate('/', { replace: true });
++  }, [navigate]);
++  return null;
++};
++
+ const App = () => {
+   const navigate = useNavigate();
+   const [language, setLanguage] = useState("ID");
+@@ -172,6 +211,7 @@ const App = () => {
+     email: "",
+   });
+   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
++  const [authStatusMessage, setAuthStatusMessage] = useState(null);
+   const [authLoading, setAuthLoading] = useState(false);
+   const [googleLoading, setGoogleLoading] = useState(false);
+   const [purchaseLoading, setPurchaseLoading] = useState(null);
+@@ -928,7 +968,7 @@ const App = () => {
+ 
+   const proceedWithGenerate = async () => {
+     setStatus("loading");
+-    setLoadingMessage("Menghubungkan ke Rungu Engine...");
++    setLoadingMessage("Menghubungkan ke Shinerva Engine...");
+ 
+     const startTime = Date.now();
+ 
+@@ -1021,7 +1061,7 @@ const App = () => {
+         }
+         
+         if (user?.generation_count && user.generation_count % 3 === 0) {
+-            toast("Share kreasi Anda & tag @rungu.id untuk bonus karakter!", { icon: 'Γëí╞Æ├ä├╝', duration: 6000 });
++            toast("Share kreasi Anda & tag @shinerva.id untuk bonus karakter!", { icon: 'Γëí╞Æ├ä├╝', duration: 6000 });
+         }
+       } else {
+         throw new Error("Gagal menerima data suara dari server.");
+@@ -1252,23 +1292,25 @@ const App = () => {
+ 
+   const handleGoogleSignIn = async () => {
+     setGoogleLoading(true);
++    setAuthStatusMessage("Signing you in...");
+     try {
+       console.log("[Auth] Starting Google sign-in...");
+       const userCredential = await loginWithGoogle();
+       console.log("[Auth] Google sign-in successful in Firebase:", userCredential.user.email);
+-      
++
+       // Explicit sync with backend to ensure user is created/updated
+       try {
++        setAuthStatusMessage("Sinkronisasi profil akun...");
+         const idToken = await userCredential.user.getIdToken(true);
+         console.log("[Auth] Syncing Google user with backend...");
+         const options = {
+           method: "POST",
+-          headers: { 
++          headers: {
+             "Authorization": `Bearer ${idToken}`
+           },
+         };
+         const syncRes = await fetch("/api/auth/sync", options);
+-        
++
+         const syncData = await checkResponse(syncRes, 0, options);
+         if (syncData.user) {
+           console.log("[Auth] User synced & created/found:", syncData.user.email);
+@@ -1279,10 +1321,12 @@ const App = () => {
+       }
+ 
+       setIsAuthOpen(false);
++      setAuthStatusMessage(null);
+       toast.success("Login Google berhasil!");
+     } catch (err) {
+       console.error("[Auth] Google sign-in error:", err?.message || err);
+       toast.error(err.message || "Gagal masuk dengan Google.");
++      setAuthStatusMessage("Google login failed: " + (err.message || "Unknown error"));
+     } finally {
+       setGoogleLoading(false);
+     }
+@@ -1584,6 +1628,10 @@ const App = () => {
+       )}
+ 
+       <main className="flex-grow pt-12 pb-12 px-4 sm:px-6 lg:px-8">
++        <Routes>
++          <Route path="/" element={
++            <>
++
+         {/* Hero Section */}
+         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-8 relative">
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-terracotta/10 rounded-full blur-[120px] -z-10"></div>
+@@ -1770,7 +1818,7 @@ const App = () => {
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+             {/* Pakets */}
+-            {[PLANS.FREE, PLANS.STARTER, PLANS.KREATOR, PLANS.PRODUKTIF].map((plan) => (
++            {[PLANS.FREE, PLANS.CREATOR, PLANS.PRO, PLANS.BUSINESS].map((plan) => (
+               <div key={plan.id} className={`bg-surface border p-6 rounded-3xl flex flex-col relative ${plan.isPopular ? 'border-terracotta shadow-[0_0_30px_rgba(226,114,91,0.15)]' : 'border-surface2'}`}>
+                 {plan.isPopular && (
+                   <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-terracotta text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest z-10">
+@@ -1998,17 +2046,31 @@ const App = () => {
+                     <div className="flex flex-col md:flex-row justify-between items-center pt-10 border-t border-surface2 text-text-muted text-xs gap-4">
+               <p>Γö¼ΓîÉ 2026 Shinerva AI Voice. All rights reserved.</p>
+               <div className="flex gap-6">
+-                <a href="/privacy.html" target="_blank" className="hover:text-text transition-colors">
++                <a href="/privacy" className="hover:text-text transition-colors">
+                   Privacy Policy
+                 </a>
+-                <a href="/terms.html" target="_blank" className="hover:text-text transition-colors">
++                <a href="/terms" className="hover:text-text transition-colors">
+                   Terms of Service
+                 </a>
+               </div>
+             </div>
+           </div>
+         </footer>
+-      </main>
++      
++            </>
++          } />
++          <Route path="/login" element={<LoginRedirect setIsAuthOpen={setIsAuthOpen} setAuthMode={setAuthMode} />} />
++          <Route path="/dashboard" element={<DashboardRedirect />} />
++          <Route path="/about" element={<AboutPage />} />
++          <Route path="/terms" element={<PolicyPage />} />
++          <Route path="/privacy" element={<PolicyPage />} />
++          <Route path="/refund" element={<PolicyPage />} />
++          <Route path="/policy/:type" element={<PolicyPage />} />
++          <Route path="/contact" element={<ContactPage />} />
++          <Route path="/settings" element={<SettingsRedirect setIsProfileModalOpen={setIsProfileModalOpen} />} />
++          <Route path="*" element={<NavigateToHome />} />
++        </Routes>
++</main>
+ 
+       {/* Profile Modal */}
+       {isProfileModalOpen && (
