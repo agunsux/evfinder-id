@@ -290,9 +290,9 @@ const VoicePlayground = ({ onUpgrade, previewAudio, language = "ID", setLanguage
                 >
                   {/* Audio Element (Hidden) */}
                   <audio
-                    key={loadedUrls[sample.id] || sample.url}
+                    key={sample.url}
                     ref={el => audioRefs.current[sample.id] = el}
-                    src={loadedUrls[sample.id] || sample.url}
+                    src={sample.url}
                     onTimeUpdate={() => handleTimeUpdate(sample.id)}
                     onEnded={() => handleEnded(sample.id)}
                     onError={(e) => {
